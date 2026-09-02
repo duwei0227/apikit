@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --body-bg: var(--p-surface-50);
+    --body-text-color: var(--p-surface-900);
+    --card-border: 1px solid var(--border-color);
+    --card-bg: var(--p-surface-0);
+    --border-color: var(--p-surface-200);
+    --text-color: var(--p-surface-700);
+    --overlay-background: #ffffff;
+    /* Shared input focus ring — intentionally blue, independent of the Noir theme */
+    --focus-ring-color: #3b82f6;
+    --focus-ring-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+    /* Autocomplete selected-item accent — bright blue, independent of the Noir
+       (grayscale) theme, tuned per scheme for high contrast against the popup. */
+    --ac-selected-bg: #2563eb;          /* solid blue-600 on white popup */
+    --ac-selected-label-color: #ffffff;
+    --ac-selected-detail-color: #dbeafe;
+}
+
+:root[class='p-dark'] {
+    --body-bg: var(--p-surface-950);
+    --body-text-color: var(--p-surface-50);
+    --card-border: 1px solid transparent;
+    --card-bg: var(--p-surface-900);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --text-color: var(--p-surface-0);
+    --overlay-background: var(--p-surface-900);
+    --focus-ring-color: #60a5fa;
+    --focus-ring-shadow: 0 0 0 2px rgba(96, 165, 250, 0.4);
+    /* Brighter blue-500 reads better on the dark popup; keep white label text. */
+    --ac-selected-bg: #3b82f6;
+    --ac-selected-label-color: #ffffff;
+    --ac-selected-detail-color: #dbeafe;
+}
+
+html {
+    font-size: 14px;
+    line-height: normal;
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--body-bg);
+    font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-weight: normal;
+    color: var(--body-text-color);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+    height: 100%;
+}
+
+.font-mono,
+pre, code, kbd, samp {
+    font-family: 'JetBrains Mono Variable', 'JetBrains Mono', Consolas, 'Courier New', monospace;
+}
+
+.p-badge.text-badge {
+    font-size: 10px;
+    line-height: 14px;
+}
+
+.cm-editor,
+.cm-editor .cm-content,
+.cm-editor .cm-line {
+    font-family: 'JetBrains Mono Variable', 'JetBrains Mono', Consolas, 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 22px;
+}
+
+.card {
+    background: var(--card-bg);
+    border: var(--card-border);
+    padding: 2rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+/* 统一输入框焦点样式 — 覆盖 InputText、Textarea、VariableInput
+   颜色由 --focus-ring-* 变量驱动，自动适配明/暗主题 */
+.p-inputtext:enabled:focus,
+.p-inputtext:enabled:focus-visible,
+.variable-input-wrapper:focus-within .p-inputtext {
+    outline: none;
+    border-color: var(--focus-ring-color);
+    box-shadow: var(--focus-ring-shadow);
+}

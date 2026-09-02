@@ -1,0 +1,103 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ApiKit",
+  "version": "0.2.19",
+  "identifier": "cn.probiecoder.apikit",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "ApiKit",
+        "width": 1280,
+        "height": 800,
+        "decorations": false,
+        "maximized": true,
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "duwei0227",
+    "copyright": "Copyright © 2024 duwei0227. All rights reserved.",
+    "category": "DeveloperTool",
+    "shortDescription": "Modern API testing tool",
+    "longDescription": "ApiKit is a modern, cross-platform API testing tool built with Tauri and Vue 3. It provides a clean and intuitive interface for testing HTTP APIs with features like collection management, environment variables, request history, and automated testing.",
+    "homepage": "https://github.com/duwei0227/apikit",
+    "licenseFile": "../LICENSE",
+    "resources": [],
+    "externalBin": [],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.13",
+      "exceptionDomain": "",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": null,
+      "dmg": {
+        "background": null,
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
+      }
+    },
+    "linux": {
+      "deb": {
+        "depends": [],
+        "section": "Development",
+        "priority": "optional",
+        "files": {}
+      },
+      "rpm": {
+        "depends": [],
+        "release": "1",
+        "epoch": 0,
+        "files": {},
+        "desktopTemplate": null
+      },
+      "appimage": {
+        "bundleMediaFramework": false,
+        "files": {}
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhFNzNDRkNGMkNENTg5MkYKUldRdmlkVXN6ODl6anNnZ2M3TStxalRrZmZ6R09YM0ZGUlNGSGI5ZGt5VjBpNnFWMGdVOXd3SGsK",
+      "endpoints": [
+        "https://github.com/duwei0227/apikit/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}

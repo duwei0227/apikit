@@ -1,0 +1,720 @@
+name: Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    outputs:
+      release_id: ${{ steps.create-release.outputs.result }}
+      release_upload_url: ${{ steps.create-release.outputs.upload_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      
+      - name: Get version
+        run: |
+          # 从 git tag 获取版本号（如果是 tag 触发）
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+            # 移除 'v' 前缀
+            VERSION="${VERSION#v}"
+            echo "Using version from tag: $VERSION"
+          else
+            # 从 package.json 获取版本号
+            VERSION=$(node -p "require('./package.json').version")
+            echo "Using version from package.json: $VERSION"
+          fi
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+      
+      - name: Extract or generate changelog
+        id: changelog
+        run: |
+          VERSION="${{ env.PACKAGE_VERSION }}"
+          
+          # 方式 1: 尝试从 CHANGELOG.md 提取
+          if [ -f "CHANGELOG.md" ]; then
+            CHANGELOG=$(sed -n "/## \[$VERSION\]/,/## \[/p" CHANGELOG.md | sed '$d' | tail -n +2)
+          fi
+          
+          # 方式 2: 如果 CHANGELOG.md 中没有找到，从 Git commits 自动生成
+          if [ -z "$CHANGELOG" ]; then
+            echo "No changelog found in CHANGELOG.md, generating from git commits..."
+            
+            # 获取上一个 tag
+            PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            
+            if [ -z "$PREV_TAG" ]; then
+              # 如果是第一个 tag，获取所有 commits
+              echo "First release, including all commits"
+              COMMITS=$(git log --pretty=format:"- %s" --no-merges)
+            else
+              # 获取两个 tag 之间的 commits
+              echo "Generating changelog from $PREV_TAG to HEAD"
+              COMMITS=$(git log --pretty=format:"- %s" --no-merges $PREV_TAG..HEAD)
+            fi
+            
+            # 按照 Conventional Commits 分类
+            FEATURES=$(echo "$COMMITS" | grep -i "^- feat" | sed 's/^- feat[:(]/- /' | sed 's/):/:/g' || echo "")
+            FIXES=$(echo "$COMMITS" | grep -i "^- fix" | sed 's/^- fix[:(]/- /' | sed 's/):/:/g' || echo "")
+            DOCS=$(echo "$COMMITS" | grep -i "^- docs" | sed 's/^- docs[:(]/- /' | sed 's/):/:/g' || echo "")
+            CHORES=$(echo "$COMMITS" | grep -i "^- chore" | sed 's/^- chore[:(]/- /' | sed 's/):/:/g' || echo "")
+            OTHERS=$(echo "$COMMITS" | grep -vi "^- \(feat\|fix\|docs\|chore\)" || echo "")
+            
+            # 构建 changelog
+            CHANGELOG=""
+            
+            if [ -n "$FEATURES" ]; then
+              CHANGELOG="${CHANGELOG}### 新增功能\n\n${FEATURES}\n\n"
+            fi
+            
+            if [ -n "$FIXES" ]; then
+              CHANGELOG="${CHANGELOG}### 问题修复\n\n${FIXES}\n\n"
+            fi
+            
+            if [ -n "$DOCS" ]; then
+              CHANGELOG="${CHANGELOG}### 文档更新\n\n${DOCS}\n\n"
+            fi
+            
+            if [ -n "$OTHERS" ] && [ "$OTHERS" != "" ]; then
+              CHANGELOG="${CHANGELOG}### 其他变更\n\n${OTHERS}\n\n"
+            fi
+            
+            if [ -z "$CHANGELOG" ]; then
+              CHANGELOG="查看完整变更日志了解详情。"
+            fi
+          fi
+          
+          # 保存到文件
+          echo -e "$CHANGELOG" > /tmp/changelog.txt
+          
+          echo "Generated changelog:"
+          cat /tmp/changelog.txt
+      
+      - name: Create release body
+        run: |
+          VERSION="${{ env.PACKAGE_VERSION }}"
+          CHANGELOG=$(cat /tmp/changelog.txt)
+          
+          echo "## 📥 下载安装" > /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "> **提示：** 请只下载以下列出的安装包文件。其他文件（如 .sig、.app.tar.gz、latest.json）是自动更新系统使用的技术文件，普通用户无需下载。" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "### Windows" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "- **ApiKit_${VERSION}_x64.msi** - 推荐，Windows 安装程序" >> /tmp/release-body.md
+          echo "- **ApiKit_${VERSION}_x64-setup.exe** - NSIS 安装程序" >> /tmp/release-body.md
+          echo "- **apikit-${VERSION}-windows-x64-portable.zip** - 便携版，解压即用" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "### macOS" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "- **ApiKit_${VERSION}_aarch64.dmg** - Apple Silicon (M1/M2/M3)" >> /tmp/release-body.md
+          echo "- **ApiKit_${VERSION}_x64.dmg** - Intel 处理器" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "### Linux" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "- **ApiKit_${VERSION}_amd64.AppImage** - 推荐，通用格式，无需安装" >> /tmp/release-body.md
+          echo "- **ApiKit_${VERSION}_amd64.deb** - Debian/Ubuntu 系统" >> /tmp/release-body.md
+          echo "- **ApiKit-${VERSION}-1.x86_64.rpm** - Fedora/RHEL/CentOS 系统" >> /tmp/release-body.md
+          echo "- **apikit-${VERSION}-linux-x64-portable.tar.gz** - 便携版，解压即用" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "---" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "## 📝 更新内容" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "$CHANGELOG" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "---" >> /tmp/release-body.md
+          echo "" >> /tmp/release-body.md
+          echo "**完整变更日志**: https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md" >> /tmp/release-body.md
+      
+      - name: Create release
+        id: create-release
+        uses: actions/github-script@v7
+        env:
+          PACKAGE_VERSION: ${{ env.PACKAGE_VERSION }}
+        with:
+          script: |
+            const fs = require('fs');
+            const version = process.env.PACKAGE_VERSION;
+            const releaseBody = fs.readFileSync('/tmp/release-body.md', 'utf8');
+            const tag = `v${version}`;
+
+            // 1. 若同名 Release 已存在，先删除以实现覆盖（清空旧的发布说明与资产）
+            //    注意：删除 Release 不会删除对应的 git tag，新的 Release 会重新绑定到该 tag
+            try {
+              const { data: existing } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag
+              });
+              console.log(`Release ${tag} already exists (id=${existing.id}), deleting it to overwrite...`);
+              await github.rest.repos.deleteRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: existing.id
+              });
+              console.log(`Deleted existing release ${tag}`);
+            } catch (error) {
+              if (error.status === 404) {
+                console.log(`No existing release ${tag}, will create a new one`);
+              } else {
+                throw error;
+              }
+            }
+
+            // 2. 创建全新的 Release
+            //    target_commitish 保证手动触发（tag 尚不存在）时能在当前提交上创建 tag
+            console.log(`Creating release ${tag}`);
+            const { data: release } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              target_commitish: context.sha,
+              name: `ApiKit ${tag}`,
+              body: releaseBody,
+              draft: false,
+              prerelease: false,
+              generate_release_notes: true
+            });
+
+            return release.id
+
+  build-tauri:
+    needs: create-release
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Decode signing key
+        shell: bash
+        run: |
+          KEY_VALUE="${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}"
+          
+          echo "Key length: ${#KEY_VALUE}"
+          
+          # 直接将密钥写入环境变量，不做任何处理
+          # Tauri 会自动处理 base64 解码
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<EOF"
+            echo "$KEY_VALUE"
+            echo "EOF"
+          } >> $GITHUB_ENV
+          
+          echo "✅ Key configured"
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ env.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.release_id }}
+          args: ${{ matrix.args }}
+
+  build-portable:
+    name: Build Portable Archives
+    needs: build-tauri
+    runs-on: ${{ matrix.platform }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'ubuntu-22.04'
+            archive_type: 'tar.gz'
+            binary_name: 'apikit'
+          - platform: 'windows-latest'
+            archive_type: 'zip'
+            binary_name: 'apikit.exe'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+      
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      
+      - name: Install frontend dependencies
+        run: npm ci
+      
+      - name: Configure signing key
+        shell: bash
+        run: |
+          KEY_VALUE="${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}"
+          
+          if [ -n "$KEY_VALUE" ]; then
+            echo "Configuring signing key..."
+            {
+              echo "TAURI_SIGNING_PRIVATE_KEY<<EOF"
+              echo "$KEY_VALUE"
+              echo "EOF"
+            } >> $GITHUB_ENV
+            echo "✅ Key configured"
+          else
+            echo "⚠️ No signing key found, skipping..."
+          fi
+      
+      - name: Build Tauri app
+        run: npm run tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ env.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building portable version: $VERSION"
+      
+      - name: Create portable archive (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          PORTABLE_DIR="apikit-${VERSION}-linux-x64-portable"
+          
+          mkdir -p "$PORTABLE_DIR"
+          mkdir -p "$PORTABLE_DIR/icons"
+          
+          # Copy binary
+          cp src-tauri/target/release/apikit "$PORTABLE_DIR/"
+          
+          # Copy resources
+          cp LICENSE "$PORTABLE_DIR/"
+          cp README.md "$PORTABLE_DIR/"
+          
+          # Copy icons
+          cp src-tauri/icons/32x32.png "$PORTABLE_DIR/icons/"
+          cp src-tauri/icons/128x128.png "$PORTABLE_DIR/icons/"
+          cp src-tauri/icons/icon.png "$PORTABLE_DIR/icons/apikit.png"
+          
+          # Create desktop file
+          {
+            echo "[Desktop Entry]"
+            echo "Version=1.0"
+            echo "Type=Application"
+            echo "Name=ApiKit"
+            echo "Comment=Modern API testing tool"
+            echo "Exec=\$PORTABLE_DIR/apikit.sh"
+            echo "Icon=\$PORTABLE_DIR/icons/apikit.png"
+            echo "Terminal=false"
+            echo "Categories=Development;Network;"
+            echo "Keywords=api;http;rest;testing;"
+          } > "$PORTABLE_DIR/apikit.desktop"
+          chmod +x "$PORTABLE_DIR/apikit.desktop"
+          
+          # Create README for portable version
+          {
+            echo "ApiKit Portable Edition"
+            echo "========================="
+            echo ""
+            echo "This is a portable version of ApiKit. No installation required!"
+            echo ""
+            echo "Usage"
+            echo "-----"
+            echo "Option 1: Run directly"
+            echo "  ./apikit"
+            echo ""
+            echo "Option 2: Use launcher script"
+            echo "  ./apikit.sh"
+            echo ""
+            echo "Option 3: Install desktop entry (optional)"
+            echo "  ./install-desktop.sh"
+            echo ""
+            echo "Requirements"
+            echo "------------"
+            echo "- Linux x64 (Ubuntu 22.04+ or equivalent)"
+            echo "- GTK 3.24+"
+            echo "- WebKit2GTK 4.1+"
+            echo ""
+            echo "Desktop Integration"
+            echo "-------------------"
+            echo "To add ApiKit to your application menu:"
+            echo "1. Run: ./install-desktop.sh"
+            echo "2. The application will appear in your menu with an icon"
+            echo ""
+            echo "To uninstall:"
+            echo "  ./uninstall-desktop.sh"
+            echo ""
+            echo "Data Storage"
+            echo "------------"
+            echo "Application data is stored in ~/.local/share/apikit/"
+            echo ""
+            echo "For more information, visit"
+            echo "https://github.com/duwei0227/apikit"
+          } > "$PORTABLE_DIR/README-PORTABLE.txt"
+          
+          # Create launcher script
+          {
+            echo "#!/bin/bash"
+            echo 'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"'
+            echo 'cd "$SCRIPT_DIR"'
+            echo './apikit "$@"'
+          } > "$PORTABLE_DIR/apikit.sh"
+          chmod +x "$PORTABLE_DIR/apikit.sh"
+          
+          # Create desktop installation script
+          {
+            echo "#!/bin/bash"
+            echo 'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"'
+            echo 'DESKTOP_DIR="$HOME/.local/share/applications"'
+            echo 'ICON_DIR="$HOME/.local/share/icons/hicolor/128x128/apps"'
+            echo ""
+            echo "# Create directories if they don't exist"
+            echo 'mkdir -p "$DESKTOP_DIR"'
+            echo 'mkdir -p "$ICON_DIR"'
+            echo ""
+            echo "# Copy icon"
+            echo 'cp "$SCRIPT_DIR/icons/apikit.png" "$ICON_DIR/"'
+            echo ""
+            echo "# Create desktop entry with absolute paths"
+            echo 'cat > "$DESKTOP_DIR/apikit.desktop" << EOF'
+            echo "[Desktop Entry]"
+            echo "Version=1.0"
+            echo "Type=Application"
+            echo "Name=ApiKit"
+            echo "Comment=Modern API testing tool"
+            echo 'Exec=$SCRIPT_DIR/apikit.sh'
+            echo "Icon=apikit"
+            echo "Terminal=false"
+            echo "Categories=Development;Network;"
+            echo "Keywords=api;http;rest;testing;"
+            echo "EOF"
+            echo ""
+            echo 'chmod +x "$DESKTOP_DIR/apikit.desktop"'
+            echo ""
+            echo "# Update desktop database"
+            echo 'if command -v update-desktop-database &> /dev/null; then'
+            echo '    update-desktop-database "$DESKTOP_DIR"'
+            echo "fi"
+            echo ""
+            echo 'echo "Desktop entry installed successfully!"'
+            echo 'echo "ApiKit should now appear in your application menu."'
+          } > "$PORTABLE_DIR/install-desktop.sh"
+          chmod +x "$PORTABLE_DIR/install-desktop.sh"
+          
+          # Create desktop uninstallation script
+          {
+            echo "#!/bin/bash"
+            echo 'DESKTOP_FILE="$HOME/.local/share/applications/apikit.desktop"'
+            echo 'ICON_FILE="$HOME/.local/share/icons/hicolor/128x128/apps/apikit.png"'
+            echo ""
+            echo 'if [ -f "$DESKTOP_FILE" ]; then'
+            echo '    rm "$DESKTOP_FILE"'
+            echo '    echo "Desktop entry removed."'
+            echo "fi"
+            echo ""
+            echo 'if [ -f "$ICON_FILE" ]; then'
+            echo '    rm "$ICON_FILE"'
+            echo '    echo "Icon removed."'
+            echo "fi"
+            echo ""
+            echo "# Update desktop database"
+            echo 'if command -v update-desktop-database &> /dev/null; then'
+            echo '    update-desktop-database "$HOME/.local/share/applications"'
+            echo "fi"
+            echo ""
+            echo 'echo "ApiKit uninstalled successfully!"'
+          } > "$PORTABLE_DIR/uninstall-desktop.sh"
+          chmod +x "$PORTABLE_DIR/uninstall-desktop.sh"
+          
+          chmod +x "$PORTABLE_DIR/apikit"
+          
+          # Create archive
+          tar -czf "apikit-${VERSION}-linux-x64-portable.tar.gz" "$PORTABLE_DIR"
+          
+          echo "Created: apikit-${VERSION}-linux-x64-portable.tar.gz"
+          ls -lh "apikit-${VERSION}-linux-x64-portable.tar.gz"
+      
+      - name: Create portable archive (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $VERSION = node -p "require('./package.json').version"
+          $PORTABLE_DIR = "apikit-$VERSION-windows-x64-portable"
+          
+          New-Item -ItemType Directory -Path $PORTABLE_DIR -Force
+          New-Item -ItemType Directory -Path "$PORTABLE_DIR/icons" -Force
+          
+          # Copy binary
+          Copy-Item "src-tauri/target/release/apikit.exe" "$PORTABLE_DIR/"
+          
+          # Copy resources
+          Copy-Item "LICENSE" "$PORTABLE_DIR/"
+          Copy-Item "README.md" "$PORTABLE_DIR/"
+          
+          # Copy icon (for shortcut creation)
+          Copy-Item "src-tauri/icons/icon.ico" "$PORTABLE_DIR/icons/apikit.ico"
+          
+          # Create README for portable version
+          $readmeContent = @(
+            "ApiKit Portable Edition",
+            "=========================",
+            "",
+            "This is a portable version of ApiKit. No installation required!",
+            "",
+            "Usage",
+            "-----",
+            "Option 1: Run directly",
+            "  Double-click apikit.exe",
+            "",
+            "Option 2: Use launcher script",
+            "  Double-click apikit.bat",
+            "",
+            "Option 3: Create desktop shortcut (optional)",
+            "  Right-click create-shortcut.vbs and select 'Open with Windows Script Host'",
+            "  Or run: create-desktop-shortcut.bat",
+            "",
+            "Requirements",
+            "------------",
+            "- Windows 10 or later (64-bit)",
+            "- WebView2 Runtime (usually pre-installed on Windows 11)",
+            "",
+            "Desktop Shortcut",
+            "----------------",
+            "To create a desktop shortcut with icon:",
+            "1. Double-click 'create-desktop-shortcut.bat'",
+            "2. A shortcut will be created on your desktop",
+            "",
+            "You can also manually create a shortcut:",
+            "1. Right-click apikit.exe",
+            "2. Select 'Create shortcut'",
+            "3. Drag the shortcut to your desktop or Start Menu",
+            "",
+            "Data Storage",
+            "------------",
+            "Application data is stored in %APPDATA%\apikit\",
+            "",
+            "For more information, visit",
+            "https://github.com/duwei0227/apikit"
+          )
+          $readmeContent -join "`r`n" | Out-File -FilePath "$PORTABLE_DIR/README-PORTABLE.txt" -Encoding UTF8
+          
+          # Create launcher batch file
+          $batchContent = @(
+            "@echo off",
+            "cd /d `"%~dp0`"",
+            "start `"`" apikit.exe %*"
+          )
+          $batchContent -join "`r`n" | Out-File -FilePath "$PORTABLE_DIR/apikit.bat" -Encoding ASCII
+          
+          # Create VBScript for desktop shortcut creation
+          $vbsContent = @(
+            "Set oWS = WScript.CreateObject(`"WScript.Shell`")",
+            "sLinkFile = oWS.SpecialFolders(`"Desktop`") & `"\ApiKit.lnk`"",
+            "Set oLink = oWS.CreateShortcut(sLinkFile)",
+            "oLink.TargetPath = WScript.ScriptFullName",
+            "Set oFSO = CreateObject(`"Scripting.FileSystemObject`")",
+            "sScriptDir = oFSO.GetParentFolderName(WScript.ScriptFullName)",
+            "oLink.WorkingDirectory = sScriptDir",
+            "oLink.TargetPath = sScriptDir & `"\apikit.exe`"",
+            "oLink.IconLocation = sScriptDir & `"\icons\apikit.ico`"",
+            "oLink.Description = `"ApiKit - Modern API testing tool`"",
+            "oLink.Save",
+            "WScript.Echo `"Desktop shortcut created successfully!`""
+          )
+          $vbsContent -join "`r`n" | Out-File -FilePath "$PORTABLE_DIR/create-shortcut.vbs" -Encoding ASCII
+          
+          # Create batch file to run VBScript
+          $shortcutBatchContent = @(
+            "@echo off",
+            "echo Creating desktop shortcut for ApiKit...",
+            "cscript //nologo `"%~dp0create-shortcut.vbs`"",
+            "if %errorlevel% equ 0 (",
+            "    echo.",
+            "    echo Desktop shortcut created successfully!",
+            "    echo You can now find ApiKit on your desktop.",
+            ") else (",
+            "    echo.",
+            "    echo Failed to create shortcut.",
+            "    echo Please create a shortcut manually by right-clicking apikit.exe",
+            ")",
+            "echo.",
+            "pause"
+          )
+          $shortcutBatchContent -join "`r`n" | Out-File -FilePath "$PORTABLE_DIR/create-desktop-shortcut.bat" -Encoding ASCII
+          
+          # Create archive
+          Compress-Archive -Path $PORTABLE_DIR -DestinationPath "apikit-$VERSION-windows-x64-portable.zip" -Force
+          
+          Write-Host "Created: apikit-$VERSION-windows-x64-portable.zip"
+          Get-Item "apikit-$VERSION-windows-x64-portable.zip" | Format-List
+      
+      - name: Upload portable archive to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          files: |
+            apikit-*-portable.*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-${{ matrix.platform }}
+          path: apikit-*-portable.*
+
+  generate-updater-manifest:
+    name: Generate Updater Manifest
+    needs: [create-release, build-tauri]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Get version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Generate updater manifest
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          RELEASE_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # Extract changelog from release
+          CHANGELOG=$(gh release view "v${VERSION}" --json body -q .body || echo "See release notes for details")
+          
+          # Find signature files
+          LINUX_SIG=$(find artifacts -name "*.AppImage.sig" -type f | head -1)
+          WINDOWS_NSIS_SIG=$(find artifacts -name "*-setup.exe.sig" -type f | head -1)
+          WINDOWS_MSI_SIG=$(find artifacts -name "*.msi.sig" -type f | head -1)
+          MACOS_X64_SIG=$(find artifacts -name "*_x64.app.tar.gz.sig" -type f | head -1)
+          MACOS_ARM_SIG=$(find artifacts -name "*_aarch64.app.tar.gz.sig" -type f | head -1)
+          
+          # Read signatures
+          LINUX_SIGNATURE=""
+          WINDOWS_NSIS_SIGNATURE=""
+          WINDOWS_MSI_SIGNATURE=""
+          MACOS_X64_SIGNATURE=""
+          MACOS_ARM_SIGNATURE=""
+          
+          [ -f "$LINUX_SIG" ] && LINUX_SIGNATURE=$(cat "$LINUX_SIG")
+          [ -f "$WINDOWS_NSIS_SIG" ] && WINDOWS_NSIS_SIGNATURE=$(cat "$WINDOWS_NSIS_SIG")
+          [ -f "$WINDOWS_MSI_SIG" ] && WINDOWS_MSI_SIGNATURE=$(cat "$WINDOWS_MSI_SIG")
+          [ -f "$MACOS_X64_SIG" ] && MACOS_X64_SIGNATURE=$(cat "$MACOS_X64_SIG")
+          [ -f "$MACOS_ARM_SIG" ] && MACOS_ARM_SIGNATURE=$(cat "$MACOS_ARM_SIG")
+          
+          # Generate JSON manifest
+          cat > latest.json << EOF
+          {
+            "version": "${VERSION}",
+            "notes": $(echo "$CHANGELOG" | jq -Rs .),
+            "pub_date": "${RELEASE_DATE}",
+            "platforms": {
+              "linux-x86_64": {
+                "signature": "${LINUX_SIGNATURE}",
+                "url": "https://github.com/duwei0227/apikit/releases/download/v${VERSION}/apikit_${VERSION}_amd64.AppImage"
+              },
+              "windows-x86_64": {
+                "signature": "${WINDOWS_NSIS_SIGNATURE}",
+                "url": "https://github.com/duwei0227/apikit/releases/download/v${VERSION}/apikit_${VERSION}_x64-setup.exe"
+              },
+              "darwin-x86_64": {
+                "signature": "${MACOS_X64_SIGNATURE}",
+                "url": "https://github.com/duwei0227/apikit/releases/download/v${VERSION}/apikit_x64.app.tar.gz"
+              },
+              "darwin-aarch64": {
+                "signature": "${MACOS_ARM_SIGNATURE}",
+                "url": "https://github.com/duwei0227/apikit/releases/download/v${VERSION}/apikit_aarch64.app.tar.gz"
+              }
+            }
+          }
+          EOF
+          
+          echo "Generated latest.json:"
+          cat latest.json | jq .
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload manifest to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          files: latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

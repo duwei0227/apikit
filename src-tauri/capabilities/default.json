@@ -1,0 +1,53 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "updater:default",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-close",
+    "core:window:allow-is-maximized",
+    "core:window:allow-start-dragging",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "http://**"
+        },
+        {
+          "url": "https://**"
+        },
+        {
+          "url": "http://localhost:**"
+        },
+        {
+          "url": "https://localhost:**"
+        },
+        {
+          "url": "http://127.0.0.1:**"
+        },
+        {
+          "url": "https://127.0.0.1:**"
+        }
+      ]
+    },
+    "core:path:default",
+    "core:path:allow-basename",
+    "core:path:allow-dirname",
+    "core:path:allow-join",
+    "core:path:allow-resolve",
+    "fs:default",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-meta-recursive",
+    "fs:scope-appdata-recursive",
+    "dialog:default",
+    "dialog:allow-save",
+    "dialog:allow-open"
+  ]
+}
