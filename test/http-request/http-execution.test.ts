@@ -209,6 +209,50 @@ describe('HttpRequest execution service', () => {
 
     expect(areTestsPassed(result.testResults)).toBe(true);
     expect(globals.tokenVar).toBe('abc123');
+    expect(result.testResults.globalVars[0]).toMatchObject({
+      success: true,
+      status: 'set',
+      variableName: 'tokenVar',
+      valueType: 'jsonPath',
+      source: '$.args.token',
+      value: 'abc123',
+    });
+  });
+
+  it('records failed and skipped global variable settings', () => {
+    const unresolved = executeRequestTests(
+      { status: 200, rawBody: '{"value":"ok"}' },
+      {
+        statusCodeTests: [],
+        jsonFieldTests: [],
+        globalVariables: [{ enabled: true, variableName: 'missingVar', valueType: 'jsonPath', jsonPath: '$.missing', customValue: '', description: '' }],
+      },
+      { setGlobalVariable: () => {} },
+    );
+    expect(unresolved.globalVars[0]).toMatchObject({
+      success: false,
+      status: 'failed',
+      variableName: 'missingVar',
+      source: '$.missing',
+      message: 'Failed to set missingVar: value could not be resolved',
+    });
+
+    const skipped = executeRequestTests(
+      { status: 500, rawBody: '{}' },
+      {
+        statusCodeTests: [{ enabled: true, operator: 'equals', expectedValue: '200', description: '' }],
+        jsonFieldTests: [],
+        globalVariables: [{ enabled: true, variableName: 'tokenVar', valueType: 'customValue', jsonPath: '', customValue: 'token', description: '' }],
+      },
+      { setGlobalVariable: () => {} },
+    );
+    expect(skipped.globalVars[0]).toMatchObject({
+      success: false,
+      status: 'skipped',
+      variableName: 'tokenVar',
+      source: 'Custom value',
+      message: 'Skipped tokenVar: request tests failed',
+    });
   });
 
   it.each([

@@ -97,8 +97,13 @@ export interface JsonFieldTestResult {
 export interface GlobalVariableTestResult {
   index: number;
   success: boolean;
+  status?: 'set' | 'failed' | 'skipped';
   message: string;
   description: string;
+  variableName?: string;
+  valueType?: 'jsonPath' | 'customValue';
+  source?: string;
+  value?: string;
 }
 
 export interface RequestTestResults {

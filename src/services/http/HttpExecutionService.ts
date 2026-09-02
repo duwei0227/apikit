@@ -176,9 +176,26 @@ export const executeRequestTests = (
     });
   });
 
-  if (areTestsPassed(results)) {
-    globalVariables.forEach((variable, index) => {
-      if (!variable.enabled || !variable.variableName) return;
+  const enabledGlobalVariables = globalVariables
+    .map((variable, index) => ({ variable, index }))
+    .filter(({ variable }) => variable.enabled && variable.variableName);
+
+  if (!areTestsPassed(results)) {
+    enabledGlobalVariables.forEach(({ variable, index }) => {
+      results.globalVars.push({
+        index,
+        success: false,
+        status: 'skipped',
+        message: `Skipped ${variable.variableName}: request tests failed`,
+        description: variable.description,
+        variableName: variable.variableName,
+        valueType: variable.valueType,
+        source: variable.valueType === 'customValue' ? 'Custom value' : variable.jsonPath,
+      });
+    });
+  } else {
+    enabledGlobalVariables.forEach(({ variable, index }) => {
+      const source = variable.valueType === 'customValue' ? 'Custom value' : variable.jsonPath;
 
       const value = variable.valueType === 'customValue'
         ? variable.customValue
@@ -186,15 +203,47 @@ export const executeRequestTests = (
           ? extractValueFromJsonPath(jsonData, variable.jsonPath)
           : undefined;
 
-      if (value !== undefined && context.setGlobalVariable) {
-        context.setGlobalVariable(variable.variableName, String(value), true, variable.description);
+      if (value === undefined) {
         results.globalVars.push({
           index,
-          success: true,
-          message: `Set ${variable.variableName} = ${value}`,
+          success: false,
+          status: 'failed',
+          message: `Failed to set ${variable.variableName}: value could not be resolved`,
           description: variable.description,
+          variableName: variable.variableName,
+          valueType: variable.valueType,
+          source,
         });
+        return;
       }
+
+      if (!context.setGlobalVariable) {
+        results.globalVars.push({
+          index,
+          success: false,
+          status: 'failed',
+          message: `Failed to set ${variable.variableName}: global variable setter is unavailable`,
+          description: variable.description,
+          variableName: variable.variableName,
+          valueType: variable.valueType,
+          source,
+          value: String(value),
+        });
+        return;
+      }
+
+      context.setGlobalVariable(variable.variableName, String(value), true, variable.description);
+      results.globalVars.push({
+        index,
+        success: true,
+        status: 'set',
+        message: `Set ${variable.variableName} = ${value}`,
+        description: variable.description,
+        variableName: variable.variableName,
+        valueType: variable.valueType,
+        source,
+        value: String(value),
+      });
     });
   }
 

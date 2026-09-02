@@ -41,6 +41,30 @@ const selectedAssertions = computed(() => {
 });
 
 const selectedTestStats = computed(() => getRequestTestStats(selectedLog.value?.testResults));
+const selectedGlobalVariables = computed(() => selectedLog.value?.testResults?.globalVars || []);
+const selectedGlobalVariableStats = computed(() => ({
+  set: selectedGlobalVariables.value.filter(result => result.success).length,
+  total: selectedGlobalVariables.value.length,
+}));
+
+const getGlobalVariableStatus = (result: { success: boolean; status?: string }) => (
+  result.status || (result.success ? 'set' : 'failed')
+);
+
+const getGlobalVariableSeverity = (result: { success: boolean; status?: string }) => {
+  const status = getGlobalVariableStatus(result);
+  if (status === 'set') return 'success';
+  if (status === 'skipped') return 'warn';
+  return 'danger';
+};
+
+const getGlobalVariableName = (result: { variableName?: string; message: string }) => (
+  result.variableName || result.message.split(' = ')[0].replace(/^Set /, '').replace(/^Failed to set /, '')
+);
+
+const getGlobalVariableValue = (result: { value?: string; message: string }) => (
+  result.value ?? result.message.split(' = ')[1] ?? '-'
+);
 
 const lifecycleRowClasses = [
   'bg-sky-50/80 dark:bg-sky-950/30',
@@ -569,12 +593,16 @@ const copyLogBody = async (value: any, label: string) => {
           </div>
         </div>
 
-        <div v-if="selectedAssertions.length > 0" class="mt-4 pt-4 border-t border-surface-200 dark:border-surface-700 text-xs">
+        <div
+          v-if="selectedAssertions.length > 0 || selectedGlobalVariables.length > 0"
+          class="mt-4 pt-4 border-t border-surface-200 dark:border-surface-700 text-xs"
+        >
           <div class="flex items-center justify-between gap-3 mb-3">
             <h4 class="font-semibold text-surface-700 dark:text-surface-300">Tests</h4>
-            <span class="text-surface-500">{{ selectedTestStats?.passed || 0 }}/{{ selectedTestStats?.total || 0 }} passed</span>
+            <span v-if="selectedAssertions.length > 0" class="text-surface-500">{{ selectedTestStats?.passed || 0 }}/{{ selectedTestStats?.total || 0 }} passed</span>
+            <span v-else class="text-surface-400">No assertions</span>
           </div>
-          <div class="space-y-2">
+          <div v-if="selectedAssertions.length > 0" class="space-y-2">
             <div
               v-for="(result, index) in selectedAssertions"
               :key="`${result.typeLabel}-${result.index}-${index}`"
@@ -606,6 +634,54 @@ const copyLogBody = async (value: any, label: string) => {
                 <div class="p-2 rounded bg-surface-0/70 dark:bg-surface-900/70 min-w-0">
                   <div class="font-semibold text-surface-500 mb-1">Expected</div>
                   <div class="font-mono break-all">{{ formatWorkflowLogValue(result.expectedValue) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="selectedGlobalVariables.length > 0" class="mt-4 pt-4 border-t border-surface-200 dark:border-surface-700">
+            <div class="flex items-center justify-between gap-3 mb-3">
+              <h5 class="font-semibold text-surface-700 dark:text-surface-300 flex items-center gap-2">
+                <i class="pi pi-globe"></i>
+                Global Variables
+              </h5>
+              <span class="text-surface-500">{{ selectedGlobalVariableStats.set }}/{{ selectedGlobalVariableStats.total }} set</span>
+            </div>
+            <div class="space-y-2">
+              <div
+                v-for="result in selectedGlobalVariables"
+                :key="`global-variable-${result.index}`"
+                class="p-3 rounded border"
+                :class="getGlobalVariableStatus(result) === 'set'
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800'
+                  : getGlobalVariableStatus(result) === 'skipped'
+                    ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800'
+                    : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800'"
+              >
+                <div class="flex items-center gap-2 mb-1">
+                  <Badge
+                    :value="getGlobalVariableStatus(result)"
+                    :severity="getGlobalVariableSeverity(result)"
+                    class="text-badge"
+                  />
+                  <span class="font-semibold text-surface-700 dark:text-surface-200">Global variable</span>
+                  <span class="font-mono text-surface-500 break-all">{{ getGlobalVariableName(result) }}</span>
+                </div>
+                <div class="text-surface-700 dark:text-surface-300 break-all">{{ result.message }}</div>
+                <div v-if="result.description" class="mt-1 text-surface-500 break-all">{{ result.description }}</div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
+                  <div class="p-2 rounded bg-surface-0/70 dark:bg-surface-900/70 min-w-0">
+                    <div class="font-semibold text-surface-500 mb-1">Variable</div>
+                    <div class="font-mono break-all">{{ getGlobalVariableName(result) }}</div>
+                  </div>
+                  <div class="p-2 rounded bg-surface-0/70 dark:bg-surface-900/70 min-w-0">
+                    <div class="font-semibold text-surface-500 mb-1">Source</div>
+                    <div class="font-mono break-all">{{ result.source || (result.valueType === 'customValue' ? 'Custom value' : '-') }}</div>
+                  </div>
+                  <div class="p-2 rounded bg-surface-0/70 dark:bg-surface-900/70 min-w-0">
+                    <div class="font-semibold text-surface-500 mb-1">Value</div>
+                    <div class="font-mono break-all">{{ getGlobalVariableValue(result) }}</div>
+                  </div>
                 </div>
               </div>
             </div>

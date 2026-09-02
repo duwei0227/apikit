@@ -180,6 +180,14 @@ describe('workflow request step', () => {
     });
 
     expect(globals.slideTitle).toContain('Sample');
+    const requestLog = store.getWorkflowLogs(definition.id).find(log => log.stepType === 'request');
+    expect(requestLog?.testResults?.globalVars[0]).toMatchObject({
+      success: true,
+      status: 'set',
+      variableName: 'slideTitle',
+      source: '$.args.slideTitle',
+      value: 'Sample',
+    });
   });
 
   it('WF-REQ-006 applies workflow overrides to the latest referenced request', async () => {
