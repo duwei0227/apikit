@@ -81,7 +81,7 @@ export const getRunningWorkflowLogExpandedKeys = (nodes: WorkflowLogTreeNode[]) 
   const visit = (node: WorkflowLogTreeNode, ancestors: WorkflowLogTreeNode[]) => {
     const path = [...ancestors, node];
     const sequence = node.data.sequence || 0;
-    if (node.data.status === 'started' && sequence >= latestRunningSequence) {
+    if (['started', 'running'].includes(node.data.status) && sequence >= latestRunningSequence) {
       latestRunningSequence = sequence;
       latestRunningPath = path;
     }

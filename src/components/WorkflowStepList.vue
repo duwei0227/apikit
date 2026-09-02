@@ -39,6 +39,8 @@ const editingInlineStep = ref<WorkflowStep | null>(null);
 const inlineEditorDraft = ref<Request | null>(null);
 const inlineEditorBaselineFingerprint = ref('');
 const inlineRequestEditorRef = ref<any>(null);
+const draggedStepId = ref<string | null>(null);
+const dropTarget = ref<{ stepId: string; position: 'before' | 'after' } | null>(null);
 const operators = [
   { label: 'Equals', value: 'equals' },
   { label: 'Not equals', value: 'notEquals' },
@@ -362,6 +364,56 @@ const moveStep = (index: number, offset: number) => {
   notify();
 };
 
+const startStepDrag = (event: DragEvent, step: WorkflowStep) => {
+  draggedStepId.value = step.id;
+  dropTarget.value = null;
+  if (!event.dataTransfer) return;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', step.id);
+};
+
+const updateStepDropTarget = (event: DragEvent, step: WorkflowStep) => {
+  if (!draggedStepId.value) return;
+  event.stopPropagation();
+  if (draggedStepId.value === step.id) {
+    dropTarget.value = null;
+    return;
+  }
+
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  const target = event.currentTarget as HTMLElement;
+  const position = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2
+    ? 'before'
+    : 'after';
+  dropTarget.value = { stepId: step.id, position };
+};
+
+const finishStepDrag = () => {
+  draggedStepId.value = null;
+  dropTarget.value = null;
+};
+
+const dropStep = (event: DragEvent, targetStep: WorkflowStep) => {
+  if (!draggedStepId.value || !dropTarget.value) return;
+  event.preventDefault();
+  event.stopPropagation();
+
+  const sourceIndex = props.steps.findIndex(step => step.id === draggedStepId.value);
+  const targetIndex = props.steps.findIndex(step => step.id === targetStep.id);
+  if (sourceIndex < 0 || targetIndex < 0) {
+    finishStepDrag();
+    return;
+  }
+
+  let insertionIndex = targetIndex + (dropTarget.value.position === 'after' ? 1 : 0);
+  const [step] = props.steps.splice(sourceIndex, 1);
+  if (sourceIndex < insertionIndex) insertionIndex -= 1;
+  props.steps.splice(insertionIndex, 0, step);
+  finishStepDrag();
+  notify();
+};
+
 const toggleCollapsed = (step: WorkflowStep) => {
   step.collapsed = !step.collapsed;
   notify();
@@ -404,9 +456,30 @@ const requestTests = (request: Request) => {
     <div
       v-for="(step, index) in steps"
       :key="step.id"
-      class="border border-surface-200 dark:border-surface-700 rounded bg-surface-0 dark:bg-surface-900"
+      class="relative border rounded transition-colors"
+      :class="step.enabled
+        ? 'border-surface-200 bg-surface-0 dark:border-surface-700 dark:bg-surface-900'
+        : 'border-dashed border-surface-300 bg-surface-100 dark:border-surface-700 dark:bg-surface-950'"
+      @dragover="updateStepDropTarget($event, step)"
+      @drop="dropStep($event, step)"
     >
+      <div
+        v-if="dropTarget?.stepId === step.id"
+        class="pointer-events-none absolute inset-x-1 z-20 h-0.5 bg-primary-500 shadow-[0_0_0_1px_var(--p-primary-200)]"
+        :class="dropTarget.position === 'before' ? '-top-0.5' : '-bottom-0.5'"
+      ></div>
       <div class="flex items-center gap-2 p-3 border-b border-surface-100 dark:border-surface-800">
+        <button
+          type="button"
+          draggable="true"
+          class="inline-flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded text-surface-500 hover:bg-surface-100 hover:text-surface-700 active:cursor-grabbing dark:hover:bg-surface-800 dark:hover:text-surface-200"
+          title="Drag to reorder"
+          aria-label="Drag to reorder step"
+          @dragstart.stop="startStepDrag($event, step)"
+          @dragend.stop="finishStepDrag"
+        >
+          <i class="pi pi-bars"></i>
+        </button>
         <Button
           :icon="step.collapsed ? 'pi pi-chevron-right' : 'pi pi-chevron-down'"
           text
@@ -416,15 +489,31 @@ const requestTests = (request: Request) => {
           :title="step.collapsed ? 'Expand' : 'Collapse'"
           @click="toggleCollapsed(step)"
         />
-        <Checkbox v-model="step.enabled" :binary="true" @update:modelValue="notify" />
-        <Badge :value="stepTypeLabel(step.type)" severity="info" />
-        <InputText v-model="step.name" size="small" class="flex-1 min-w-0" @update:modelValue="notify" />
+        <Checkbox
+          v-model="step.enabled"
+          :binary="true"
+          :title="step.enabled ? 'Disable step' : 'Enable step'"
+          @update:modelValue="notify"
+        />
+        <Badge :value="stepTypeLabel(step.type)" :severity="step.enabled ? 'info' : 'secondary'" />
+        <Badge v-if="!step.enabled" value="Disabled" severity="secondary" />
+        <InputText
+          v-model="step.name"
+          size="small"
+          class="flex-1 min-w-0"
+          :class="{ 'opacity-60': !step.enabled }"
+          @update:modelValue="notify"
+        />
         <Button icon="pi pi-arrow-up" text rounded size="small" :disabled="index === 0" @click="moveStep(index, -1)" />
         <Button icon="pi pi-arrow-down" text rounded size="small" :disabled="index === steps.length - 1" @click="moveStep(index, 1)" />
         <Button icon="pi pi-trash" text rounded size="small" severity="danger" @click="removeStep(index)" />
       </div>
 
-      <div v-if="!step.collapsed" class="p-3 space-y-3">
+      <div
+        v-if="!step.collapsed"
+        class="p-3 space-y-3 transition-opacity"
+        :class="{ 'opacity-60': !step.enabled }"
+      >
         <template v-if="step.type === 'request'">
           <div class="flex flex-wrap items-center gap-2">
             <Dropdown

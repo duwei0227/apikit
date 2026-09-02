@@ -459,7 +459,7 @@ export const useWorkflowsStore = defineStore('workflows', () => {
 
   async function runRequestStep(step: WorkflowStep, context: WorkflowRuntimeContext, depth: number, parentId?: string): Promise<any> {
     const started = Date.now();
-    let requestLog = addLog(makeLog(step, 'started', 'info', 'Request running', { depth, parentId }));
+    let requestLog = addLog(makeLog(step, 'running', 'info', 'Request running', { depth, parentId }));
     let result: Awaited<ReturnType<typeof executeHttpRequest>>;
 
     try {
@@ -482,7 +482,7 @@ export const useWorkflowsStore = defineStore('workflows', () => {
         onRequestStart: requestId => { currentRequestId.value = requestId; },
       });
     } catch (error: any) {
-      if (requestLog.status === 'started') {
+      if (requestLog.status === 'running') {
         requestLog = updateLog(requestLog, {
           status: stopRequested.value ? 'stopped' : 'failed',
           level: stopRequested.value ? 'warn' : 'error',

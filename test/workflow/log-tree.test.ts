@@ -83,7 +83,7 @@ describe('workflow log tree', () => {
       log({ id: 'outer-iteration', parentId: 'outer', sequence: 3, stepType: 'for', iteration: 1, status: 'started' }),
       log({ id: 'inner', parentId: 'outer-iteration', sequence: 4, stepType: 'while', status: 'started' }),
       log({ id: 'inner-iteration', parentId: 'inner', sequence: 5, stepType: 'while', iteration: 1, status: 'started' }),
-      log({ id: 'request', parentId: 'inner-iteration', sequence: 6, status: 'started' }),
+      log({ id: 'request', parentId: 'inner-iteration', sequence: 6, status: 'running' }),
     ];
     const nodes = buildWorkflowLogTree(nestedLogs);
     expect(getRunningWorkflowLogExpandedKeys(nodes)).toEqual({

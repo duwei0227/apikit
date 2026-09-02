@@ -68,16 +68,16 @@ describe('workflow request step', () => {
     await vi.waitFor(() => {
       const requestLogs = store.getWorkflowLogs(definition.id).filter(item => item.stepType === 'request');
       expect(requestLogs).toHaveLength(1);
-      expect(requestLogs[0]).toMatchObject({ status: 'started', level: 'info', message: 'Request running' });
+      expect(requestLogs[0]).toMatchObject({ status: 'running', level: 'info', message: 'Request running' });
     });
 
-    const startedLogId = store.getWorkflowLogs(definition.id).find(item => item.stepType === 'request')?.id;
+    const runningLogId = store.getWorkflowLogs(definition.id).find(item => item.stepType === 'request')?.id;
     finishLoading(savedRequest);
     await run;
 
     const requestLogs = store.getWorkflowLogs(definition.id).filter(item => item.stepType === 'request');
     expect(requestLogs).toHaveLength(1);
-    expect(requestLogs[0]).toMatchObject({ id: startedLogId, status: 'passed', level: 'success', message: 'Request completed: 200' });
+    expect(requestLogs[0]).toMatchObject({ id: runningLogId, status: 'passed', level: 'success', message: 'Request completed: 200' });
     loadSpy.mockRestore();
   });
 

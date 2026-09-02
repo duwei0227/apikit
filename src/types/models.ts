@@ -200,7 +200,7 @@ export interface WorkflowRunLog {
   stepType: WorkflowStepType | 'workflow';
   depth?: number;
   level: 'info' | 'success' | 'warn' | 'error';
-  status: 'started' | 'completed' | 'passed' | 'failed' | 'skipped' | 'stopped' | 'then' | 'else';
+  status: 'started' | 'running' | 'completed' | 'passed' | 'failed' | 'skipped' | 'stopped' | 'then' | 'else';
   message: string;
   iteration?: number;
   iterationTotal?: number;

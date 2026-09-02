@@ -235,6 +235,7 @@ const getStatusSeverity = (log: WorkflowRunLog) => {
   if (log.level === 'error' || log.status === 'failed') return 'danger';
   if (log.level === 'success' || log.status === 'passed' || log.status === 'completed') return 'success';
   if (log.level === 'warn' || log.status === 'stopped') return 'warn';
+  if (log.status === 'running') return 'secondary';
   return 'info';
 };
 
@@ -242,6 +243,7 @@ const getRowClass = (log: WorkflowLogTreeRow) => {
   if (selectedLog.value?.id === log.id) return 'bg-surface-50 dark:bg-surface-900';
   if (log.level === 'error' || log.status === 'failed') return 'bg-red-50/80 dark:bg-red-950/30';
   if (log.level === 'warn' || log.status === 'stopped') return 'bg-amber-50/80 dark:bg-amber-950/30';
+  if (log.status === 'running') return 'bg-violet-50/70 dark:bg-violet-950/25';
   if (log.lifecycleDepth === undefined) {
     return '';
   }
@@ -251,6 +253,9 @@ const getRowClass = (log: WorkflowLogTreeRow) => {
 const getStatusBadgeClass = (log: WorkflowLogTreeRow) => {
   if (log.level === 'error' || log.status === 'failed' || log.level === 'warn' || log.status === 'stopped') {
     return '';
+  }
+  if (log.status === 'running') {
+    return '!bg-violet-500 !text-white dark:!bg-violet-400 dark:!text-violet-950 ring-1 ring-inset ring-violet-600/20';
   }
   if (log.lifecycleDepth === undefined) {
     return '';
@@ -477,7 +482,7 @@ const copyLogBody = async (value: any, label: string) => {
         v-if="selectedLog"
         class="flex-shrink-0 h-[82.5%] max-h-[calc(100%-5rem)] min-h-80 overflow-y-auto border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-950 p-3"
       >
-        <div class="flex items-center justify-between gap-3 mb-3">
+        <div class="sticky top-0 z-20 flex items-center justify-between gap-3 -mx-3 -mt-3 mb-3 px-3 py-3 border-b border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-950 shadow-sm">
           <div class="min-w-0">
             <div class="font-semibold text-surface-800 dark:text-surface-100 truncate">{{ selectedLog.stepName }}</div>
             <div class="text-xs text-surface-500 truncate">{{ selectedLog.message }}</div>
