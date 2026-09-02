@@ -8,6 +8,7 @@ import RequestBodyEditor from './RequestBodyEditor.vue';
 import { apiService } from '@/services/api/apiService';
 import { useKeyValueRows } from '@/composables/useKeyValueRows';
 import { parseCurl } from '@/utils/curl-parser';
+import { generateCurlCommand } from '@/utils/curl-generator';
 import { debounce } from '@/utils/debounce';
 import { formatJsonPreservingNumbers, parseJsonPreservingNumbers } from '@/utils/jsonFormat';
 import { removeHttpHeader, setDefaultHeader } from '@/utils/httpHeaders';
@@ -1645,98 +1646,42 @@ const isRequestNameDuplicate = (collectionId, folderId, requestName, excludeRequ
   );
 };
 
-const generateCurl = (resolveVars = false) => {
-  const rv = resolveVars ? replaceVariables : (s) => s;
-  let curl = `curl -X ${localRequest.value.method}`;
+const generateCurl = (variableResolver = (value) => value) => generateCurlCommand(
+  localRequest.value,
+  {
+    followRedirects: followRedirects.value,
+    maxRedirectCount: maxRedirectCount.value,
+    verifySsl: verifySsl.value,
+    autoEncodeUrl: autoEncodeUrl.value,
+    acceptEncoding: acceptEncoding.value,
+  },
+  variableResolver,
+);
 
-  if (followRedirects.value) {
-    curl += ` \\\n  --location`;
-  }
-  curl += ` \\\n  --max-redirs ${maxRedirectCount.value}`;
-  if (!verifySsl.value) {
-    curl += ` \\\n  --insecure`;
-  }
-  if (acceptEncoding.value) {
-    curl += ` \\\n  --compressed`;
+const createCurlPreviewResolver = () => {
+  const manager = getEnvironmentManager();
+  if (manager && typeof manager.createVariableResolver === 'function') {
+    return manager.createVariableResolver({ consumeSequences: false });
   }
 
-  const url = buildRequestUrl(localRequest.value.url, localRequest.value.params, {
-    autoEncode: autoEncodeUrl.value,
-    transform: rv,
+  // 环境管理器尚未挂载时仍解析 store 中已有的环境/全局变量。
+  const variables = { ...environmentsStore.getAllAvailableVariables };
+  return (value) => String(value ?? '').replace(/\{\{([^}]+)\}\}/g, (match, variableName) => {
+    const key = variableName.trim();
+    return variables[key] !== undefined ? variables[key] : match;
   });
-
-  curl += ` '${url}'`;
-
-  const headers = {};
-  localRequest.value.headers
-    .filter(h => h.enabled && h.key)
-    .forEach(h => {
-      headers[rv(h.key)] = rv(h.value);
-    });
-
-  if (localRequest.value.auth.type === 'bearer' && localRequest.value.auth.token) {
-    const token = rv(localRequest.value.auth.token);
-    headers['Authorization'] = token.toLowerCase().startsWith('bearer ') ? token : `Bearer ${token}`;
-  } else if (localRequest.value.auth.type === 'basic' && localRequest.value.auth.username) {
-    const credentials = btoa(`${rv(localRequest.value.auth.username)}:${rv(localRequest.value.auth.password)}`);
-    headers['Authorization'] = `Basic ${credentials}`;
-  }
-
-  if (canSendRequestBody(localRequest.value.method)) {
-    if (localRequest.value.body.type === 'json') {
-      setDefaultHeader(headers, 'Content-Type', 'application/json');
-    } else if (localRequest.value.body.type === 'xml') {
-      setDefaultHeader(headers, 'Content-Type', 'application/xml');
-    } else if (localRequest.value.body.type === 'text') {
-      setDefaultHeader(headers, 'Content-Type', 'text/plain');
-    } else if (localRequest.value.body.type === 'binary') {
-      setDefaultHeader(headers, 'Content-Type', 'application/octet-stream');
-    } else if (localRequest.value.body.type === 'x-www-form-urlencoded') {
-      setDefaultHeader(headers, 'Content-Type', 'application/x-www-form-urlencoded');
-    }
-  }
-
-  Object.entries(headers).forEach(([key, value]) => {
-    curl += ` \\\n  -H '${key}: ${value}'`;
-  });
-
-  if (canSendRequestBody(localRequest.value.method)) {
-    if (localRequest.value.body.type === 'json' && localRequest.value.body.raw) {
-      const escapedBody = rv(localRequest.value.body.raw).replace(/'/g, "'\\''");
-      curl += ` \\\n  -d '${escapedBody}'`;
-    } else if (localRequest.value.body.type === 'xml' && localRequest.value.body.raw) {
-      const escapedBody = rv(localRequest.value.body.raw).replace(/'/g, "'\\''");
-      curl += ` \\\n  -d '${escapedBody}'`;
-    } else if (localRequest.value.body.type === 'text' && localRequest.value.body.raw) {
-      const escapedBody = rv(localRequest.value.body.raw).replace(/'/g, "'\\''");
-      curl += ` \\\n  --data-raw '${escapedBody}'`;
-    } else if (localRequest.value.body.type === 'binary' && localRequest.value.body.filePath) {
-      const escapedPath = rv(localRequest.value.body.filePath).replace(/'/g, "'\\''");
-      curl += ` \\\n  --data-binary '@${escapedPath}'`;
-    } else if (localRequest.value.body.type === 'x-www-form-urlencoded') {
-      const enabledData = localRequest.value.body.urlencoded.filter(r => r.enabled && r.key);
-      const body = enabledData
-        .map(r => `${encodeURIComponent(rv(r.key))}=${encodeURIComponent(rv(r.value))}`)
-        .join('&');
-      curl += ` \\\n  -d '${body}'`;
-    } else if (localRequest.value.body.type === 'form-data') {
-      const enabledData = localRequest.value.body.formData.filter(r => r.enabled && r.key);
-      enabledData.forEach(r => {
-        if (r.type === 'text') {
-          curl += ` \\\n  -F '${rv(r.key)}=${rv(r.value)}'`;
-        } else if (r.type === 'file' && (r.file || r.filePath)) {
-          curl += ` \\\n  -F '${rv(r.key)}=@${r.filePath || r.value}'`;
-        }
-      });
-    }
-  }
-
-  return curl;
 };
+
+// computed 本身就是一次稳定快照；请求、设置、环境或页签变化后才会重新生成。
+const curlPreview = computed(() => {
+  void activeParamTab.value;
+  void activeCodeTab.value;
+  return generateCurl(createCurlPreviewResolver());
+});
 
 const copyCurl = async () => {
   try {
-    await navigator.clipboard.writeText(generateCurl(true));
+    await navigator.clipboard.writeText(curlPreview.value);
     // 显示成功提示
     if (window.$toast) {
       window.$toast.add({
@@ -2330,7 +2275,7 @@ defineExpose({
                         @click="copyCurl"
                       />
                     </div>
-                    <pre class="p-4 bg-surface-100 dark:bg-surface-900 rounded text-xs font-mono whitespace-pre-wrap overflow-x-auto border border-surface-200 dark:border-surface-700 max-h-96">{{ generateCurl() }}</pre>
+                    <pre class="p-4 bg-surface-100 dark:bg-surface-900 rounded text-xs font-mono whitespace-pre-wrap overflow-x-auto border border-surface-200 dark:border-surface-700 max-h-96">{{ curlPreview }}</pre>
                   </div>
                 </TabPanel>
 

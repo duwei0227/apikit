@@ -12,6 +12,12 @@ export interface Sequence {
   updatedAt: string;
 }
 
+export interface SequencePreviewCursor {
+  currentValue: number;
+  step: number;
+  padding: number;
+}
+
 export const useSequencesStore = defineStore('sequences', () => {
   // State
   const sequences = ref<Map<string, Sequence>>(new Map());
@@ -83,6 +89,35 @@ export const useSequencesStore = defineStore('sequences', () => {
     return value.toString();
   }
 
+  function getSequenceSnapshot(name: string = 'default'): Sequence | undefined {
+    const sequence = sequences.value.get(name);
+    return sequence ? { ...sequence } : undefined;
+  }
+
+  function getPreviewNextValue(
+    cursors: Map<string, SequencePreviewCursor>,
+    name: string = 'default',
+    padding: number | null = null,
+    startValue: number = 1,
+    step: number = 1,
+  ): string {
+    let cursor = cursors.get(name);
+    if (!cursor) {
+      const sequence = getSequenceSnapshot(name);
+      cursor = sequence
+        ? { currentValue: sequence.currentValue, step: sequence.step, padding: sequence.padding }
+        : { currentValue: startValue, step, padding: padding ?? 0 };
+      cursors.set(name, cursor);
+    }
+
+    const value = cursor.currentValue;
+    cursor.currentValue += cursor.step;
+    const effectivePadding = padding !== null ? padding : cursor.padding;
+    return effectivePadding > 0
+      ? value.toString().padStart(effectivePadding, '0')
+      : value.toString();
+  }
+
   async function resetSequence(name: string, value: number) {
     const sequence = sequences.value.get(name);
     if (sequence) {
@@ -132,6 +167,8 @@ export const useSequencesStore = defineStore('sequences', () => {
     loadSequences,
     saveSequences,
     getNextValue,
+    getSequenceSnapshot,
+    getPreviewNextValue,
     resetSequence,
     updateSequence,
     deleteSequence,

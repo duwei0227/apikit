@@ -905,7 +905,7 @@ const generateRandomChineseString = (length = 10) => {
 };
 
 // 获取所有可用变量（环境变量 + 内置变量）
-const getAllAvailableVariables = () => {
+const getAllAvailableVariables = (now = new Date()) => {
   const envVars = getCurrentEnvironmentVariables();
   
   // 全局变量（由 Tests 设置的）
@@ -917,8 +917,6 @@ const getAllAvailableVariables = () => {
       }
     });
   }
-  
-  const now = new Date();
   
   // 内置变量
   // $randomInt: 默认范围 0-1000，也可以使用 $randomInt(start, end) 指定范围
@@ -933,8 +931,8 @@ const getAllAvailableVariables = () => {
   // $randomChinese: 默认长度 10，生成随机中文字符，可以使用 $randomChinese(length) 自定义
   // $sequence: 自增序列，可以使用 $sequence(name, padding, start, step) 自定义
   const builtInVars = {
-    '$timestamp': Date.now().toString(),
-    '$isoTimestamp': new Date().toISOString(),
+    '$timestamp': now.getTime().toString(),
+    '$isoTimestamp': now.toISOString(),
     '$randomInt': Math.floor(Math.random() * 1001).toString(), // 0-1000
     '$guid': crypto.randomUUID(),
     '$date': formatDateTime(now, 'yyyyMMdd'),
@@ -953,10 +951,10 @@ const getAllAvailableVariables = () => {
 };
 
 // 替换字符串中的变量
-const replaceVariables = (str) => {
+const replaceVariables = (str, resolutionContext = null) => {
   if (!str || typeof str !== 'string') return str;
   
-  const allVars = getAllAvailableVariables();
+  const allVars = resolutionContext?.allVars || getAllAvailableVariables();
   console.log('[EnvironmentManager] ========== replaceVariables START ==========');
   console.log('[EnvironmentManager] Input string:', str);
   console.log('[EnvironmentManager] Input string length:', str.length);
@@ -967,6 +965,13 @@ const replaceVariables = (str) => {
   const result = str.replace(/\{\{([^}]+)\}\}/g, (match, varName) => {
     const trimmedVarName = varName.trim();
     console.log(`[EnvironmentManager] Processing variable: "${trimmedVarName}" from match: "${match}"`);
+
+    const isSequenceVariable = trimmedVarName === '$sequence' || trimmedVarName.startsWith('$sequence(');
+    if (!isSequenceVariable && resolutionContext?.resolvedValues.has(trimmedVarName)) {
+      return resolutionContext.resolvedValues.get(trimmedVarName);
+    }
+
+    const resolvedValue = (() => {
     
     // 检查是否是 $sequence 函数调用
     if (trimmedVarName === '$sequence' || trimmedVarName.startsWith('$sequence(')) {
@@ -1029,8 +1034,19 @@ const replaceVariables = (str) => {
         }
       }
       
+      // 预览只在当前解析会话内模拟步进，不创建或推进真实序列。
+      if (resolutionContext?.consumeSequences === false) {
+        return sequencesStore.getPreviewNextValue(
+          resolutionContext.sequenceStates,
+          name,
+          padding,
+          startValue,
+          step,
+        );
+      }
+
       // 检查序列是否已存在
-      const existingSeq = sequencesStore.getAllSequences().find(s => s.name === name);
+      const existingSeq = sequencesStore.getSequenceSnapshot(name);
       
       if (existingSeq) {
         // 序列已存在：忽略 startValue 和 step 参数
@@ -1198,7 +1214,7 @@ const replaceVariables = (str) => {
         }
       }
       
-      const formattedDate = formatDateTime(new Date(), format);
+      const formattedDate = formatDateTime(resolutionContext?.now || new Date(), format);
       console.log(`[EnvironmentManager] Replacing ${match} with formatted date: ${formattedDate}`);
       return formattedDate;
     }
@@ -1217,7 +1233,7 @@ const replaceVariables = (str) => {
         }
       }
       
-      const formattedTime = formatDateTime(new Date(), format);
+      const formattedTime = formatDateTime(resolutionContext?.now || new Date(), format);
       console.log(`[EnvironmentManager] Replacing ${match} with formatted time: ${formattedTime}`);
       return formattedTime;
     }
@@ -1236,22 +1252,42 @@ const replaceVariables = (str) => {
         }
       }
       
-      const formattedDatetime = formatDateTime(new Date(), format);
+      const formattedDatetime = formatDateTime(resolutionContext?.now || new Date(), format);
       console.log(`[EnvironmentManager] Replacing ${match} with formatted datetime: ${formattedDatetime}`);
       return formattedDatetime;
     }
     
     // 普通变量替换
     // 注意：$sequence 已经在上面特殊处理了，不会到达这里
-    const replacement = allVars[trimmedVarName] !== undefined ? allVars[trimmedVarName] : match;
-    console.log(`[EnvironmentManager] Ordinary variable replacement: ${match} -> ${replacement}`);
-    return replacement;
+    const ordinaryReplacement = allVars[trimmedVarName] !== undefined ? allVars[trimmedVarName] : match;
+    console.log(`[EnvironmentManager] Ordinary variable replacement: ${match} -> ${ordinaryReplacement}`);
+    return ordinaryReplacement;
+    })();
+
+    if (!isSequenceVariable && resolutionContext && resolvedValue !== match) {
+      resolutionContext.resolvedValues.set(trimmedVarName, resolvedValue);
+    }
+    return resolvedValue;
   });
   
   console.log('[EnvironmentManager] Result:', result);
   console.log('[EnvironmentManager] Result length:', result.length);
   console.log('[EnvironmentManager] ========== replaceVariables END ==========');
   return result;
+};
+
+// 创建一次变量解析会话。预览会话会固定动态值，并只在内存中模拟序列步进。
+const createVariableResolver = ({ consumeSequences = true } = {}) => {
+  const now = new Date();
+  const resolutionContext = {
+    consumeSequences,
+    now,
+    allVars: getAllAvailableVariables(now),
+    resolvedValues: new Map(),
+    sequenceStates: new Map(),
+  };
+
+  return (value) => replaceVariables(value, resolutionContext);
 };
 
 // 设置全局变量的方法
@@ -1316,6 +1352,7 @@ defineExpose({
   getCurrentEnvironmentVariables,
   getAllAvailableVariables,
   replaceVariables,
+  createVariableResolver,
   currentEnvironment,
   openCreateDialog,
   setGlobalVariable
