@@ -1,6 +1,6 @@
 [package]
 name = "apikit"
-version = "0.2.19"
+version = "0.2.20"
 description = "Modern API testing tool - A cross-platform desktop application for testing HTTP APIs"
 authors = ["duwei0227"]
 edition = "2024"
