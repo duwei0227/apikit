@@ -100,7 +100,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYxMThENTI4NEE2MzUyQ0MKUldUTVVtTktLTlVZWWV6K0dId0E2VGFYdVdDc2pIRWtPdjBmTXZmVkVFMnJVUU9YaVBSUG9RV3YK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI2QkFEMzZGMThFQzVCMjAKUldRZ1crd1liOU82dGhtSXY4SWJYemZlWEw1WDFPbFhjb3VQSmVoTEFtZW9DMkI5OHpkZm5DN3IK",
       "endpoints": [
         "https://github.com/duwei0227/apikit/releases/latest/download/latest.json"
       ]
