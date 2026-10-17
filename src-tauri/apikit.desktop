@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ApiKit
+GenericName=API Testing Tool
+Comment=Modern API testing tool for developers
+Exec=apikit %U
+Icon=apikit
+Terminal=false
+Categories=Development;Network;WebDevelopment;
+Keywords=api;http;rest;testing;postman;development;
+MimeType=x-scheme-handler/apikit;
+StartupNotify=true
+StartupWMClass=ApiKit
