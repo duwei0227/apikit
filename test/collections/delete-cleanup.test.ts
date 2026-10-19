@@ -134,3 +134,33 @@ describe('reordering folders', () => {
     expect(shape(collection.id)).toEqual([['Users', []], 'Login', ['Orders', []]]);
   });
 });
+
+describe('reordering requests', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+
+  const shape = (collectionId: string) => {
+    const collection = buildCollectionTree(useCollectionsStore().collections).find(node => node.data.id === collectionId)!;
+    return collection.children.map(node => node.label);
+  };
+
+  it('COL-MOVE-004 swaps a request with the next item shown in the tree instead of skipping folders', async () => {
+    const collections = useCollectionsStore();
+    const collection = await collections.createCollection('Shop');
+    await collections.addRequestReference(collection.id, 'r1', 'Login', 'GET', '/login');
+    await collections.addFolder(collection.id, 'Orders');
+    await collections.addRequestReference(collection.id, 'r2', 'Logout', 'GET', '/logout');
+    expect(shape(collection.id)).toEqual(['Login', 'Orders', 'Logout']);
+
+    await collections.reorderRequest(collection.id, 'r2', 'up');
+    expect(shape(collection.id)).toEqual(['Login', 'Logout', 'Orders']);
+    await collections.reorderRequest(collection.id, 'r1', 'down');
+    expect(shape(collection.id)).toEqual(['Logout', 'Login', 'Orders']);
+    await collections.reorderRequest(collection.id, 'r1', 'down');
+    expect(shape(collection.id)).toEqual(['Logout', 'Orders', 'Login']);
+    // 已在最下面时不变
+    await collections.reorderRequest(collection.id, 'r1', 'down');
+    expect(shape(collection.id)).toEqual(['Logout', 'Orders', 'Login']);
+  });
+});

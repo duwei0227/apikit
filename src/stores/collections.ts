@@ -329,26 +329,13 @@ export const useCollectionsStore = defineStore('collections', () => {
   }
 
 
+  /** 请求与同一层中相邻的子项（文件夹或请求，按显示顺序）交换位置；已在最上或最下时不变 */
   async function reorderRequest(collectionId: string, requestId: string, direction: 'up' | 'down') {
     try {
       const collection = collections.value.find(c => c.id === collectionId);
       if (!collection) throw new Error(`Collection ${collectionId} not found`);
       const container = findRequestContainer(collection, requestId);
-      if (!container) return;
-      const index = container.requests.findIndex(r => r.id === requestId);
-      if (index === -1) return;
-      const newIndex = direction === 'up' ? index - 1 : index + 1;
-      if (newIndex < 0 || newIndex >= container.requests.length) return;
-      const temp = container.requests[index];
-      container.requests[index] = container.requests[newIndex];
-      container.requests[newIndex] = temp;
-      // 若带 order，则同时交换 order 值，否则按 order 排序的渲染看不到数组交换的效果。
-      const aOrder = container.requests[index].order;
-      const bOrder = container.requests[newIndex].order;
-      if (typeof aOrder === 'number' && typeof bOrder === 'number') {
-        container.requests[index].order = bOrder;
-        container.requests[newIndex].order = aOrder;
-      }
+      if (!container || !swapWithAdjacentChild(container, 'request', requestId, direction)) return;
       collection.updatedAt = new Date().toISOString();
       await storageService.saveCollection(collection);
     } catch (e) {
@@ -363,16 +350,7 @@ export const useCollectionsStore = defineStore('collections', () => {
       const collection = collections.value.find(c => c.id === collectionId);
       if (!collection) throw new Error(`Collection ${collectionId} not found`);
       const container = findFolderContainer(collection, folderId);
-      if (!container) return;
-      const entries = orderedChildEntries(container);
-      const index = entries.findIndex(entry => entry.kind === 'folder' && entry.item.id === folderId);
-      const newIndex = direction === 'up' ? index - 1 : index + 1;
-      if (index === -1 || newIndex < 0 || newIndex >= entries.length) return;
-      [entries[index], entries[newIndex]] = [entries[newIndex], entries[index]];
-      // 重新编号，旧集合（子项没有 order）交换后也按新顺序显示
-      entries.forEach((entry, order) => {
-        entry.item.order = order;
-      });
+      if (!container || !swapWithAdjacentChild(container, 'folder', folderId, direction)) return;
       collection.updatedAt = new Date().toISOString();
       await storageService.saveCollection(collection);
     } catch (e) {
@@ -485,6 +463,24 @@ export const useCollectionsStore = defineStore('collections', () => {
     entries.forEach((entry, index) => {
       entry.item.order = index;
     });
+  }
+
+  /** 按显示顺序与相邻子项交换，并重新编号 order（旧集合的子项没有 order 时也按新顺序显示）；没有移动时返回 false */
+  function swapWithAdjacentChild(
+    container: Collection | Folder,
+    kind: 'request' | 'folder',
+    id: string,
+    direction: 'up' | 'down'
+  ): boolean {
+    const entries = orderedChildEntries(container);
+    const index = entries.findIndex(entry => entry.kind === kind && entry.item.id === id);
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (index === -1 || newIndex < 0 || newIndex >= entries.length) return false;
+    [entries[index], entries[newIndex]] = [entries[newIndex], entries[index]];
+    entries.forEach((entry, order) => {
+      entry.item.order = order;
+    });
+    return true;
   }
 
   function orderedChildEntries(container: Collection | Folder) {
