@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { storageService } from '@/services/storage';
 import { debounce } from '@/utils/debounce';
-import type { AppState } from '@/types/models';
+import type { AppState, SaveLocation } from '@/types/models';
 
 export type ContentTabType = 'request' | 'workflow' | 'mock';
 
@@ -22,6 +22,7 @@ export const useAppStateStore = defineStore('appState', () => {
   const tabOrder = ref<string[]>([]);
   const sidebarWidth = ref(320);
   const footerHeight = ref(200);
+  const lastSaveLocation = ref<SaveLocation | null>(null);
   const isLoading = ref(true);
 
   // Debounced save function
@@ -35,6 +36,7 @@ export const useAppStateStore = defineStore('appState', () => {
       tabOrder: tabOrder.value,
       sidebarWidth: sidebarWidth.value,
       footerHeight: footerHeight.value,
+      lastSaveLocation: lastSaveLocation.value,
       lastSavedAt: new Date().toISOString()
     };
     
@@ -83,7 +85,7 @@ export const useAppStateStore = defineStore('appState', () => {
   const contentTabs = computed<ContentTab[]>(() => tabOrder.value.map(parseTabKey));
 
   // Watch for changes and auto-save
-  watch([openRequests, activeRequestIndex, openWorkflows, openMocks, activeContentIndex, tabOrder, sidebarWidth, footerHeight], () => {
+  watch([openRequests, activeRequestIndex, openWorkflows, openMocks, activeContentIndex, tabOrder, sidebarWidth, footerHeight, lastSaveLocation], () => {
     debouncedSave();
   }, { deep: true });
 
@@ -103,6 +105,7 @@ export const useAppStateStore = defineStore('appState', () => {
         activeContentIndex.value = state.activeContentIndex ?? activeRequestIndex.value ?? 0;
         sidebarWidth.value = state.sidebarWidth || 320;
         footerHeight.value = state.footerHeight || 200;
+        lastSaveLocation.value = state.lastSaveLocation ?? null;
       }
     } catch (e) {
       console.error('Failed to load app state:', e);
@@ -121,6 +124,7 @@ export const useAppStateStore = defineStore('appState', () => {
       tabOrder: tabOrder.value,
       sidebarWidth: sidebarWidth.value,
       footerHeight: footerHeight.value,
+      lastSaveLocation: lastSaveLocation.value,
       lastSavedAt: new Date().toISOString()
     };
     
@@ -212,6 +216,7 @@ export const useAppStateStore = defineStore('appState', () => {
     contentTabs,
     sidebarWidth,
     footerHeight,
+    lastSaveLocation,
     isLoading,
     
     // Actions

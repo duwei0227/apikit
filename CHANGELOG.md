@@ -12,9 +12,11 @@
 
 ### Added
 - Workflows in the sidebar can be organized in folders, which can be nested. Create folders with **New Folder**, create a workflow in a folder from the folder row or its right-click menu, and drag workflows and folders to reorder them or move them into folders. Deleting a folder also deletes the workflows in it.
+- The **Save Request** dialog has a **New Collection** button, so a new request can be saved even before any collection exists.
 - ApiKit JSON export keeps the folder of each workflow, and import puts it back into a folder with the same name. The AI (MCP) `list_workflows` tool returns workflows in sidebar order with their `folderPath`.
 
 ### Changed
+- The **Save Request** dialog now starts at the location you last saved to (or the only collection when there is just one), expands to it, and marks a collection's top level as **(collection root)**.
 - A new workflow is now added at the end of the sidebar list (or of its folder) instead of at the top; the order you set by dragging is kept.
 - Params, Headers, form-data and x-www-form-urlencoded now support Postman-style Bulk Edit with one `key: value` pair per line.
 - Windows uninstaller now explains that deleting the app cache also removes theme and MCP settings, while user data is controlled by a separate option.
@@ -24,9 +26,11 @@
 
 ### 新增
 - 侧边栏 Workflows 支持用文件夹分组，文件夹可以多级嵌套。用 **New Folder** 新建文件夹，在文件夹行或右键菜单中在文件夹内新建工作流，拖动工作流和文件夹可以调整顺序或移入文件夹。删除文件夹会同时删除其中的工作流。
+- **Save Request** 对话框新增 **New Collection** 按钮，还没有任何集合时也能直接保存新请求。
 - ApiKit JSON 导出会记录工作流所在的文件夹，导入时放回同名文件夹。AI（MCP）的 `list_workflows` 按侧边栏顺序返回工作流及其 `folderPath`。
 
 ### 变更
+- **Save Request** 对话框默认选中上次保存的位置（只有一个集合时选中它）并展开到该位置，保存在集合根目录时标注 **(collection root)**。
 - 新建的工作流现在放在侧边栏列表（或所在文件夹）的末尾，而不是最前面；拖动调整的顺序会保留。
 - Params、Headers、form-data 和 x-www-form-urlencoded 现支持 Postman 风格的 Bulk Edit，每行使用 `key: value` 编辑；form-data 文件字段在批量编辑时保留。
 - Windows 卸载程序现在说明删除应用缓存也会移除主题和 MCP 设置，用户数据则由单独选项控制。

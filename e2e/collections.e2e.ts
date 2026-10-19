@@ -223,3 +223,70 @@ test.describe('pointer drag (Windows)', () => {
     await expect(node(page, 'Beta Renamed')).toBeVisible();
   });
 });
+
+test.describe('save dialog', () => {
+  const saveDialog = (page: Page) => page.locator('.p-dialog', { hasText: 'Save Request' });
+
+  async function saveNewRequest(app: App, page: Page, url: string) {
+    await app.newRequest();
+    await app.url.fill(url);
+    await app.url.click();
+    await page.keyboard.press('Control+s');
+    await expect(saveDialog(page)).toBeVisible();
+  }
+
+  const requestLocations = (app: App) => app.run(() => window.__store('collections').collections.map((c: any) => [
+    c.name, c.requests.length, c.folders.map((f: any) => [f.name, f.requests.length]),
+  ]));
+
+  test('creates a collection in the dialog and remembers the last location', async ({ app, page }) => {
+    await saveNewRequest(app, page, 'https://example.com/a');
+    const dialog = saveDialog(page);
+    await expect(dialog.getByText('No collections yet. Click New Collection to create one.')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+
+    // Esc 只关闭新建集合的输入框
+    await dialog.getByRole('button', { name: 'New Collection' }).click();
+    await page.keyboard.press('Escape');
+    await expect(dialog.getByPlaceholder('Collection name')).toBeHidden();
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'New Collection' }).click();
+    await dialog.getByPlaceholder('Collection name').fill('Shop');
+    await page.keyboard.press('Enter');
+    await expect(dialog).toContainText('Selected: Shop (collection root)');
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(saveDialog(page)).toBeHidden();
+    await expect.poll(() => requestLocations(app)).toEqual([['Shop', 1, []]]);
+
+    // 下次保存默认选中上次的位置；选中文件夹后再下次默认选中该文件夹
+    await app.run(async () => {
+      const cols = window.__store('collections');
+      await cols.addFolder(cols.collections[0].id, 'Orders');
+      await cols.createCollection('Archive');
+    });
+    await saveNewRequest(app, page, 'https://example.com/b');
+    await expect(saveDialog(page)).toContainText('Selected: Shop (collection root)');
+    await expect(saveDialog(page).getByRole('button', { name: 'New Collection' })).toBeVisible();
+    await saveDialog(page).locator('.p-tree-node-toggle-button').first().click();
+    await saveDialog(page).locator('.p-tree-node-content', { hasText: 'Orders' }).click();
+    await saveDialog(page).getByRole('button', { name: 'Save', exact: true }).click();
+    await expect.poll(() => requestLocations(app)).toEqual([['Shop', 1, [['Orders', 1]]], ['Archive', 0, []]]);
+
+    await saveNewRequest(app, page, 'https://example.com/c');
+    await expect(saveDialog(page)).toContainText('Selected: Shop / Orders');
+    await expect(saveDialog(page).locator('.p-tree-node-selected')).toHaveText(/Orders/);
+  });
+
+  test('new collection names are checked for duplicates', async ({ app, page }) => {
+    await app.run(() => window.__store('collections').createCollection('Shop'));
+    await saveNewRequest(app, page, 'https://example.com/a');
+    const dialog = saveDialog(page);
+    // 只有一个集合时默认选中它
+    await expect(dialog).toContainText('Selected: Shop (collection root)');
+    await dialog.getByRole('button', { name: 'New Collection' }).click();
+    await dialog.getByPlaceholder('Collection name').fill('shop');
+    await expect(dialog.getByText('This name already exists')).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Create' })).toBeDisabled();
+  });
+});

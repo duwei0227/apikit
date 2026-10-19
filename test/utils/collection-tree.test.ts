@@ -11,6 +11,7 @@ import {
   findNodeByKey,
   findSiblingFolders,
   isRequestNameTaken,
+  resolveSaveLocation,
   searchRequestReferences,
 } from '@/utils/collectionTree';
 import { collectExpandableKeys, computeDropResult, findNodeByIndexPath } from '@/utils/treeDrop';
@@ -138,5 +139,31 @@ describe('collection tree', () => {
     // 文件夹名匹配不会带出其中的请求；空搜索词返回全部
     expect(searchRequestReferences([collection], 'archive')).toEqual([]);
     expect(searchRequestReferences([collection], '').map(result => result.request.id)).toEqual(['r4', 'r3', 'r1', 'r2']);
+  });
+});
+
+describe('resolveSaveLocation', () => {
+  const folder = (id: string, folders: any[] = []) => ({ id, name: `Folder ${id}`, folders, requests: [] });
+  const collection = (id: string, folders: any[] = []) => ({ id, name: `Collection ${id}`, folders, requests: [], createdAt: '', updatedAt: '' });
+  const shop = collection('c1', [folder('f1', [folder('f2')])]);
+  const archive = collection('c2');
+
+  it('上次保存的位置仍存在时选中它（含嵌套文件夹）', () => {
+    const location = resolveSaveLocation([shop, archive], { collectionId: 'c1', folderId: 'f2' });
+    expect(location?.collection.id).toBe('c1');
+    expect(location?.folder?.id).toBe('f2');
+    expect(resolveSaveLocation([shop, archive], { collectionId: 'c2', folderId: null })).toEqual({ collection: archive, folder: null });
+  });
+
+  it('文件夹已删除时退回到集合根目录，集合已删除时按集合数量决定', () => {
+    expect(resolveSaveLocation([shop, archive], { collectionId: 'c1', folderId: 'gone' })).toEqual({ collection: shop, folder: null });
+    expect(resolveSaveLocation([shop, archive], { collectionId: 'gone', folderId: null })).toBeNull();
+    expect(resolveSaveLocation([archive], { collectionId: 'gone', folderId: null })).toEqual({ collection: archive, folder: null });
+  });
+
+  it('没有上次的位置时，只有一个集合则选中它', () => {
+    expect(resolveSaveLocation([shop], null)).toEqual({ collection: shop, folder: null });
+    expect(resolveSaveLocation([shop, archive], undefined)).toBeNull();
+    expect(resolveSaveLocation([], null)).toBeNull();
   });
 });

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
+import { useCollectionsStore } from '@/stores/collections';
 import type { Collection, Folder } from '@/types/models';
 
-// Save-request modal: pick a name and a target collection/folder.
-// Pure picker UI — the parent owns the actual save (duplicate check, building
+// Save-request modal: pick a name and a target collection/folder, or create a
+// collection inline. The parent owns the actual save (duplicate check, building
 // the request payload, persistence) and controls when the dialog closes.
 const props = withDefaults(defineProps<{
   visible?: boolean;
@@ -36,6 +37,23 @@ const name = ref('');
 const selectedCollection = ref<Collection | null>(null);
 const selectedFolder = ref<Folder | null>(null);
 const selectedKeys = ref<Record<string, boolean>>({});
+const expandedKeys = ref<Record<string, boolean>>({});
+
+// 新建集合（对话框内，新建后选中它）
+const collectionsStore = useCollectionsStore();
+const isCreatingCollection = ref(false);
+const newCollectionName = ref('');
+const newCollectionInput = ref<{ $el: HTMLElement } | null>(null);
+
+/** 展开节点的全部上级（key 按层级拼接：collection/<cid>/<fid>...） */
+const expandAncestors = (key: string) => {
+  const parts = key.split('/');
+  const next: Record<string, boolean> = {};
+  for (let i = 2; i < parts.length; i++) {
+    next[parts.slice(0, i).join('/')] = true;
+  }
+  expandedKeys.value = next;
+};
 
 // (Re)initialize fields each time the dialog opens, from the parent's prefill props.
 watch(
@@ -50,9 +68,13 @@ watch(
         ? `collection/${selectedCollection.value.id}/${selectedFolder.value.id}`
         : `collection/${selectedCollection.value.id}`;
       selectedKeys.value = { [key]: true };
+      expandAncestors(key);
     } else {
       selectedKeys.value = {};
+      expandedKeys.value = {};
     }
+    isCreatingCollection.value = false;
+    newCollectionName.value = '';
   },
   { immediate: true }
 );
@@ -132,6 +154,41 @@ const selectedPath = computed(() => {
   return parts.join(' / ');
 });
 
+const isCollectionNameDuplicate = computed(() => {
+  const name = newCollectionName.value.trim().toLowerCase();
+  return !!name && props.collections.some(collection => collection.name.toLowerCase() === name);
+});
+
+const startCreatingCollection = async () => {
+  newCollectionName.value = '';
+  isCreatingCollection.value = true;
+  // 对话框已打开，autofocus 不会生效，手动聚焦
+  await nextTick();
+  newCollectionInput.value?.$el.focus();
+};
+
+const createCollection = async () => {
+  const collectionName = newCollectionName.value.trim();
+  if (!collectionName || isCollectionNameDuplicate.value) return;
+  const collection = await collectionsStore.createCollection(collectionName);
+  selectedCollection.value = collection;
+  selectedFolder.value = null;
+  selectedKeys.value = { [`collection/${collection.id}`]: true };
+  isCreatingCollection.value = false;
+};
+
+// Esc 只关闭新建集合的输入框，不关闭对话框
+const onNewCollectionKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    createCollection();
+  } else if (event.key === 'Escape') {
+    event.preventDefault();
+    event.stopPropagation();
+    isCreatingCollection.value = false;
+  }
+};
+
 const onSave = () => {
   if (!name.value.trim() || !selectedCollection.value) return;
   emit('save', {
@@ -171,12 +228,49 @@ const onCancel = () => {
 
       <!-- Collection Selection -->
       <div>
-        <label class="block text-sm font-medium mb-2">
-          Save to Collection
-        </label>
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-sm font-medium">
+            Save to Collection
+          </label>
+          <Button
+            v-if="!isCreatingCollection"
+            label="New Collection"
+            icon="pi pi-plus"
+            text
+            size="small"
+            @click="startCreatingCollection"
+          />
+        </div>
+
+        <div v-if="isCreatingCollection" class="mb-2">
+          <div class="flex items-center gap-2">
+            <InputText
+              ref="newCollectionInput"
+              v-model="newCollectionName"
+              placeholder="Collection name"
+              class="flex-1"
+              size="small"
+              :invalid="isCollectionNameDuplicate"
+              @keydown="onNewCollectionKeydown"
+            />
+            <Button
+              label="Create"
+              size="small"
+              :disabled="!newCollectionName.trim() || isCollectionNameDuplicate"
+              @click="createCollection"
+            />
+            <Button label="Cancel" size="small" severity="secondary" text @click="isCreatingCollection = false" />
+          </div>
+          <small v-if="isCollectionNameDuplicate" class="text-red-500">This name already exists</small>
+        </div>
 
         <div class="border border-surface-300 dark:border-surface-600 rounded p-3 max-h-64 overflow-y-auto">
+          <div v-if="treeData.length === 0" class="text-sm text-surface-500 dark:text-surface-400 text-center py-4">
+            No collections yet. Click New Collection to create one.
+          </div>
           <Tree
+            v-else
+            v-model:expandedKeys="expandedKeys"
             :value="treeData"
             v-model:selectionKeys="selectedKeys"
             selectionMode="single"
@@ -197,6 +291,7 @@ const onCancel = () => {
         <div v-if="selectedCollection" class="mt-2 p-2 bg-surface-100 dark:bg-surface-800 rounded text-sm">
           <span class="font-medium">Selected: </span>
           <span>{{ selectedPath }}</span>
+          <span v-if="!selectedFolder" class="text-surface-500 dark:text-surface-400"> (collection root)</span>
         </div>
       </div>
     </div>

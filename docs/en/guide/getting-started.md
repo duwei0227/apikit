@@ -25,7 +25,7 @@ Query parameters in the URL are synced to **Params**. Set headers, the body and 
 ## Save to a collection
 
 1. Click **Save**.
-2. Choose a collection and folder, or create one, enter a name and save.
+2. Choose a collection and folder, or click **New Collection** to create one, enter a name and save. Next time, the dialog starts at the location you last saved to.
 
 Saved requests appear under **Collections** in the sidebar, where you can reorder them by dragging, duplicate them (`Ctrl+D`) and move them.
 

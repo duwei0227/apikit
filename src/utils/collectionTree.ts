@@ -2,7 +2,7 @@
 
 import { cloneJson } from '@/utils/clone';
 import { generateId } from '@/utils/id-generator';
-import type { Collection, Folder, RequestReference } from '@/types/models';
+import type { Collection, Folder, RequestReference, SaveLocation } from '@/types/models';
 
 /** 树节点的数据：集合、文件夹或请求引用，type 区分种类 */
 export type CollectionTreeNodeData =
@@ -191,6 +191,22 @@ export function isRequestNameTaken(
     : collection.requests || [];
   const name = requestName.toLowerCase();
   return requests.some(req => req.name.toLowerCase() === name && req.id !== excludeRequestId);
+}
+
+/**
+ * 保存对话框默认选中的位置：上次保存的位置仍然存在时用它（文件夹已删除时退回到它所在集合的根目录），
+ * 否则只有一个集合时选中它的根目录；都不满足时为 null。
+ */
+export function resolveSaveLocation(
+  collections: Collection[],
+  lastLocation: SaveLocation | null | undefined,
+): { collection: Collection; folder: Folder | null } | null {
+  const lastCollection = lastLocation ? collections.find(c => c.id === lastLocation.collectionId) : undefined;
+  if (lastCollection) {
+    const folder = lastLocation?.folderId ? findFolderById(lastCollection.folders || [], lastLocation.folderId) : null;
+    return { collection: lastCollection, folder };
+  }
+  return collections.length === 1 ? { collection: collections[0], folder: null } : null;
 }
 
 /** 按文件夹 id 路径逐层查找 */

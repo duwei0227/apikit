@@ -1,5 +1,6 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue';
-import { findFolderById, isRequestNameTaken } from '@/utils/collectionTree';
+import { useAppStateStore } from '@/stores/appState';
+import { findFolderById, isRequestNameTaken, resolveSaveLocation } from '@/utils/collectionTree';
 import { generateId } from '@/utils/id-generator';
 import type { Collection, Folder, Request, TestConfig } from '@/types/models';
 import { matchesShortcut } from '@/utils/shortcuts';
@@ -24,6 +25,7 @@ interface RequestSaveOptions {
  * 返回保存对话框的状态和处理函数，供模板中的 SaveRequestDialog 使用。
  */
 export function useRequestSave({ props, localRequest, buildTestsConfig, emitSave }: RequestSaveOptions) {
+  const appStateStore = useAppStateStore();
   const showSaveDialog = ref(false);
   // 保存对话框的预填充数据（传给 SaveRequestDialog 子组件）
   const saveDialogName = ref('');
@@ -51,8 +53,10 @@ export function useRequestSave({ props, localRequest, buildTestsConfig, emitSave
 
   const openSaveDialog = () => {
     saveDialogName.value = localRequest.value.name;
-    saveDialogCollection.value = null;
-    saveDialogFolder.value = null;
+    // 默认选中上次保存的位置；没有时只有一个集合则选中它
+    const location = resolveSaveLocation(props.collections, appStateStore.lastSaveLocation);
+    saveDialogCollection.value = location?.collection ?? null;
+    saveDialogFolder.value = location?.folder ?? null;
     showSaveDialog.value = true;
   };
 
@@ -121,6 +125,7 @@ export function useRequestSave({ props, localRequest, buildTestsConfig, emitSave
     // 更新 collectionId 和 folderId
     localRequest.value.collectionId = collection.id;
     localRequest.value.folderId = folder?.id || null;
+    appStateStore.lastSaveLocation = { collectionId: collection.id, folderId: folder?.id || null };
 
     // 发出保存事件（成功提示由上层 MainContent.handleSaveRequest 在实际持久化后统一弹出）
     emitSave({ request: requestToSave, collection, folder });

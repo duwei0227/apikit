@@ -7,7 +7,7 @@ Collections organize your saved requests, with folders nested as deep as you lik
 ## Create and save
 
 - Click **New Collection** to create a collection.
-- The first time you click **Save** for a new request, choose the collection and folder to save it in.
+- The first time you click **Save** for a new request, choose the collection and folder to save it in; select the collection itself to save at its top level (shown as **(collection root)**). The dialog starts at the location you last saved to, or at the only collection when there is just one, and **New Collection** in the dialog creates a collection right there.
 - Right-click a collection or folder: **Add Request** creates a request, **Add Folder** creates a folder.
 
 ## Organize

@@ -412,6 +412,12 @@ export interface LogBodies {
 
 export type LogBodyKind = keyof LogBodies;
 
+/** 请求的保存位置：集合，以及其中的文件夹（null 为集合根目录） */
+export interface SaveLocation {
+  collectionId: string;
+  folderId: string | null;
+}
+
 export interface AppState {
   openRequests: string[]; // Request IDs
   activeRequestIndex: number;
@@ -421,6 +427,8 @@ export interface AppState {
   /** 内容页签统一顺序：`request:<id>` / `workflow:<id>` / `mock:<id>` */
   tabOrder?: string[];
   activeEnvironmentId?: string;
+  /** 上次保存新请求的位置，作为保存对话框的默认位置 */
+  lastSaveLocation?: SaveLocation | null;
   sidebarWidth: number;
   footerHeight: number;
   lastSavedAt: string;
