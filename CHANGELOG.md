@@ -23,6 +23,7 @@
 
 ### Fixed
 - Bulk Edit buttons no longer shift the Value column heading out of alignment with the table rows.
+- Updated bundled dependencies (Vue, DOMPurify, nanoid and others) to patched versions that fix known security vulnerabilities.
 
 ### 新增
 - 侧边栏 Workflows 支持用文件夹分组，文件夹可以多级嵌套。用 **New Folder** 新建文件夹，在文件夹行或右键菜单中在文件夹内新建工作流，拖动工作流和文件夹可以调整顺序或移入文件夹。删除文件夹会同时删除其中的工作流。
@@ -37,6 +38,7 @@
 
 ### 修复
 - Bulk Edit 按钮不再导致 Value 列标题与表格数据行错位。
+- 升级内置依赖（Vue、DOMPurify、nanoid 等）到已修复已知安全漏洞的版本。
 
 ## [0.4.3] - 2026-10-15
 
