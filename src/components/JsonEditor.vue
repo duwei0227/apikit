@@ -14,7 +14,7 @@ import {
   findTemplateVariableAt,
   type VariableCompletion,
 } from '@/utils/templateVariables';
-import { placePopup, type PopupAnchor } from '@/utils/popupPosition';
+import { placePopup, popupStyle, type PopupAnchor, type PopupPosition } from '@/utils/popupPosition';
 
 const props = withDefaults(defineProps<{
   modelValue?: string;
@@ -64,7 +64,7 @@ let resizeObserver: ResizeObserver | null = null;
 
 const showParameterHint = ref(false);
 const parameterHintContent = ref('');
-const hintPosition = ref({ top: 0, left: 0 });
+const hintPosition = ref<PopupPosition>({ top: 0, left: 0 });
 
 const isKnownVariable = (name: string) => name in props.availableVariables;
 const createMode = () => createTemplateMode(props.language === 'xml' || props.language === 'text' ? props.language : 'json', isKnownVariable);
@@ -75,11 +75,13 @@ const lineAnchor = (editor: AceEditor, row: number, column: number): PopupAnchor
   return { top: coords.pageY, bottom: coords.pageY + editor.renderer.lineHeight, left: coords.pageX };
 };
 
-// 浮层挂在 body 上（position: fixed），渲染后按实际尺寸放到锚点下方或上方，不超出窗口
-const placeOverPage = (el: HTMLElement | null, anchor: PopupAnchor) => {
+// 浮层挂在 body 上（position: fixed），渲染后按实际尺寸放到锚点下方或上方，不超出窗口。
+// 测量前要先去掉上次的高度限制（maxHeight 为空），否则量到的是被限制后的高度
+const placeOverPage = (el: HTMLElement | null, anchor: PopupAnchor): PopupPosition => {
   const rect = el?.getBoundingClientRect();
   if (!rect) return { top: anchor.bottom + 4, left: anchor.left };
-  return placePopup(anchor, { width: rect.width, height: rect.height }, { width: window.innerWidth, height: window.innerHeight });
+  const { top, left, maxHeight } = placePopup(anchor, { width: rect.width, height: rect.height }, { width: window.innerWidth, height: window.innerHeight });
+  return { top, left, maxHeight };
 };
 
 // ── 函数参数提示（{{$sequence( 等） ─────────────────────────────────────────
@@ -91,11 +93,12 @@ const updateParameterHint = () => {
   if (funcName) {
     const anchor = lineAnchor(editor, cursor.row, cursor.column);
     parameterHintContent.value = funcName;
-    if (!showParameterHint.value) hintPosition.value = { top: anchor.bottom + 4, left: anchor.left };
+    hintPosition.value = showParameterHint.value
+      ? { top: hintPosition.value.top, left: hintPosition.value.left }
+      : { top: anchor.bottom + 4, left: anchor.left };
     showParameterHint.value = true;
     nextTick(() => {
-      const { top, left } = placeOverPage(parameterHintPanel.value, anchor);
-      hintPosition.value = { top, left };
+      hintPosition.value = placeOverPage(parameterHintPanel.value, anchor);
     });
   } else {
     showParameterHint.value = false;
@@ -104,12 +107,10 @@ const updateParameterHint = () => {
 
 // ── 变量自动完成 ─────────────────────────────────────────────────────────────
 // 只在 {{ 之后、用户输入时打开；输入法组字期间不打开，组字结束后再判断。
-interface CompletionState {
+interface CompletionState extends PopupPosition {
   visible: boolean;
   items: VariableCompletion[];
   index: number;
-  top: number;
-  left: number;
 }
 const completion = ref<CompletionState>({ visible: false, items: [], index: 0, top: 0, left: 0 });
 let completionStart: { row: number; column: number } | null = null; // {{ 的位置
@@ -146,8 +147,7 @@ const updateCompletion = () => {
   };
   nextTick(() => {
     if (!completion.value.visible) return;
-    const { top, left } = placeOverPage(completionList.value, anchor);
-    completion.value = { ...completion.value, top, left };
+    completion.value = { ...completion.value, ...placeOverPage(completionList.value, anchor) };
   });
 };
 
@@ -394,8 +394,8 @@ defineExpose({ undo, redo, focus });
     <div
       v-if="showParameterHint && parameterHints[parameterHintContent]"
       ref="parameterHintPanel"
-      class="ak-param-hint fixed bg-surface-0 dark:bg-surface-900 border border-primary-300 dark:border-primary-700 rounded shadow-lg p-4 min-w-96 max-w-2xl"
-      :style="{ top: hintPosition.top + 'px', left: hintPosition.left + 'px' }"
+      class="ak-param-hint fixed bg-surface-0 dark:bg-surface-900 border border-primary-300 dark:border-primary-700 rounded shadow-lg p-4 min-w-96 max-w-2xl max-h-(--ak-popup-max-height) overflow-y-auto"
+      :style="popupStyle(hintPosition)"
     >
       <div class="flex flex-col gap-3">
         <!-- Title -->
@@ -466,7 +466,7 @@ defineExpose({ undo, redo, focus });
         v-if="completion.visible"
         ref="completionList"
         class="ak-hints"
-        :style="{ top: completion.top + 'px', left: completion.left + 'px' }"
+        :style="popupStyle(completion)"
       >
         <li
           v-for="(item, idx) in completion.items"
@@ -522,7 +522,7 @@ defineExpose({ undo, redo, focus });
   border-radius: 6px;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   min-width: 320px;
-  max-height: 20em;
+  max-height: min(20em, var(--ak-popup-max-height, 20em));
   overflow-y: auto;
   font-family: 'JetBrains Mono Variable', 'JetBrains Mono', Consolas, 'Courier New', monospace;
 }

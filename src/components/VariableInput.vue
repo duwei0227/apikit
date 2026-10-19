@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { placePopup } from '@/utils/popupPosition';
+import { placePopup, popupStyle, type PopupPosition } from '@/utils/popupPosition';
 import { BUILT_IN_VARIABLE_SYNTAX, PARAMETER_HINTS as parameterHints, completionCursorOffset } from '@/utils/templateVariables';
 
 const props = withDefaults(defineProps<{
@@ -80,18 +80,20 @@ const variableSuggestions = computed<VariableSuggestion[]>(() => {
 });
 
 // 下拉框和参数提示都挂在 body 上（position: fixed），不会被所在区域裁剪；
-// 渲染后按实际尺寸放到输入框下方，下方放不下且上方更宽裕时放到上方，左右不超出窗口
-const suggestionsPos = ref({ top: 0, left: 0, width: 0 });
-const parameterHintPos = ref({ top: 0, left: 0 });
+// 渲染后按实际尺寸放到输入框下方，下方放不下且上方更宽裕时放到上方，左右不超出窗口；
+// 每次放置前先去掉上次的高度限制（maxHeight 为空），量到浮层的实际高度
+const suggestionsPos = ref<PopupPosition & { width: number }>({ top: 0, left: 0, width: 0 });
+const parameterHintPos = ref<PopupPosition>({ top: 0, left: 0 });
 const parameterHintRef = ref<HTMLElement | null>(null);
 
 const inputRect = () => {
   return inputRef.value?.$el.getBoundingClientRect() ?? null;
 };
 
-const placeNearInput = (el: HTMLElement, rect: DOMRect) => {
+const placeNearInput = (el: HTMLElement, rect: DOMRect): PopupPosition => {
   const size = el.getBoundingClientRect();
-  return placePopup(rect, { width: size.width, height: size.height }, { width: window.innerWidth, height: window.innerHeight });
+  const { top, left, maxHeight } = placePopup(rect, { width: size.width, height: size.height }, { width: window.innerWidth, height: window.innerHeight });
+  return { top, left, maxHeight };
 };
 
 const placeSuggestions = () => {
@@ -100,8 +102,7 @@ const placeSuggestions = () => {
   suggestionsPos.value = { top: rect.bottom + 4, left: rect.left, width: rect.width };
   nextTick(() => {
     if (!suggestionsRef.value) return;
-    const { top, left } = placeNearInput(suggestionsRef.value, rect);
-    suggestionsPos.value = { top, left, width: rect.width };
+    suggestionsPos.value = { ...placeNearInput(suggestionsRef.value, rect), width: rect.width };
   });
 };
 
@@ -116,9 +117,8 @@ const placeParameterHint = () => {
 };
 
 const suggestionsStyle = computed(() => ({
+  ...popupStyle(suggestionsPos.value),
   width: `${suggestionsPos.value.width}px`,
-  left: `${suggestionsPos.value.left}px`,
-  top: `${suggestionsPos.value.top}px`
 }));
 
 watch(() => [showSuggestions.value, variableSuggestions.value.length], ([show]) => {
@@ -521,7 +521,7 @@ const highlightedHtml = computed(() => {
       <div
         v-if="showSuggestions && variableSuggestions.length > 0"
         ref="suggestionsRef"
-        class="variable-suggestions ak-floating fixed bg-surface-0 dark:bg-surface-900 border border-surface-300 dark:border-surface-700 rounded shadow-lg max-h-64 overflow-y-auto"
+        class="variable-suggestions ak-floating fixed bg-surface-0 dark:bg-surface-900 border border-surface-300 dark:border-surface-700 rounded shadow-lg max-h-[min(16rem,var(--ak-popup-max-height,16rem))] overflow-y-auto"
         :style="suggestionsStyle"
       >
       <div
@@ -559,8 +559,8 @@ const highlightedHtml = computed(() => {
     <div
       v-if="showParameterHint && parameterHints[parameterHintContent]"
       ref="parameterHintRef"
-      class="ak-floating ak-variable-param-hint fixed bg-surface-0 dark:bg-surface-900 border border-primary-300 dark:border-primary-700 rounded shadow-lg p-4 min-w-96 max-w-2xl"
-      :style="{ top: parameterHintPos.top + 'px', left: parameterHintPos.left + 'px' }"
+      class="ak-floating ak-variable-param-hint fixed bg-surface-0 dark:bg-surface-900 border border-primary-300 dark:border-primary-700 rounded shadow-lg p-4 min-w-96 max-w-2xl max-h-(--ak-popup-max-height) overflow-y-auto"
+      :style="popupStyle(parameterHintPos)"
     >
       <div class="flex flex-col gap-3">
         <!-- Title -->

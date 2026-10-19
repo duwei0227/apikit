@@ -102,6 +102,27 @@ test.describe('variable popups', () => {
     await page.keyboard.press('Escape');
   });
 
+  test('shrink to the space left and scroll when they fit neither above nor below', async ({ app, page }) => {
+    await page.setViewportSize({ width: 1280, height: 600 });
+    const scrollable = (selector: string) => page.locator(selector).last().evaluate(el => el.scrollHeight > el.clientHeight);
+
+    // 输入框的参数提示
+    await app.url.click();
+    await page.keyboard.type('{{$sequence(');
+    await expectOverlayVisible(page, PARAM_HINT);
+    expect(await scrollable(PARAM_HINT)).toBe(true);
+    await page.keyboard.press('Escape');
+
+    // Body 编辑器的参数提示
+    await app.selectBodyType('json');
+    const editor = new AceEditorHandle(page, app.request.locator('.json-editor-container'));
+    await editor.waitReady();
+    await editor.setDoc('{\n  "page": "|"\n}');
+    await page.keyboard.type('{{$sequence(');
+    await expectOverlayVisible(page, '.ak-param-hint');
+    expect(await scrollable('.ak-param-hint')).toBe(true);
+  });
+
   test('open above fields near the bottom of the window and do not stay after switching tabs', async ({ app, page }) => {
     // 新请求的响应区默认折叠，参数表格可以排到窗口底部
     await app.url.fill('{{baseUrl}}/x?' + Array.from({ length: 14 }, (_, i) => `p${i}=${i}`).join('&'));
