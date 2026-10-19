@@ -8,7 +8,7 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
-## [Unreleased]
+## [0.5.1] - 2026-10-19
 
 ### Fixed
 - On Windows, typing Chinese with an IME (especially third-party ones) over selected text in the body editor no longer shows an extra space or dot, garbled styling, or leaves the text empty after pressing `Enter` to commit. The selection is replaced when the input is committed.
