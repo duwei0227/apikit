@@ -372,3 +372,33 @@ test('opens and copies the documentation and GitHub links in About', async ({ ap
   await links.nth(0).getByRole('button', { name: 'Copy Documentation link' }).click();
   await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('https://duwei0227.github.io/apikit/en/');
 });
+
+test.describe('edit menu', () => {
+  test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
+
+  test('selects all, cuts and pastes in an input from the right-click menu', async ({ app, page }) => {
+    await app.newRequest();
+    await app.url.fill('https://example.com/orders');
+    const menu = page.locator('.p-contextmenu');
+    const choose = async (item: string) => {
+      await app.url.click({ button: 'right' });
+      await expect(menu.getByText(item, { exact: true })).toBeVisible();
+      await expect(menu.locator('.p-contextmenu-item')).toHaveText(['Cut', 'Copy', 'Paste', 'Select All']);
+      await menu.getByText(item, { exact: true }).click();
+      await expect(menu).toBeHidden();
+      // 菜单打开时焦点在菜单上，执行命令前要还给输入框
+      await expect(app.url).toBeFocused();
+    };
+
+    // 焦点和选区还给输入框后再执行命令
+    await choose('Select All');
+    await expect.poll(() => app.url.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd]))
+      .toEqual([0, 'https://example.com/orders'.length]);
+
+    await choose('Cut');
+    await expect(app.url).toHaveValue('');
+
+    await choose('Paste');
+    await expect(app.url).toHaveValue('https://example.com/orders');
+  });
+});

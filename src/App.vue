@@ -58,20 +58,56 @@ const mcpStore = useMcpStore();
 const mocksStore = useMocksStore();
 
 // ── Editable-area right-click context menu ─────────────────────────────
-const editCtxMenu = ref({ visible: false, x: 0, y: 0 });
+// 输入框、文本框和可编辑区域的右键菜单（剪切、复制、粘贴、全选）。
+// 菜单打开时焦点会移到菜单上，执行命令前先把焦点和选区还给原来的元素。
+const editMenu = ref<{ show: (event: Event) => void; hide: () => void } | null>(null);
 let editCtxTarget: HTMLElement | null = null;
+let editCtxRange: Range | null = null;
 
-const closeEditContextMenu = () => {
-  editCtxMenu.value = { ...editCtxMenu.value, visible: false };
+const isTextField = (el: HTMLElement): el is HTMLInputElement | HTMLTextAreaElement => (
+  el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
+);
+
+const restoreEditTarget = () => {
+  const el = editCtxTarget;
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  // 输入框获得焦点时保留原来的选区；可编辑区域需要手动恢复
+  if (!isTextField(el) && editCtxRange) {
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(editCtxRange);
+  }
 };
 
-// Close on any outside mousedown
-const handleOutsideMouseDown = () => {
-  if (editCtxMenu.value.visible) closeEditContextMenu();
+const ctxPaste = async () => {
+  restoreEditTarget();
+  try {
+    const text = await navigator.clipboard.readText();
+    document.execCommand('insertText', false, text);
+  } catch {
+    document.execCommand('paste');
+  }
 };
+
+const ctxSelectAll = () => {
+  const el = editCtxTarget;
+  if (!el) return;
+  restoreEditTarget();
+  if (isTextField(el)) el.select();
+  else document.execCommand('selectAll');
+};
+
+const editMenuItems = [
+  { label: 'Cut', icon: 'pi pi-minus-circle', command: () => { restoreEditTarget(); document.execCommand('cut'); } },
+  { label: 'Copy', icon: 'pi pi-copy', command: () => { restoreEditTarget(); document.execCommand('copy'); } },
+  { label: 'Paste', icon: 'pi pi-clipboard', command: ctxPaste },
+  { separator: true },
+  { label: 'Select All', icon: 'pi pi-check-square', command: ctxSelectAll },
+];
 
 // Always prevent the browser's default context menu.
-// For editable elements, also show our custom 4-item menu.
+// For editable elements, also show the edit menu.
 const handleContextMenu = (event: MouseEvent) => {
   event.preventDefault();
 
@@ -84,38 +120,12 @@ const handleContextMenu = (event: MouseEvent) => {
 
   if (isEditable) {
     editCtxTarget = target;
-    const menuW = 148, menuH = 152;
-    editCtxMenu.value = {
-      visible: true,
-      x: Math.min(event.clientX, window.innerWidth  - menuW - 8),
-      y: Math.min(event.clientY, window.innerHeight - menuH - 8),
-    };
+    const selection = window.getSelection();
+    editCtxRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
+    editMenu.value?.show(event);
   } else {
-    closeEditContextMenu();
+    editMenu.value?.hide();
   }
-};
-
-const ctxCut = () => { document.execCommand('cut'); closeEditContextMenu(); };
-const ctxCopy = () => { document.execCommand('copy'); closeEditContextMenu(); };
-const ctxPaste = async () => {
-  try {
-    const text = await navigator.clipboard.readText();
-    document.execCommand('insertText', false, text);
-  } catch {
-    document.execCommand('paste');
-  }
-  closeEditContextMenu();
-};
-const ctxSelectAll = () => {
-  const el = editCtxTarget;
-  if (el) {
-    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-      el.select();
-    } else {
-      document.execCommand('selectAll');
-    }
-  }
-  closeEditContextMenu();
 };
 
 onMounted(async () => {
@@ -124,8 +134,6 @@ onMounted(async () => {
 
   // Disable default browser context menu (Back/Refresh/Save As/Print)
   document.addEventListener('contextmenu', handleContextMenu);
-  // Close custom context menu on outside click
-  document.addEventListener('mousedown', handleOutsideMouseDown);
 
   // Add global keyboard shortcut for Ctrl+N
   window.addEventListener('keydown', handleGlobalKeyDown);
@@ -210,7 +218,6 @@ onBeforeUnmount(async () => {
   window.removeEventListener('keydown', handleGlobalKeyDown);
   // Remove context menu blockers
   document.removeEventListener('contextmenu', handleContextMenu);
-  document.removeEventListener('mousedown', handleOutsideMouseDown);
   unlistenCloseRequested?.();
   await flushPendingSaves();
 });
@@ -327,46 +334,8 @@ const handleCreate = (type: 'request' | 'collection' | 'environment' | 'mock') =
     <Toast position="top-right" />
     <ConfirmDialog />
 
-    <!-- Custom right-click context menu for editable areas -->
-    <Teleport to="body">
-      <div
-        v-if="editCtxMenu.visible"
-        class="fixed z-9999 min-w-[140px] rounded-lg border border-surface-200 bg-surface-0 py-1 shadow-xl dark:border-surface-600 dark:bg-surface-800"
-        :style="{ left: editCtxMenu.x + 'px', top: editCtxMenu.y + 'px' }"
-        @mousedown.stop.prevent
-        @contextmenu.prevent
-      >
-        <button
-          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700 cursor-pointer"
-          @click="ctxCut"
-        >
-          <i class="pi pi-minus-circle text-meta opacity-60"></i>
-          Cut
-        </button>
-        <button
-          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700 cursor-pointer"
-          @click="ctxCopy"
-        >
-          <i class="pi pi-copy text-meta opacity-60"></i>
-          Copy
-        </button>
-        <button
-          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700 cursor-pointer"
-          @click="ctxPaste"
-        >
-          <i class="pi pi-clipboard text-meta opacity-60"></i>
-          Paste
-        </button>
-        <div class="mx-1 my-1 border-t border-surface-200 dark:border-surface-600"></div>
-        <button
-          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700 cursor-pointer"
-          @click="ctxSelectAll"
-        >
-          <i class="pi pi-check-square text-meta opacity-60"></i>
-          Select All
-        </button>
-      </div>
-    </Teleport>
+    <!-- 可编辑区域的右键菜单 -->
+    <ContextMenu ref="editMenu" :model="editMenuItems" />
 
     <CreateNewModal
       v-if="showCreateNewModal"
