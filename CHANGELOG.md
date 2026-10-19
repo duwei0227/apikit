@@ -16,7 +16,7 @@
 - ApiKit JSON export keeps the folder of each workflow, and import puts it back into a folder with the same name. The AI (MCP) `list_workflows` tool returns workflows in sidebar order with their `folderPath`.
 
 ### Changed
-- The README and Getting Started guide note that `.deb`, `.rpm` and the portable Linux build use the system WebKitGTK (2.40 or later recommended), while the AppImage includes its own.
+- The README and Getting Started guide note that `.deb`, `.rpm` and the portable Linux build use the system WebKitGTK (2.50 or later recommended), while the AppImage includes its own.
 - ApiKit now requires macOS 11 Big Sur or later, with Safari 16.4 or later (before: macOS 10.13). The interface styles were updated to a newer toolkit that the older system WebKit cannot display.
 - Buttons in the toolbar, title bar, status bar and elsewhere, the right-click menu of text fields (Cut, Copy, Paste, Select All), and tabs such as **Find** / **Console**, **Pretty** / **Raw**, the import and export lists and the mock service views now use the standard component style; the response text view switches between **Rendered** and **Source** with a segmented button. The Mocks and MCP status in the status bar is shown as a badge, the dot on the title-bar ✦ icon appears only while the MCP server is running (green) or failed to start (red), and the file picker for form-data and binary bodies is a **Select File** button next to the file name.
 - Dialogs use consistent widths by content: simple name dialogs (such as **Rename**) are a little wider, **Move Request** is as wide as **Save Request**, and **Manage Environments** and **AI Integration (MCP)** no longer stretch across large screens. Dialogs also stay inside small windows.
@@ -38,7 +38,7 @@
 - ApiKit JSON 导出会记录工作流所在的文件夹，导入时放回同名文件夹。AI（MCP）的 `list_workflows` 按侧边栏顺序返回工作流及其 `folderPath`。
 
 ### 变更
-- README 和快速开始文档说明 Linux 的 `.deb`、`.rpm` 和便携版使用系统的 WebKitGTK（建议 2.40 或更高），AppImage 自带 WebKitGTK。
+- README 和快速开始文档说明 Linux 的 `.deb`、`.rpm` 和便携版使用系统的 WebKitGTK（建议 2.50 或更高），AppImage 自带 WebKitGTK。
 - ApiKit 现在需要 macOS 11 Big Sur 或更高版本，且 Safari 为 16.4 或更高（之前为 macOS 10.13）。界面样式改用了新版工具，旧版系统 WebKit 无法正确显示。
 - 工具栏、标题栏、状态栏等处的按钮，输入框的右键菜单（Cut、Copy、Paste、Select All），以及 **Find** / **Console**、**Pretty** / **Raw**、导入导出列表和 Mock 服务视图等选项卡改用标准组件样式；流式响应文本视图用分段按钮切换 **Rendered** 和 **Source**。状态栏中 Mocks 和 MCP 的状态以徽标显示；标题栏 ✦ 图标上的圆点只在 MCP 服务运行中（绿色）或启动失败（红色）时显示；form-data 和 binary 请求体的文件选择改为 **Select File** 按钮加文件名。
 - 弹窗按内容统一宽度：只有名称输入的弹窗（如 **Rename**）略为加宽，**Move Request** 与 **Save Request** 同宽，**Manage Environments** 和 **AI Integration (MCP)** 在大屏上不再过宽；窗口较小时弹窗不会超出窗口。

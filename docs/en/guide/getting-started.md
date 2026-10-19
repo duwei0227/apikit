@@ -10,7 +10,7 @@ Download the package for your system from the [Releases](https://github.com/duwe
 | macOS | `.dmg` | |
 | Linux | `.AppImage` (run it after `chmod +x`) | `.deb`, `.rpm`, `.tar.gz` (portable) |
 
-On Linux, `.deb`, `.rpm` and the portable build use the system WebKitGTK. Keep your system updated (WebKitGTK 2.40 or later); otherwise bold text may be shown at regular weight. The AppImage includes its own WebKitGTK and is not affected.
+On Linux, `.deb`, `.rpm` and the portable build use the system WebKitGTK. Keep your system updated (WebKitGTK 2.50 or later); otherwise bold text may be shown at regular weight. The AppImage includes its own WebKitGTK and is not affected.
 
 On macOS, ApiKit requires macOS 11 Big Sur or later with Safari updated to 16.4 or later. The first time you open ApiKit on macOS, you may need to allow it in "System Settings → Privacy & Security". After installing, use **Help → Check For Update** to check for and install new versions.
 

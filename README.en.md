@@ -78,7 +78,7 @@ Download the latest version from the [Releases](https://github.com/duwei0227/api
 | `.rpm` | Fedora/RHEL/CentOS package | |
 | `.tar.gz` | Portable (unpack and run) | |
 
-**Requirements**: `.deb`, `.rpm` and the portable build show the interface with the system WebKitGTK; keep your system updated (WebKitGTK 2.40 or later). With older versions, bold text may be shown at regular weight. The AppImage includes its own WebKitGTK and does not depend on the system version.
+**Requirements**: `.deb`, `.rpm` and the portable build show the interface with the system WebKitGTK; keep your system updated (WebKitGTK 2.50 or later). With older versions, bold text may be shown at regular weight. The AppImage includes its own WebKitGTK and does not depend on the system version.
 
 **Using the AppImage**:
 ```bash

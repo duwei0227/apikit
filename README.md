@@ -78,7 +78,7 @@ ApiKit 是一个跨平台的 API 测试工具，专为开发者设计，提供�
 | `.rpm` | Fedora/RHEL/CentOS 安装包 | |
 | `.tar.gz` | 便携版（解压即用） | |
 
-**系统要求**: `.deb`、`.rpm` 和便携版使用系统的 WebKitGTK 显示界面，建议保持系统更新（WebKitGTK 2.40 或更高）；较旧的版本中粗体文字可能显示为常规粗细。AppImage 自带 WebKitGTK，不受系统版本影响。
+**系统要求**: `.deb`、`.rpm` 和便携版使用系统的 WebKitGTK 显示界面，建议保持系统更新（WebKitGTK 2.50 或更高）；较旧的版本中粗体文字可能显示为常规粗细。AppImage 自带 WebKitGTK，不受系统版本影响。
 
 **AppImage 使用方法**:
 ```bash
