@@ -402,3 +402,23 @@ test.describe('edit menu', () => {
     await expect(app.url).toHaveValue('https://example.com/orders');
   });
 });
+
+test('newRequest waits for the new tab even when saving the request is slow', async ({ app, page }) => {
+  // 新请求先保存再切换页签；让保存时的路径拼接变慢，放大切换前的间隙
+  await page.evaluate(() => {
+    const internals = (window as any).__TAURI_INTERNALS__;
+    const invoke = internals.invoke;
+    internals.invoke = async (cmd: string, args: any, options: any) => {
+      if (cmd === 'plugin:path|join') await new Promise(resolve => setTimeout(resolve, 300));
+      return invoke(cmd, args, options);
+    };
+  });
+  await app.newRequest();
+  await app.url.fill('https://example.com/first');
+  await app.newRequest();
+  // 紧接着输入：应落在新请求上，第一个请求的 URL 不变
+  await app.url.fill('https://example.com/second');
+  const allUrls = () => page.locator('.http-request').getByPlaceholder('Enter request URL')
+    .evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value).sort());
+  await expect.poll(allUrls).toEqual(['https://example.com/first', 'https://example.com/second']);
+});

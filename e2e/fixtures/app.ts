@@ -174,7 +174,15 @@ export class App {
   }
 
   async newRequest() {
+    // 新请求先保存再切换过去，切换前旧页签的编辑器仍然可见；
+    // 等新请求成为当前页签，避免接下来的操作落在旧请求上
+    const openBefore: string[] = await this.run(() => [...window.__store('appState').openRequests]);
     await this.page.getByRole('button', { name: 'New Request' }).first().click();
+    await expect.poll(() => this.run((before) => {
+      const appState = window.__store('appState');
+      const tab = appState.contentTabs[appState.activeContentIndex];
+      return tab?.type === 'request' && !before.includes(tab.id);
+    }, openBefore)).toBe(true);
     await this.url.waitFor();
   }
 
