@@ -35,7 +35,8 @@
 - Updated bundled dependencies (Vue, DOMPurify, nanoid and others) to patched versions that fix known security vulnerabilities.
 
 ### 新增
-- 侧边栏 Workflows 支持用文件夹分组，文件夹可以多级嵌套。用 **New Folder** 新建文件夹，在文件夹行或右键菜单中在文件夹内新建工作流，拖动工作流和文件夹可以调整顺序或移入文件夹。删除文件夹会同时删除其中的工作流。
+- 集合中的文件夹可以在右键菜单中用 **Move Up** / **Move Down** 上移、下移，与请求一致。
+- 侧边栏 Workflows 支持用文件夹分组，文件夹可以多级嵌套。用 **New Folder** 新建文件夹，在文件夹行或右键菜单中在文件夹内新建工作流，拖动工作流和文件夹可以调整顺序或移入文件夹。右键工作流或文件夹选择 **Move Up** / **Move Down** 调整顺序，右键工作流选择 **Move to...** 移到其他文件夹，与请求一致。删除文件夹会同时删除其中的工作流。
 - **Save Request** 对话框新增 **New Collection** 按钮，还没有任何集合时也能直接保存新请求。
 - ApiKit JSON 导出会记录工作流所在的文件夹，导入时放回同名文件夹。AI（MCP）的 `list_workflows` 按侧边栏顺序返回工作流及其 `folderPath`。
 
