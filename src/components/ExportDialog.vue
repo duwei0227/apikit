@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { cloneJson } from '@/utils/clone';
 import { computed, ref } from 'vue';
 import { importExportService, type CollectionExportTarget } from '@/services/import-export';
@@ -379,7 +380,7 @@ defineExpose({ open: openExportDialog });
     v-model:visible="showExportDialog"
     header="Export"
     :modal="true"
-    :style="{ width: '42rem' }"
+    :style="dialogStyle('lg')"
     @hide="closeExportDialog"
   >
     <div class="flex flex-col gap-3">

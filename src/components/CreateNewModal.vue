@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { ref } from 'vue';
 
 type CreateType = 'request' | 'collection' | 'environment' | 'mock';
@@ -53,7 +54,7 @@ const handleClose = () => {
     modal
     :closable="true"
     :draggable="false"
-    class="create-new-dialog"
+    :style="dialogStyle('md')"
     @update:visible="handleClose"
   >
     <template #header>
@@ -94,11 +95,6 @@ const handleClose = () => {
 </template>
 
 <style scoped>
-.create-new-dialog {
-  width: 500px;
-  max-width: 90vw;
-}
-
 .create-options-grid {
   display: flex;
   flex-direction: column;

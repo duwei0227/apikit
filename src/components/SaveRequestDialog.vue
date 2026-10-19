@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { ref, computed, watch, nextTick } from 'vue';
 import { useCollectionsStore } from '@/stores/collections';
 import type { Collection, Folder } from '@/types/models';
@@ -209,7 +210,7 @@ const onCancel = () => {
     @update:visible="$emit('update:visible', $event)"
     header="Save Request"
     :modal="true"
-    :style="{ width: '500px' }"
+    :style="dialogStyle('md')"
   >
     <div class="flex flex-col gap-4">
       <!-- Request Name -->

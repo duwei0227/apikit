@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { computed, watch } from 'vue';
 import { getCurrentWindow, UserAttentionType } from '@tauri-apps/api/window';
 import { useMcpStore } from '@/stores/mcp';
@@ -24,7 +25,7 @@ const answer = (value: 'deny' | 'allow' | 'allowAll') => {
     :header="confirmation?.title || ''"
     :modal="true"
     :closable="false"
-    :style="{ width: '30rem' }"
+    :style="dialogStyle('sm')"
   >
     <div v-if="confirmation" class="flex flex-col gap-3 text-sm">
       <div class="grid grid-cols-[3.5rem_1fr] gap-x-3 gap-y-1.5">

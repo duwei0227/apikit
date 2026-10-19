@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { ref, computed } from 'vue';
 import { useEnvironmentsStore } from '@/stores/environments';
 import { useSequencesStore } from '@/stores/sequences';
@@ -252,7 +253,7 @@ defineExpose({ open: openVariablesView });
     v-model:visible="showVariablesViewDialog"
     header="Current Request Variables"
     :modal="true"
-    :style="{ width: '800px' }"
+    :style="dialogStyle('xxl')"
   >
     <div class="flex flex-col gap-6">
       <!-- Environment Variables -->
@@ -417,7 +418,7 @@ defineExpose({ open: openVariablesView });
     v-model:visible="showEditGlobalVarDialog"
     header="Edit Global Variable"
     :modal="true"
-    :style="{ width: '400px' }"
+    :style="dialogStyle('sm')"
   >
     <div class="flex flex-col gap-4">
       <div>

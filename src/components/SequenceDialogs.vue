@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { ref } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import { useSequencesStore, type Sequence } from '@/stores/sequences';
@@ -128,7 +129,7 @@ defineExpose({
     v-model:visible="showSequenceDialog"
     header="Manage Sequences"
     :modal="true"
-    :style="{ width: '700px' }"
+    :style="dialogStyle('xl')"
   >
     <div class="flex flex-col gap-4">
       <div v-if="sequencesStore.getAllSequences().length === 0" class="text-center py-8 text-surface-500 dark:text-surface-400 text-sm">
@@ -190,7 +191,7 @@ defineExpose({
     v-model:visible="showSequenceEditDialog"
     header="Edit Sequence"
     :modal="true"
-    :style="{ width: '400px' }"
+    :style="dialogStyle('sm')"
   >
     <div v-if="editingSequence" class="flex flex-col gap-4">
       <div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { cloneJson } from '@/utils/clone';
 import { ref, computed } from 'vue';
 import { useCollectionsStore } from '@/stores/collections';
@@ -77,7 +78,7 @@ defineExpose({ open: openMoveDialog });
     v-model:visible="showMoveDialog"
     header="Move Request"
     :modal="true"
-    :style="{ width: '25rem' }"
+    :style="dialogStyle('md')"
   >
     <div class="flex flex-col gap-3">
       <p class="text-sm text-surface-600 dark:text-surface-400">

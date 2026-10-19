@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { computed, ref, watch } from 'vue';
 import { useCollectionsStore } from '@/stores/collections';
 import { useConsoleLogsStore } from '@/stores/consoleLogs';
@@ -166,7 +167,7 @@ const create = async () => {
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" header="New Mock Service" modal :style="{ width: '46rem' }" :dismissable-mask="true">
+  <Dialog v-model:visible="visible" header="New Mock Service" modal :style="dialogStyle('xl')" :dismissable-mask="true">
     <div class="flex flex-col gap-4 text-sm">
       <div class="flex gap-3 flex-wrap items-end">
         <label class="flex flex-col gap-1 flex-1 min-w-60 text-xs text-surface-500">Name

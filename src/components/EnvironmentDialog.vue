@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { cloneJson } from '@/utils/clone';
 import { ref, computed } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
@@ -317,7 +318,7 @@ defineExpose({
     v-model:visible="showEnvDialog"
     :header="getEnvDialogTitle()"
     :modal="true"
-    :style="{ width: '72vw', maxWidth: '72vw' }"
+    :style="dialogStyle('xxl')"
     :closable="envDialogMode === 'list'"
   >
     <!-- List View -->

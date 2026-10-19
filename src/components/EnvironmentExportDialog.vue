@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { cloneJson } from '@/utils/clone';
 import { ref, computed } from 'vue';
 import { useEnvironmentsStore } from '@/stores/environments';
@@ -89,7 +90,7 @@ defineExpose({ open: openEnvExportDialog });
     v-model:visible="showEnvExportDialog"
     header="Export Environments"
     :modal="true"
-    :style="{ width: '34rem' }"
+    :style="dialogStyle('md')"
   >
     <div class="flex flex-col gap-3">
       <div>

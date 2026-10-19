@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { computed, ref, watch } from 'vue';
 import { useMcpStore } from '@/stores/mcp';
 import { MCP_TOOLS } from '@/services/mcp/tools';
@@ -98,7 +99,7 @@ const formatTime = (iso: string) => new Date(iso).toLocaleTimeString();
     @update:visible="closeDialog"
     header="AI Integration (MCP)"
     :modal="true"
-    :style="{ width: '70vw' }"
+    :style="dialogStyle('xxl')"
     :dismissableMask="true"
   >
     <div class="flex flex-col gap-4 text-sm">

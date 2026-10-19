@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { ref, computed } from 'vue';
 import { useCollectionsStore } from '@/stores/collections';
 import { useRequestsStore } from '@/stores/requests';
@@ -138,7 +139,7 @@ defineExpose({ open: openRenameDialog });
     v-model:visible="showRenameDialog"
     header="Rename"
     :modal="true"
-    :style="{ width: '25rem' }"
+    :style="dialogStyle('sm')"
   >
     <div class="flex flex-col gap-4">
       <div>

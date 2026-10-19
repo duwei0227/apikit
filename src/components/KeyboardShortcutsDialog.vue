@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { isMacPlatform, shortcutKeys } from '@/utils/shortcuts';
 
 defineProps<{ visible: boolean }>();
@@ -82,7 +83,7 @@ const closeDialog = () => {
     @update:visible="closeDialog"
     header="Keyboard Shortcuts"
     :modal="true"
-    :style="{ width: '700px' }"
+    :style="dialogStyle('xl')"
     :dismissableMask="true"
   >
     <div class="shortcuts-container">

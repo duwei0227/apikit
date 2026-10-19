@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { ref, onMounted } from 'vue';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { apiService } from '@/services/api/apiService';
@@ -56,7 +57,7 @@ const copyLink = async (label: string, url: string) => {
     @update:visible="closeDialog"
     header="About ApiKit"
     :modal="true"
-    :style="{ width: '500px' }"
+    :style="dialogStyle('md')"
     :dismissableMask="true"
   >
     <div class="about-content text-center py-4">

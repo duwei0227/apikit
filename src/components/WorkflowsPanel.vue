@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { computed, ref, watch } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import { usePointerTreeDrag } from '@/composables/usePointerTreeDrag';
@@ -367,7 +368,7 @@ const onTreeContextMenu = (event: MouseEvent) => {
 
     <ContextMenu ref="contextMenu" :model="menuItems" />
 
-    <Dialog v-model:visible="showNameDialog" :header="nameDialogText.header" :modal="true" :style="{ width: '25rem' }">
+    <Dialog v-model:visible="showNameDialog" :header="nameDialogText.header" :modal="true" :style="dialogStyle('sm')">
       <div>
         <label class="block text-sm font-medium mb-2">Name</label>
         <InputText

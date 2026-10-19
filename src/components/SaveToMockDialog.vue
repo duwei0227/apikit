@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { computed, ref, watch } from 'vue';
 import { useMocksStore } from '@/stores/mocks';
 import type { HttpMethod, HttpResponseView } from '@/types/models';
@@ -89,7 +90,7 @@ const save = async () => {
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" header="Save Response to a Mock" modal :style="{ width: '30rem' }" :dismissable-mask="true">
+  <Dialog v-model:visible="visible" header="Save Response to a Mock" modal :style="dialogStyle('sm')" :dismissable-mask="true">
     <div class="flex flex-col gap-3 text-sm">
       <label class="flex flex-col gap-1 text-xs text-surface-500">Mock service
         <Select v-model="serviceId" :options="serviceOptions" option-label="label" option-value="value" aria-label="Mock service" />

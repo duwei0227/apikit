@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { computed, ref } from 'vue';
 import { importExportService, type ImportFilePreview } from '@/services/import-export';
 import type { Collection, Environment, Request } from '@/types/models';
@@ -321,7 +322,7 @@ defineExpose({ open: openImportDialog });
     v-model:visible="showImportDialog"
     header="Import"
     :modal="true"
-    :style="{ width: '40rem' }"
+    :style="dialogStyle('lg')"
     @hide="closeImportDialog"
   >
     <div class="flex flex-col gap-4">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { computed } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -117,7 +118,7 @@ const formatDate = (dateString: string | undefined) => {
     modal
     :closable="!downloading"
     :closeOnEscape="!downloading"
-    :style="{ width: '600px', maxWidth: 'calc(100vw - 32px)' }"
+    :style="dialogStyle('lg')"
     :contentStyle="{ maxHeight: '60vh' }"
   >
     <template #header>

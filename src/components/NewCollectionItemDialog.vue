@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { dialogStyle } from '@/utils/dialogSize';
 import { ref, computed } from 'vue';
 import { useCollectionsStore } from '@/stores/collections';
 import type { Collection, Folder } from '@/types/models';
@@ -71,7 +72,7 @@ defineExpose({ open: openCreateDialog });
     v-model:visible="showCreateDialog"
     :header="dialogMode === 'collection' ? 'New Collection' : 'New Folder'"
     :modal="true"
-    :style="{ width: '25rem' }"
+    :style="dialogStyle('sm')"
   >
     <div class="flex flex-col gap-4">
       <div>
