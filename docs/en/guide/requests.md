@@ -30,6 +30,7 @@ Select **Bulk Edit** on the right side of the table to edit headers as text, one
 The body editor is based on Ace:
 
 - Typing `{{` completes variables; defined and undefined variables have different colours, and hovering shows the value.
+- JSON braces and brackets and XML tags are coloured by nesting level: each pair shares a colour, three colours repeat, and extra ones without a pair are shown in red.
 - `Ctrl+F` searches, with match case (**Aa**) and regular expressions (**.\***).
 - Brackets and quotes close automatically, and Ace's common shortcuts work, such as `Ctrl+/` to toggle a comment and `Alt+↑/↓` to move lines; see [Reference](./reference#keyboard-shortcuts).
 - Large integers keep their exact value instead of being rounded by JavaScript.

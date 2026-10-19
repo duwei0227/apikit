@@ -2,6 +2,10 @@
 
 import { AceEditorHandle, expect, imeType, test } from './fixtures/app';
 
+// 括号着色：按出现顺序列出 "字符层级"，例如 {0 [1
+const bracketColors = (host: import('@playwright/test').Locator) => host.locator('.ace_rainbow').evaluateAll(spans =>
+  spans.map(span => span.textContent + (span.className.match(/ace_rainbow-(\w+)/)?.[1] ?? '')));
+
 test.describe('request body editor', () => {
   let editor: AceEditorHandle;
 
@@ -258,6 +262,21 @@ test.describe('request body editor', () => {
     expect(await editor.value()).toBe('{"cn": "文"}');
   });
 
+  test('colors brackets and XML tags by nesting level', async ({ app, page }) => {
+    await editor.setDoc('{"a": [{"b": [1]}],\n "c": "[{}]"}|');
+    await expect.poll(() => bracketColors(editor.host)).toEqual(['{0', '[1', '{2', '[0', ']0', '}2', ']1', '}0']);
+    // 前面多一层后，后面的行跟着重新着色；多出来的右括号标红
+    await editor.setDoc('|"x": 1}\n}');
+    await expect.poll(() => bracketColors(editor.host)).toEqual(['}unmatched', '}unmatched']);
+    await page.keyboard.type('{');
+    await expect.poll(() => bracketColors(editor.host)).toEqual(['{0', '}0', '}unmatched']);
+    expect(await editor.value()).toBe('{"x": 1}\n}');
+
+    await app.selectBodyType('xml');
+    await editor.setDoc('<root>\n  <item a="1"/>\n  <item>v</item>\n</root>|');
+    await expect.poll(() => bracketColors(editor.host)).toEqual(['<0', '>0', '<1', '/>1', '<1', '>1', '</1', '>1', '</0', '>0']);
+  });
+
   test('closes XML tags and expands Enter between them', async ({ app, page }) => {
     await app.selectBodyType('xml');
     await editor.setDoc('|');
@@ -298,6 +317,17 @@ test.describe('response viewer', () => {
 
     await page.evaluate(() => document.documentElement.classList.add('p-dark'));
     await expect(viewer.locator('.ace_editor')).toHaveClass(/ace-apikit-dark/);
+  });
+
+  test('colors brackets in JSON and XML responses by nesting level', async ({ app }) => {
+    const viewer = app.request.locator('.code-editor-container').first();
+    await app.setMockResponse({ body: '{"list": [{"id": 1}]}' });
+    await app.request.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect.poll(() => bracketColors(viewer)).toEqual(['{0', '[1', '{2', '}2', ']1', '}0']);
+
+    await app.setMockResponse({ contentType: 'application/xml', body: '<root><item/></root>' });
+    await app.request.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect.poll(() => bracketColors(viewer)).toEqual(['<0', '>0', '<1', '/>1', '</0', '>0']);
   });
 
   test('focuses the response search box of the current request when several are open', async ({ app, page }) => {

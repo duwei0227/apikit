@@ -9,6 +9,7 @@ import 'ace-builds/src-noconflict/mode-xml';
 import 'ace-builds/src-noconflict/mode-html';
 import 'ace-builds/src-noconflict/mode-text';
 import { getBaseVarName } from '@/utils/templateVariables';
+import { bracketStateKey, colorBrackets, INITIAL_BRACKET_STATE, type BracketLanguage, type BracketState, type BracketToken } from '@/utils/bracketColors';
 
 export { ace };
 export type AceEditor = ace.Ace.Editor;
@@ -76,6 +77,55 @@ function addJsonNullRule(rules: Record<string, HighlightRule[]>, token = 'consta
   rules.start.splice(booleanIndex + 1, 0, { token, regex: 'null\\b' });
 }
 
+// ── 括号按层级着色 ───────────────────────────────────────────────────────────
+// 层级要跨行传递，所以放进 Ace 的行状态：每行结束的状态包成 BracketLineState（原状态 + 括号状态），
+// 状态的字符串形式带上层级，某行层级变化后 Ace 会继续给后面的行重新着色。着色结果放在
+// token.rainbow，渲染时才拼进 class，token.type 不变，自动配对、括号匹配和折叠不受影响。
+
+class BracketLineState {
+  constructor(readonly inner: unknown, readonly brackets: BracketState) {}
+  toString() {
+    return `${String(this.inner)}#${bracketStateKey(this.brackets)}`;
+  }
+}
+
+interface LineTokenizer {
+  getLineTokens(line: string, startState: unknown, row?: number): { tokens: BracketToken[]; state: unknown };
+}
+
+function withBracketColors<T extends ace.Ace.SyntaxMode>(mode: T, language: BracketLanguage): T {
+  const getTokenizer = mode.getTokenizer.bind(mode) as unknown as () => LineTokenizer;
+  let tokenizer: LineTokenizer | null = null;
+  (mode as unknown as { getTokenizer: () => LineTokenizer }).getTokenizer = () => {
+    if (tokenizer) return tokenizer;
+    const inner = getTokenizer();
+    tokenizer = Object.create(inner) as LineTokenizer;
+    tokenizer.getLineTokens = (line, startState, row) => {
+      const start = startState instanceof BracketLineState ? startState : null;
+      const data = inner.getLineTokens(line, start ? start.inner : startState, row);
+      const colored = colorBrackets(language, data.tokens, start ? start.brackets : INITIAL_BRACKET_STATE);
+      return { tokens: colored.tokens, state: new BracketLineState(data.state, colored.state) };
+    };
+    return tokenizer;
+  };
+  return mode;
+}
+
+// 其他地方（缩进、注释、折叠）读到的仍是模式自己的状态
+const EditSession = ace.require('ace/edit_session').EditSession;
+const getState = EditSession.prototype.getState;
+EditSession.prototype.getState = function (this: unknown, row: number) {
+  const state = getState.call(this, row);
+  return state instanceof BracketLineState ? state.inner : state;
+};
+
+const TextLayer = ace.require('ace/layer/text').Text;
+const renderToken = TextLayer.prototype.$renderToken;
+TextLayer.prototype.$renderToken = function (this: unknown, parent: unknown, screenColumn: number, token: BracketToken, value: string) {
+  const rendered = token.rainbow ? { ...token, type: `${token.type}.${token.rainbow}` } : token;
+  return renderToken.call(this, parent, screenColumn, rendered, value);
+};
+
 /** 编辑模式：json / xml / text，都能识别 {{变量}}。isKnownVariable 在每次着色时调用，变量变化后需重新着色 */
 export function createTemplateMode(language: 'json' | 'xml' | 'text', isKnownVariable: (name: string) => boolean) {
   const BaseMode = language === 'json' ? JsonMode : (language === 'xml' ? XmlMode : TextMode);
@@ -108,7 +158,8 @@ export function createTemplateMode(language: 'json' | 'xml' | 'text', isKnownVar
   Mode.prototype.$id = `ace/mode/apikit-${language}`;
   // 不在 worker 里做语法检查：请求体允许出现 {{变量}}，按 JSON 校验会处处报错
   Mode.prototype.createWorker = () => null;
-  return new (Mode as unknown as ModeConstructor)();
+  const mode = new (Mode as unknown as ModeConstructor)();
+  return language === 'text' ? mode : withBracketColors(mode, language);
 }
 
 // ── 只读查看用的模式 ─────────────────────────────────────────────────────────
@@ -155,8 +206,8 @@ ViewerJsonMode.prototype.$id = 'ace/mode/apikit-json-viewer';
 export function createViewerMode(language: string): ace.Ace.SyntaxMode {
   let mode: ace.Ace.SyntaxMode;
   switch (language) {
-    case 'json': mode = new (ViewerJsonMode as unknown as ModeConstructor)(); break;
-    case 'xml': mode = new XmlMode(); break;
+    case 'json': mode = withBracketColors(new (ViewerJsonMode as unknown as ModeConstructor)(), 'json'); break;
+    case 'xml': mode = withBracketColors(new XmlMode(), 'xml'); break;
     case 'html': mode = new HtmlMode(); break;
     case 'urlencoded': mode = new (UrlEncodedMode as unknown as ModeConstructor)(); break;
     default: mode = new TextMode();
@@ -201,6 +252,10 @@ const themeCss = (cls: string, c: Record<string, string>) => `
 .${cls} .ace_entity.ace_name.ace_function, .${cls} .ace_support.ace_function { color: ${c.func}; }
 .${cls} .ace_support.ace_constant, .${cls} .ace_support.ace_type { color: ${c.number}; }
 .${cls} .ace_invalid { color: ${c.invalid}; background: none; }
+.${cls} .ace_rainbow.ace_rainbow-0 { color: ${c.rainbow0}; }
+.${cls} .ace_rainbow.ace_rainbow-1 { color: ${c.rainbow1}; }
+.${cls} .ace_rainbow.ace_rainbow-2 { color: ${c.rainbow2}; }
+.${cls} .ace_rainbow.ace_rainbow-unmatched { color: ${c.invalid}; }
 .${cls} .ace_template.ace_valid { color: #d97706; font-weight: 500; }
 .${cls} .ace_template.ace_invalid { color: #dc2626; font-weight: 500; }
 .${cls} .ace_placeholder { color: ${c.gutterFg}; font-family: inherit; transform: none; opacity: 1; }
@@ -242,6 +297,9 @@ defineTheme(LIGHT_THEME, 'ace-apikit-light', false, {
   meta: '#032f62',
   func: '#6f42c1',
   invalid: '#cb2431',
+  rainbow0: '#9a6700',
+  rainbow1: '#8250df',
+  rainbow2: '#0969da',
 });
 
 defineTheme(DARK_THEME, 'ace-apikit-dark', true, {
@@ -267,6 +325,9 @@ defineTheme(DARK_THEME, 'ace-apikit-dark', true, {
   meta: '#c9d1d9',
   func: '#d2a8ff',
   invalid: '#f48771',
+  rainbow0: '#ffd700',
+  rainbow1: '#da70d6',
+  rainbow2: '#179fff',
 });
 
 // 搜索高亮（标记层，在文字下方）：普通匹配高于当前行背景，当前匹配项高于选区，始终可见

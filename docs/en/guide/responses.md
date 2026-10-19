@@ -6,7 +6,7 @@ After sending, the top of the response area shows the status, time and size, wit
 
 | View | Description |
 |------|-------------|
-| **Pretty** | JSON, XML and similar formats are formatted and highlighted, with folding |
+| **Pretty** | JSON, XML and similar formats are formatted and highlighted, with folding; brackets and XML tags are coloured by nesting level |
 | **Raw** | The text as received |
 
 - Click the search icon (or press `Ctrl+F` in the response) to search, with match case and regular expressions; `Ctrl+A` selects all of the response.

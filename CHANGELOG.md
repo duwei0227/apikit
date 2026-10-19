@@ -11,6 +11,7 @@
 ## [Unreleased]
 
 ### Added
+- Braces and brackets in JSON, and tags in XML, are colored by nesting level in the request body editor and the response viewer. Each pair shares a color, three colors repeat by level, and a closing bracket or end tag without a pair is shown in red.
 - Folders in a collection can be moved with **Move Up** and **Move Down** in their right-click menu, as with requests.
 - Workflows in the sidebar can be organized in folders, which can be nested. Create folders with **New Folder**, create a workflow in a folder from the folder row or its right-click menu, and drag workflows and folders to reorder them or move them into folders. Right-click a workflow or folder and choose **Move Up** or **Move Down** to reorder it, or a workflow and choose **Move to...** to move it to another folder, as with requests. Deleting a folder also deletes the workflows in it.
 - The **Save Request** dialog has a **New Collection** button, so a new request can be saved even before any collection exists.
@@ -38,6 +39,7 @@
 - Updated bundled dependencies (Vue, DOMPurify, nanoid and others) to patched versions that fix known security vulnerabilities.
 
 ### 新增
+- 请求体编辑器和响应查看器中，JSON 的花括号、中括号和 XML 标签按嵌套层级着色：成对的颜色相同，三种颜色按层级循环使用，没有配对的右括号或结束标签显示为红色。
 - 集合中的文件夹可以在右键菜单中用 **Move Up** / **Move Down** 上移、下移，与请求一致。
 - 侧边栏 Workflows 支持用文件夹分组，文件夹可以多级嵌套。用 **New Folder** 新建文件夹，在文件夹行或右键菜单中在文件夹内新建工作流，拖动工作流和文件夹可以调整顺序或移入文件夹。右键工作流或文件夹选择 **Move Up** / **Move Down** 调整顺序，右键工作流选择 **Move to...** 移到其他文件夹，与请求一致。删除文件夹会同时删除其中的工作流。
 - **Save Request** 对话框新增 **New Collection** 按钮，还没有任何集合时也能直接保存新请求。
