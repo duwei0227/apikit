@@ -16,7 +16,7 @@ On the left of each step card you can drag to reorder and collapse the step; the
 
 When you have many workflows, group them in folders under **Workflows** in the sidebar. Folders can be nested.
 
-- Click the folder button next to **New Workflow** (**New Folder**) to create a folder at the top level; right-click a folder and choose **New Folder** to create a subfolder.
+- Click the folder button next to **New Workflow** (**New Folder**) to create a folder at the top level; right-click a folder and choose **New Folder** to create a subfolder. A new folder is placed after the other folders in its level and before the workflows.
 - To create a workflow in a folder, click **+** (**New Workflow in Folder**) on the folder row, or right-click the folder and choose **New Workflow**.
 - Click a folder to expand or collapse it. Right-click a folder or workflow to **Rename** or **Delete** it; deleting a folder also deletes all workflows in it, including those in subfolders.
 - Right-click a workflow or folder and choose **Move Up** / **Move Down** to move it up or down within its level; right-click a workflow and choose **Move to...** to move it to another folder or the top level (**Workflows**), at the end. These options are hidden while searching.

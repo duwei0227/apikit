@@ -309,3 +309,20 @@ test.describe('save dialog', () => {
     await expect(dialog.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 });
+
+test('a new folder goes after the other folders and before the requests', async ({ app, page }) => {
+  await createShop(app, page);
+  const addFolder = async (parent: string, name: string) => {
+    await contextMenu(page, parent, 'Add Folder');
+    await dialog(page).getByPlaceholder('Enter a name').fill(name);
+    await dialog(page).getByRole('button', { name: 'Create' }).click();
+    await expect(dialog(page)).toBeHidden();
+    await expandAll(page);
+  };
+  const shown = () => tree(page).locator('.p-tree-node-label').allInnerTexts()
+    .then(texts => texts.map(text => text.replace(/^(GET|POST)\s*/, '').trim()));
+
+  await addFolder('Shop', 'Archive');
+  await addFolder('Orders', 'Drafts');
+  await expect.poll(shown).toEqual(['Shop', 'Orders', 'Drafts', 'Create', 'Search', 'Archive', 'List']);
+});

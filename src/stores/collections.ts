@@ -5,6 +5,7 @@ import type { Collection, Folder, HttpMethod, RequestReference } from '@/types/m
 import { generateId } from '@/utils/id-generator';
 import { collectAllRequestIds, findFolderById } from '@/utils/collectionTree';
 import { useRequestsStore } from './requests';
+import { newFolderIndex } from '@/utils/folderPlacement';
 
 interface AddRequestReferenceOptions {
   insertAfterRequestId?: string;
@@ -142,18 +143,11 @@ export const useCollectionsStore = defineStore('collections', () => {
         requests: []
       };
 
-      if (parentFolderId) {
-        const parentFolder = findFolder(collection.folders, parentFolderId);
-        if (!parentFolder) {
-          throw new Error(`Parent folder ${parentFolderId} not found`);
-        }
-        // 排到同层级末尾
-        newFolder.order = nextOrder(parentFolder);
-        parentFolder.folders.push(newFolder);
-      } else {
-        newFolder.order = nextOrder(collection);
-        collection.folders.push(newFolder);
+      const parent = parentFolderId ? findFolder(collection.folders, parentFolderId) : collection;
+      if (!parent) {
+        throw new Error(`Parent folder ${parentFolderId} not found`);
       }
+      insertFolder(parent, newFolder);
 
       collection.updatedAt = new Date().toISOString();
       await storageService.saveCollection(collection);
@@ -434,6 +428,17 @@ export const useCollectionsStore = defineStore('collections', () => {
     return orders.length > 0
       ? Math.max(...orders) + 1
       : container.folders.length + container.requests.length;
+  }
+
+  /** 新文件夹放在同层其他文件夹之后、request 之前，并按显示顺序重新编号 order */
+  function insertFolder(container: Collection | Folder, folder: Folder) {
+    const entries = orderedChildEntries(container);
+    const index = newFolderIndex(entries.map(entry => entry.kind === 'folder'));
+    container.folders.push(folder);
+    entries.splice(index, 0, { kind: 'folder', item: folder, index: -1, order: undefined });
+    entries.forEach((entry, order) => {
+      entry.item.order = order;
+    });
   }
 
   function insertRequestReference(

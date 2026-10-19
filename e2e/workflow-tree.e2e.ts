@@ -81,7 +81,8 @@ test('creates, renames and deletes folders and the workflows in them', async ({ 
   await submitName(page, 'After sales');
   await contextMenu(page, 'After sales', 'Rename');
   await submitName(page, 'Returns', 'Rename');
-  await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Checkout', ['Returns', []]]]]);
+  // 新文件夹排在同层 Workflow 之前
+  await expect.poll(() => treeShape(app)).toEqual([['Orders', [['Returns', []], 'Checkout']]]);
 
   // 点击文件夹折叠和展开
   await node(page, 'Orders').click();
@@ -232,11 +233,13 @@ test.describe('pointer drag (Windows)', () => {
     await createOrders(app);
     await app.run(() => window.__store('workflows').createFolder('Archive'));
     await expect(node(page, 'Archive')).toBeVisible();
+    // 新文件夹紧跟 Orders，排在根目录的 Workflow 之前
+    await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Checkout']], ['Archive', []], 'Login', 'Refund']);
     await setExpanded(page, 'Orders', true);
 
     // 文件夹中间：放进去
     await pointerDrag(page, 'Login', 'Archive');
-    await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Checkout']], 'Refund', ['Archive', ['Login']]]);
+    await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Checkout']], ['Archive', ['Login']], 'Refund']);
 
     // 文件夹也可以放进另一个文件夹
     await setExpanded(page, 'Archive', true);

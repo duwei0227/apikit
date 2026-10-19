@@ -2,6 +2,7 @@
 
 import { cloneJson } from '@/utils/clone';
 import type { WorkflowFolder, WorkflowLayout, WorkflowLayoutItem } from '@/types/models';
+import { newFolderIndex } from '@/utils/folderPlacement';
 
 export type WorkflowTreeNodeData =
   | { type: 'folder'; id: string; name: string }
@@ -226,7 +227,8 @@ export function addFolderToLayout(
   parentId: string | null = null,
 ): WorkflowLayout {
   const next = cloneJson(layout);
-  (childrenOf(next, parentId) ?? next.items).push({ type: 'folder', id: folder.id, name: folder.name, children: [] });
+  const siblings = childrenOf(next, parentId) ?? next.items;
+  siblings.splice(newFolderIndex(siblings.map(item => item.type === 'folder')), 0, { type: 'folder', id: folder.id, name: folder.name, children: [] });
   return next;
 }
 

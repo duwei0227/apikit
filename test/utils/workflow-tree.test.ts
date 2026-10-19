@@ -156,6 +156,19 @@ describe('修改结构', () => {
     ]);
   });
 
+  it('新建文件夹排在同层其他文件夹之后、Workflow 之前；交错时紧跟最后一个文件夹', () => {
+    const ids = (items: WorkflowLayout['items']) => items.map(item => item.id);
+    // 根目录：f1、w1 → f1、新、w1
+    expect(ids(addFolderToLayout(layout, { id: 'f9', name: 'New' }).items)).toEqual(['f1', 'f9', 'w1']);
+    // f1 内是 w2、f2 交错 → 紧跟 f2
+    const inFolder = addFolderToLayout(layout, { id: 'f9', name: 'New' }, 'f1');
+    expect(ids((inFolder.items[0] as { children: WorkflowLayout['items'] }).children)).toEqual(['w2', 'f2', 'f9']);
+    // 只有 Workflow 时放在最前；空文件夹中直接加入
+    const onlyWorkflows: WorkflowLayout = { items: [{ type: 'workflow', id: 'w1' }, { type: 'workflow', id: 'w2' }] };
+    expect(ids(addFolderToLayout(onlyWorkflows, { id: 'f9', name: 'New' }).items)).toEqual(['f9', 'w1', 'w2']);
+    expect(ids(addFolderToLayout({ items: [] }, { id: 'f9', name: 'New' }).items)).toEqual(['f9']);
+  });
+
   it('新建、重命名和删除文件夹，删除时返回其中的全部 Workflow', () => {
     const created = addFolderToLayout(layout, { id: 'f9', name: 'Smoke' }, 'f1');
     expect(findParentFolderId(created, 'f9')).toBe('f1');

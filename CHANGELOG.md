@@ -23,6 +23,7 @@
 - Dialogs use consistent widths by content: simple name dialogs (such as **Rename**) are a little wider, **Move Request** is as wide as **Save Request**, and **Manage Environments** and **AI Integration (MCP)** no longer stretch across large screens. Dialogs also stay inside small windows.
 - Status, method and highlight colors (for example the unsaved tab title and **Status: 200 OK**) use the updated default color palette and look slightly more vivid, mainly in the dark theme.
 - The **Save Request** dialog now starts at the location you last saved to (or the only collection when there is just one), expands to it, and marks a collection's top level as **(collection root)**.
+- A new folder in a collection or in the Workflows sidebar is placed after the other folders in its level and before the requests or workflows, instead of at the end. If folders and items have been mixed by dragging, it goes right after the last folder.
 - A new workflow is now added at the end of the sidebar list (or of its folder) instead of at the top; the order you set by dragging is kept.
 - Params, Headers, form-data and x-www-form-urlencoded now support Postman-style Bulk Edit with one `key: value` pair per line.
 - Windows uninstaller now explains that deleting the app cache also removes theme and MCP settings, while user data is controlled by a separate option.
@@ -48,6 +49,7 @@
 - 弹窗按内容统一宽度：只有名称输入的弹窗（如 **Rename**）略为加宽，**Move Request** 与 **Save Request** 同宽，**Manage Environments** 和 **AI Integration (MCP)** 在大屏上不再过宽；窗口较小时弹窗不会超出窗口。
 - 状态、请求方法和强调色（例如未保存页签的标题和 **Status: 200 OK**）改用新版默认调色板，颜色略为鲜艳，主要体现在暗色主题。
 - **Save Request** 对话框默认选中上次保存的位置（只有一个集合时选中它）并展开到该位置，保存在集合根目录时标注 **(collection root)**。
+- 在集合或 Workflows 侧边栏中新建的文件夹排在同层其他文件夹之后、请求或工作流之前，而不是放在末尾；同层被拖成交错顺序时紧跟最后一个文件夹。
 - 新建的工作流现在放在侧边栏列表（或所在文件夹）的末尾，而不是最前面；拖动调整的顺序会保留。
 - Params、Headers、form-data 和 x-www-form-urlencoded 现支持 Postman 风格的 Bulk Edit，每行使用 `key: value` 编辑；form-data 文件字段在批量编辑时保留。
 - Windows 卸载程序现在说明删除应用缓存也会移除主题和 MCP 设置，用户数据则由单独选项控制。

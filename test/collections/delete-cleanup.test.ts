@@ -93,8 +93,10 @@ describe('reordering folders', () => {
     const orders = await collections.addFolder(collection.id, 'Orders');
     const archive = await collections.addFolder(collection.id, 'Archive', orders.id);
     await collections.addRequestReference(collection.id, 'r1', 'Login', 'GET', '/login');
-    await collections.addFolder(collection.id, 'Users');
+    const users = await collections.addFolder(collection.id, 'Users');
     await collections.addRequestReference(collection.id, 'r2', 'List', 'GET', '/orders', orders.id);
+    // 新文件夹排在 request 之前，先把 Users 移到 Login 后面，得到交错的起始顺序
+    await collections.reorderFolder(collection.id, users.id, 'down');
 
     expect(shape(collection.id)).toEqual([['Orders', [['Archive', []], 'List']], 'Login', ['Users', []]]);
 
@@ -149,8 +151,10 @@ describe('reordering requests', () => {
     const collections = useCollectionsStore();
     const collection = await collections.createCollection('Shop');
     await collections.addRequestReference(collection.id, 'r1', 'Login', 'GET', '/login');
-    await collections.addFolder(collection.id, 'Orders');
+    const orders = await collections.addFolder(collection.id, 'Orders');
     await collections.addRequestReference(collection.id, 'r2', 'Logout', 'GET', '/logout');
+    // 新文件夹排在 request 之前，先把 Orders 移到 Login 后面，得到交错的起始顺序
+    await collections.reorderFolder(collection.id, orders.id, 'down');
     expect(shape(collection.id)).toEqual(['Login', 'Orders', 'Logout']);
 
     await collections.reorderRequest(collection.id, 'r2', 'up');
