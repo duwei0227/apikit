@@ -4,6 +4,7 @@ import { variableContext } from '@/services/variables/resolver';
 import { useWorkflowsStore } from '@/stores/workflows';
 import type { WorkflowDefinition } from '@/types/models';
 import { generateId } from '@/utils/id-generator';
+import { listWorkflowPlacements } from '@/utils/workflowTree';
 import { notifyItemDeleted } from '@/composables/useDeletedItems';
 import { requireWorkflow } from '../lookups';
 import { fail, requireString, describeLog, confirmOrThrow } from '../shared';
@@ -13,14 +14,21 @@ import { buildWorkflowSteps, describeStep, countSteps } from '../workflowSteps';
 export const workflowHandlers: Record<string, McpToolHandler> = {
   async list_workflows() {
     const store = useWorkflowsStore();
+    const workflowsById = new Map(store.workflows.map(workflow => [workflow.id, workflow]));
     return {
-      workflows: store.workflows.map(workflow => ({
-        id: workflow.id,
-        name: workflow.name,
-        stepCount: countSteps(workflow.steps),
-        updatedAt: workflow.updatedAt,
-        hasUnsavedEdits: Boolean(store.getWorkflowDraft(workflow.id)),
-      })),
+      // 与侧边栏的顺序一致
+      workflows: listWorkflowPlacements(store.layout).flatMap(({ id, folderPath }) => {
+        const workflow = workflowsById.get(id);
+        if (!workflow) return [];
+        return [{
+          id: workflow.id,
+          name: workflow.name,
+          folderPath,
+          stepCount: countSteps(workflow.steps),
+          updatedAt: workflow.updatedAt,
+          hasUnsavedEdits: Boolean(store.getWorkflowDraft(workflow.id)),
+        }];
+      }),
     };
   },
 

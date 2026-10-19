@@ -237,11 +237,14 @@ const importSelection = async () => {
   }
 
   // 引用了未导入请求的步骤转成 inline 请求，Workflow 仍可运行
-  for (const workflow of selectedImportWorkflows.value) {
+  // 导出时在文件夹中的 Workflow 放回同名文件夹（没有时新建）
+  for (const { folderPath = [], ...workflow } of selectedImportWorkflows.value) {
     await workflowsStore.saveWorkflow({
       ...inlineWorkflowReferences(workflow, requestMap, keptRequestIds),
       name: workflowNames[workflow.id]
     });
+    const folderId = await workflowsStore.ensureFolderPath(folderPath);
+    if (folderId) await workflowsStore.moveWorkflowToFolder(workflow.id, folderId);
   }
 
   let environmentCount = 0;
@@ -449,6 +452,11 @@ defineExpose({ open: openImportDialog });
                   class="transfer-tag rename"
                   :title="`Will be imported as ${importWorkflowNames[workflow.id]}`"
                 >→ {{ importWorkflowNames[workflow.id] }}</span>
+                <span
+                  v-if="workflow.folderPath?.length"
+                  class="transfer-meta truncate"
+                  :title="workflow.folderPath.join(' / ')"
+                ><i class="pi pi-folder text-xs mr-1"></i>{{ workflow.folderPath.join(' / ') }}</span>
                 <span class="transfer-meta">{{ workflowMeta(workflow) }}</span>
               </label>
             </div>

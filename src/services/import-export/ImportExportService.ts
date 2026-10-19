@@ -4,6 +4,7 @@ import { join } from '@tauri-apps/api/path';
 import type { AuthConfig, Collection, Environment, Folder, FormDataItem, HttpMethod, KeyValue, Request, RequestBody, RequestReference, WorkflowDefinition } from '@/types/models';
 import { generateId } from '@/utils/id-generator';
 import { isWorkflowDefinition, remapWorkflow } from '@/utils/workflowTransfer';
+import { readWorkflowFolderPath } from '@/utils/workflowTree';
 import { isValidJsonSyntax } from '@/utils/jsonSyntax';
 import { parseRequestUrl, serializeRequestUrl } from '@/utils/urlQuery';
 import { parse as parseYaml } from 'yaml';
@@ -48,12 +49,15 @@ export interface MultiExportFormat {
   requests: Request[];
 }
 
+/** 导出文件中的 Workflow：folderPath 是它在侧边栏中所在文件夹的名称路径，在根目录时省略 */
+export type ExportedWorkflow = WorkflowDefinition & { folderPath?: string[] };
+
 export interface BundleExportFormat {
   version: string;
   exportedAt: string;
   collections: Collection[];
   requests: Request[];
-  workflows: WorkflowDefinition[];
+  workflows: ExportedWorkflow[];
 }
 
 export interface ImportBundle {
@@ -61,7 +65,7 @@ export interface ImportBundle {
   version?: string;
   collections: Collection[];
   requests: Request[];
-  workflows: WorkflowDefinition[];
+  workflows: ExportedWorkflow[];
   /** OpenAPI 导入时生成的环境（含 baseUrl 等变量），由用户选择是否一并创建 */
   environments?: Environment[];
   /** 转换中未能导入的内容 */
@@ -171,7 +175,7 @@ export class ImportExportService {
    * 导出 Collections 与 Workflows 到同一个文件。Postman 格式只包含 Collections。
    */
   async exportBundle(
-    bundle: { collections: Collection[]; requests: Request[]; workflows: WorkflowDefinition[] },
+    bundle: { collections: Collection[]; requests: Request[]; workflows: ExportedWorkflow[] },
     format: CollectionExportTarget = 'apikit'
   ): Promise<boolean> {
     const { collections, requests, workflows } = bundle;
@@ -280,7 +284,11 @@ export class ImportExportService {
     );
     const workflows = (Array.isArray(exported.workflows) ? exported.workflows : [])
       .filter(isWorkflowDefinition)
-      .map((workflow: WorkflowDefinition) => remapWorkflow(workflow, requestIdMap));
+      .map((workflow: ExportedWorkflow): ExportedWorkflow => {
+        const { folderPath, ...definition } = remapWorkflow(workflow, requestIdMap) as ExportedWorkflow;
+        const path = readWorkflowFolderPath(folderPath);
+        return path.length > 0 ? { ...definition, folderPath: path } : definition;
+      });
 
     return { source: 'apikit', version: data.version, collections, requests, workflows };
   }

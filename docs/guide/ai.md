@@ -54,7 +54,7 @@ MCP 服务默认关闭，只接受本机连接，并且必须带 token。点击 
 
 | 分类 | 工具 |
 |------|------|
-| 读取 | `list_collections`、`search_requests`（用 `query` 按名称或 URL 片段查找）、`get_request`、`list_workflows`、`get_workflow`、`list_environments`、`list_builtin_variables`、`get_workflow_logs`、`list_request_logs`、`get_request_log` |
+| 读取 | `list_collections`、`search_requests`（用 `query` 按名称或 URL 片段查找）、`get_request`、`list_workflows`（含所在文件夹 `folderPath`）、`get_workflow`、`list_environments`、`list_builtin_variables`、`get_workflow_logs`、`list_request_logs`、`get_request_log` |
 | 打开和关闭页签 | `open_request`、`close_request`、`open_workflow`、`close_workflow` |
 | 创建和修改 | `create_collection`、`update_collection`、`create_folder`、`update_folder`、`create_request`、`import_curl`（从 cURL 命令创建）、`update_request`、`move_request`、`create_workflow`、`update_workflow`、`create_environment`、`update_environment`、`set_global_variables` |
 | 运行（需确认） | `send_request`、`run_workflow`、`set_active_environment` |

@@ -13,6 +13,7 @@ import type {
   AppState,
   Sequence,
   WorkflowDefinition,
+  WorkflowLayout,
   MockLogEntry,
   MockService,
 } from '@/types/models';
@@ -127,6 +128,16 @@ export interface IStorageService {
    * Delete a workflow draft
    */
   deleteWorkflowDraft(id: string): Promise<void>;
+
+  /**
+   * Load the sidebar folder structure of workflows (unvalidated, null when never saved)
+   */
+  loadWorkflowLayout(): Promise<unknown>;
+
+  /**
+   * Save the sidebar folder structure of workflows
+   */
+  saveWorkflowLayout(layout: WorkflowLayout): Promise<void>;
 
   // Mock services
   loadMockServices(): Promise<MockService[]>;

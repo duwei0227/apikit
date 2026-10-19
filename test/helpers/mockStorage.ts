@@ -10,6 +10,7 @@ import type {
   HistoryItem,
   Request,
   WorkflowDefinition,
+  WorkflowLayout,
   MockLogEntry,
   MockService,
 } from '@/types/models';
@@ -23,6 +24,7 @@ class MockStorageService implements IStorageService {
   requestDrafts = new Map<string, Request>();
   workflows = new Map<string, WorkflowDefinition>();
   workflowDrafts = new Map<string, WorkflowDefinition>();
+  workflowLayout: WorkflowLayout | null = null;
   environments: Environment[] = [];
   globalVariables: EnvironmentVariable[] = [];
   history: HistoryItem[] = [];
@@ -40,6 +42,7 @@ class MockStorageService implements IStorageService {
     this.requestDrafts.clear();
     this.workflows.clear();
     this.workflowDrafts.clear();
+    this.workflowLayout = null;
     this.environments = [];
     this.globalVariables = [];
     this.history = [];
@@ -106,6 +109,14 @@ class MockStorageService implements IStorageService {
 
   async saveWorkflow(workflow: WorkflowDefinition) {
     this.workflows.set(workflow.id, clone(workflow));
+  }
+
+  async loadWorkflowLayout() {
+    return this.workflowLayout ? clone(this.workflowLayout) : null;
+  }
+
+  async saveWorkflowLayout(layout: WorkflowLayout) {
+    this.workflowLayout = clone(layout);
   }
 
   async deleteWorkflow(id: string) {

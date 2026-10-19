@@ -144,6 +144,17 @@ test('workflow editor and log', async ({ app, page }) => {
         },
       ],
     });
+    // 侧边栏的文件夹：Orders（本例和 Refund an order）、Auth（Refresh token），以及根目录的 Smoke test
+    const store = window.__store('workflows');
+    const empty = (id: string, name: string) => ({ id, name, version: 1, createdAt: '', updatedAt: '', steps: [] });
+    const ordersId = await store.createFolder('Orders');
+    const authId = await store.createFolder('Auth');
+    await store.moveWorkflowToFolder('wf-order', ordersId);
+    await store.saveWorkflow(empty('wf-refund', 'Refund an order'));
+    await store.moveWorkflowToFolder('wf-refund', ordersId);
+    await store.saveWorkflow(empty('wf-refresh', 'Refresh token'));
+    await store.moveWorkflowToFolder('wf-refresh', authId);
+    await store.saveWorkflow(empty('wf-smoke', 'Smoke test'));
     // 模拟的接口：按请求返回响应，查询订单时状态逐次推进
     let polls = 0;
     Object.defineProperty(window, '__mockResponse', {
@@ -159,9 +170,11 @@ test('workflow editor and log', async ({ app, page }) => {
     });
   });
   await page.getByRole('tab', { name: 'Workflows' }).click();
+  await page.getByText('Orders', { exact: true }).click();
   await page.getByText('Place and track an order').click();
   await expect(page.getByTestId('workflow-condition-row')).toHaveCount(2);
   await shot(page, 'workflow');
+  await page.screenshot({ path: `${OUT}/workflow-folders.png`, clip: { x: 0, y: 80, width: 320, height: 320 }, animations: 'disabled' });
 
   await page.getByRole('button', { name: 'Run workflow' }).click();
   await expect(page.getByRole('button', { name: 'Run workflow' })).toBeEnabled({ timeout: 20_000 });

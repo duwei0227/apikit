@@ -117,6 +117,22 @@ describe('parseImportData', () => {
     expect(result.workflows).toHaveLength(1);
   });
 
+  it('读取 Workflow 所在文件夹的名称路径，且不写入 Workflow 定义以外的字段', () => {
+    const result = service.parseImportData({
+      version: '1.1.0',
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      collections: [],
+      requests: [],
+      workflows: [
+        { ...workflow, folderPath: ['Orders', ' ', 'After sales'] },
+        { ...workflow, id: 'wf-2', folderPath: 'Orders' },
+        { ...workflow, id: 'wf-3' },
+      ],
+    });
+    expect(result.workflows.map(item => item.folderPath)).toEqual([['Orders', 'After sales'], undefined, undefined]);
+    expect('folderPath' in result.workflows[1]).toBe(false);
+  });
+
   it('拒绝无法识别的文件', () => {
     expect(() => service.parseImportData({ foo: 1 })).toThrow('Invalid import file format');
   });

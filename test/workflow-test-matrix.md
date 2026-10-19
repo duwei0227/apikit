@@ -6,6 +6,8 @@ Target service: `https://httpbin.org`
 | --- | --- | --- | --- | --- | --- |
 | Workflow CRUD | Store | create/save/load/delete workflow | `test/workflow/workflow-store.test.ts` | `WF-STORE-001` | Covered |
 | Workflow Draft | Store | save/restore/clear draft | `test/workflow/workflow-store.test.ts` | `WF-STORE-001` | Covered |
+| Workflow Folders | Store | create/rename/delete folders, move, reload, folder path | `test/workflow/workflow-store.test.ts` | `WF-STORE-FOLDER-001` | Covered |
+| Workflow Folders | Store | workflows saved before folders existed, ensure folder path | `test/workflow/workflow-store.test.ts` | `WF-STORE-FOLDER-002` | Covered |
 | Workflow Logs | Store | started/completed lifecycle | `test/workflow/workflow-store.test.ts` | `WF-STORE-002` | Covered |
 | Workflow Logs | Store | clear scoped logs | `test/workflow/workflow-store.test.ts` | `WF-STORE-003` | Covered |
 | Request | Inline Request | GET, params, headers, status test | `test/workflow/request-step.test.ts` | `WF-REQ-001` | Covered |

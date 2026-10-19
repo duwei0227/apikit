@@ -5,9 +5,20 @@ import type { WorkflowRuntimeContext } from '@/services/workflow/engine';
 import { normalizeWorkflowDefinition } from '@/services/workflow/definition';
 import { RunLogRecorder } from '@/services/workflow/runLog';
 import { useRequestsStore } from '@/stores/requests';
-import type { WorkflowDefinition, WorkflowRunLog } from '@/types/models';
+import type { WorkflowDefinition, WorkflowLayout, WorkflowRunLog } from '@/types/models';
 import { generateId } from '@/utils/id-generator';
 import { cloneJson } from '@/utils/clone';
+import {
+  addFolderToLayout,
+  addWorkflowToLayout,
+  ensureWorkflowFolderPath,
+  insertWorkflowAfter,
+  listWorkflowPlacements,
+  normalizeWorkflowLayout,
+  removeFolderFromLayout,
+  removeWorkflowFromLayout,
+  renameFolderInLayout,
+} from '@/utils/workflowTree';
 
 // 定义和执行已移到 services/workflow，这里保留导出供原有调用方使用
 export type { WorkflowRuntimeContext } from '@/services/workflow/engine';
@@ -33,6 +44,8 @@ export const useWorkflowsStore = defineStore('workflows', () => {
   // 外部（如 MCP）把修改存为未保存修改的次数，打开的 Workflow 据此重新载入
   const externalRevisions = ref<Record<string, number>>({});
   const currentWorkflowId = ref<string>('');
+  // 侧边栏的文件夹结构和顺序
+  const layout = ref<WorkflowLayout>({ items: [] });
 
   const activeWorkflow = computed(() => workflows.value.find(item => item.id === activeWorkflowId.value) || null);
 
@@ -40,6 +53,10 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     isLoading.value = true;
     try {
       workflows.value = (await storageService.loadWorkflows()).map(normalizeWorkflowDefinition);
+      layout.value = normalizeWorkflowLayout(
+        await storageService.loadWorkflowLayout(),
+        workflows.value.map(workflow => workflow.id)
+      );
       const drafts = await storageService.loadWorkflowDrafts();
       workflowDrafts.value = new Map(
         Object.entries(drafts).map(([id, workflow]) => [id, normalizeWorkflowDefinition(workflow)])
@@ -52,7 +69,13 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     }
   }
 
-  async function createWorkflow(name: string = 'New Workflow') {
+  async function saveLayout(next: WorkflowLayout) {
+    layout.value = next;
+    await storageService.saveWorkflowLayout(next);
+  }
+
+  /** folderId 为 null 时放在根目录末尾 */
+  async function createWorkflow(name: string = 'New Workflow', folderId: string | null = null) {
     const now = new Date().toISOString();
     const workflow: WorkflowDefinition = {
       id: generateId(),
@@ -65,6 +88,7 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     workflows.value.unshift(workflow);
     activeWorkflowId.value = workflow.id;
     await storageService.saveWorkflow(workflow);
+    await saveLayout(addWorkflowToLayout(layout.value, workflow.id, folderId));
     return workflow;
   }
 
@@ -81,6 +105,10 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     }
     await storageService.saveWorkflow(normalizedWorkflow);
     clearWorkflowDraft(normalizedWorkflow.id);
+    // 新的 Workflow（如 AI 创建或导入）放在根目录末尾
+    if (index < 0) {
+      await saveLayout(addWorkflowToLayout(layout.value, normalizedWorkflow.id));
+    }
   }
 
   function notifyExternalUpdate(id: string): void {
@@ -125,6 +153,56 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     if (activeWorkflowId.value === id) {
       activeWorkflowId.value = workflows.value[0]?.id || null;
     }
+    await saveLayout(removeWorkflowFromLayout(layout.value, id));
+  }
+
+  /** 在 parentId 文件夹（null 为根目录）末尾新建文件夹，返回文件夹 id */
+  async function createFolder(name: string, parentId: string | null = null) {
+    const id = generateId();
+    await saveLayout(addFolderToLayout(layout.value, { id, name }, parentId));
+    return id;
+  }
+
+  async function renameFolder(folderId: string, name: string) {
+    await saveLayout(renameFolderInLayout(layout.value, folderId, name));
+  }
+
+  /** 删除文件夹及其中（含子文件夹）的全部 Workflow，返回被删除的 Workflow id */
+  async function deleteFolder(folderId: string) {
+    const { workflowIds } = removeFolderFromLayout(layout.value, folderId);
+    for (const id of workflowIds) {
+      await deleteWorkflow(id);
+    }
+    await saveLayout(removeFolderFromLayout(layout.value, folderId).layout);
+    return workflowIds;
+  }
+
+  /** 把 Workflow 移到文件夹末尾，folderId 为 null 时移到根目录 */
+  async function moveWorkflowToFolder(workflowId: string, folderId: string | null) {
+    await saveLayout(addWorkflowToLayout(layout.value, workflowId, folderId));
+  }
+
+  /** 把 Workflow 放在 referenceId 的后面（如复制出的 Workflow 放在原 Workflow 后面） */
+  async function placeWorkflowAfter(workflowId: string, referenceId: string) {
+    await saveLayout(insertWorkflowAfter(layout.value, workflowId, referenceId));
+  }
+
+  /** 按名称路径找到文件夹，缺少的逐级新建；路径为空时返回 null（根目录） */
+  async function ensureFolderPath(folderPath: string[]) {
+    if (folderPath.length === 0) return null;
+    const result = ensureWorkflowFolderPath(layout.value, folderPath, generateId);
+    await saveLayout(result.layout);
+    return result.folderId;
+  }
+
+  /** 拖放后的新结构 */
+  async function setLayout(next: WorkflowLayout) {
+    await saveLayout(normalizeWorkflowLayout(next, workflows.value.map(workflow => workflow.id)));
+  }
+
+  /** Workflow 所在文件夹的名称路径，在根目录时为空 */
+  function getWorkflowFolderPath(workflowId: string): string[] {
+    return listWorkflowPlacements(layout.value).find(placement => placement.id === workflowId)?.folderPath || [];
   }
 
   async function runWorkflow(workflow: WorkflowDefinition, context: WorkflowRuntimeContext = {}) {
@@ -207,10 +285,19 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     activeWorkflow,
     runLogs,
     workflowLogsById,
+    layout,
     loadWorkflows,
     createWorkflow,
     saveWorkflow,
     deleteWorkflow,
+    createFolder,
+    renameFolder,
+    deleteFolder,
+    moveWorkflowToFolder,
+    placeWorkflowAfter,
+    ensureFolderPath,
+    setLayout,
+    getWorkflowFolderPath,
     runWorkflow,
     stopWorkflow,
     clearLogs,

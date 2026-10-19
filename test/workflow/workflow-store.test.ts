@@ -38,6 +38,48 @@ describe('workflow store lifecycle', () => {
     expect(mockStorageService.workflows.has(created.id)).toBe(false);
   });
 
+  it('WF-STORE-FOLDER-001 keeps workflows in sidebar folders across reloads', async () => {
+    const store = useWorkflowsStore();
+    const folderId = await store.createFolder('Orders');
+    const subFolderId = await store.createFolder('After sales', folderId);
+    const checkout = await store.createWorkflow('Checkout', folderId);
+    const refund = await store.createWorkflow('Refund', subFolderId);
+    // 新的 Workflow（如 AI 创建）放在根目录末尾
+    const login = workflow([], { id: 'wf-login', name: 'Login' });
+    await store.saveWorkflow(login);
+
+    expect(store.getWorkflowFolderPath(refund.id)).toEqual(['Orders', 'After sales']);
+    expect(store.getWorkflowFolderPath(login.id)).toEqual([]);
+
+    await store.renameFolder(subFolderId, 'Returns');
+    await store.moveWorkflowToFolder(login.id, subFolderId);
+
+    setActivePinia(createPinia());
+    const reloaded = useWorkflowsStore();
+    await reloaded.loadWorkflows();
+    expect(reloaded.getWorkflowFolderPath(login.id)).toEqual(['Orders', 'Returns']);
+    expect(reloaded.getWorkflowFolderPath(checkout.id)).toEqual(['Orders']);
+
+    const deleted = await reloaded.deleteFolder(subFolderId);
+    expect(deleted.sort()).toEqual([login.id, refund.id].sort());
+    expect(mockStorageService.workflows.has(refund.id)).toBe(false);
+    expect(mockStorageService.workflowLayout?.items).toEqual([
+      { type: 'folder', id: folderId, name: 'Orders', children: [{ type: 'workflow', id: checkout.id }] },
+    ]);
+  });
+
+  it('WF-STORE-FOLDER-002 places workflows saved before folders existed at the top level', async () => {
+    mockStorageService.workflows.set('old-1', workflow([], { id: 'old-1', name: 'Old one' }));
+    mockStorageService.workflows.set('old-2', workflow([], { id: 'old-2', name: 'Old two' }));
+    const store = useWorkflowsStore();
+    await store.loadWorkflows();
+    expect(store.layout.items).toEqual([{ type: 'workflow', id: 'old-1' }, { type: 'workflow', id: 'old-2' }]);
+
+    const folderId = (await store.ensureFolderPath(['Imported', 'Smoke']))!;
+    expect(await store.ensureFolderPath(['imported', 'smoke'])).toBe(folderId);
+    expect(await store.ensureFolderPath([])).toBeNull();
+  });
+
   it('WF-STORE-002 updates a single workflow lifecycle log to completed', async () => {
     const store = useWorkflowsStore();
     const definition = workflow([requestStep()]);

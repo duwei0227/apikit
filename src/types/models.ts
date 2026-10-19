@@ -240,6 +240,21 @@ export interface WorkflowDefinition {
   updatedAt: string;
 }
 
+/** 侧边栏 Workflows 中的文件夹，children 按显示顺序 */
+export interface WorkflowFolder {
+  type: 'folder';
+  id: string;
+  name: string;
+  children: WorkflowLayoutItem[];
+}
+
+export type WorkflowLayoutItem = { type: 'workflow'; id: string } | WorkflowFolder;
+
+/** 侧边栏 Workflows 的文件夹结构和顺序；Workflow 定义本身不记录所在文件夹 */
+export interface WorkflowLayout {
+  items: WorkflowLayoutItem[];
+}
+
 export interface WorkflowRunLog {
   id: string;
   parentId?: string;

@@ -24,6 +24,7 @@ import type {
   AppState,
   Sequence,
   WorkflowDefinition,
+  WorkflowLayout,
   MockLogEntry,
   MockService,
 } from '@/types/models';
@@ -399,6 +400,31 @@ export class FileSystemStorageService implements IStorageService {
       throw new StorageError(
         `Failed to delete workflow ${id}`,
         ErrorCode.PERMISSION_DENIED,
+        error
+      );
+    }
+  }
+
+  async loadWorkflowLayout(): Promise<unknown> {
+    try {
+      const filePath = await join(this.workflowsDir, '_layout.json');
+      if (await exists(filePath)) {
+        return JSON.parse(await readTextFile(filePath));
+      }
+    } catch (error) {
+      console.error('Failed to load workflow layout:', error);
+    }
+    return null;
+  }
+
+  async saveWorkflowLayout(layout: WorkflowLayout): Promise<void> {
+    const filePath = await join(this.workflowsDir, '_layout.json');
+    try {
+      await writeTextFile(filePath, JSON.stringify(layout, null, 2));
+    } catch (error) {
+      throw new StorageError(
+        'Failed to save workflow layout',
+        ErrorCode.DISK_FULL,
         error
       );
     }

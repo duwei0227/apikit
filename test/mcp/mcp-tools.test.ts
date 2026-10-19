@@ -268,7 +268,13 @@ describe('MCP tools', () => {
     expect(mockStorageService.workflows.has(created.id)).toBe(true);
 
     const listed = await call('list_workflows');
-    expect(listed.workflows[0]).toMatchObject({ id: created.id, stepCount: 5, hasUnsavedEdits: false });
+    expect(listed.workflows[0]).toMatchObject({ id: created.id, folderPath: [], stepCount: 5, hasUnsavedEdits: false });
+
+    // 侧边栏文件夹中的 Workflow 返回文件夹的名称路径
+    const workflowsStore = useWorkflowsStore();
+    const ordersId = await workflowsStore.createFolder('Orders');
+    await workflowsStore.moveWorkflowToFolder(created.id, await workflowsStore.createFolder('Smoke', ordersId));
+    expect((await call('list_workflows')).workflows[0]).toMatchObject({ id: created.id, folderPath: ['Orders', 'Smoke'] });
 
     const renamed = await call('update_workflow', { workflowId: created.id, name: 'Renamed' });
     expect(renamed.name).toBe('Renamed');

@@ -19,6 +19,7 @@ import { useRequestsStore } from '@/stores/requests';
 import { useWorkflowsStore } from '@/stores/workflows';
 import { pluralize, workflowMeta } from '@/utils/transferFormat';
 import { collectWorkflowRequestIds, inlineWorkflowReferences } from '@/utils/workflowTransfer';
+import { listWorkflowPlacements } from '@/utils/workflowTree';
 
 const collectionsStore = useCollectionsStore();
 const requestsStore = useRequestsStore();
@@ -30,6 +31,14 @@ const exportUserSelectionKeys = ref<Record<string, CheckState>>({});
 const exportExpandedKeys = ref<Record<string, boolean>>({});
 const exportFormat = ref<CollectionExportTarget>('apikit');
 const exportWorkflowSelection = ref<Record<string, boolean>>({});
+
+// 按侧边栏的顺序列出 Workflow，并记录所在文件夹（导出后导入时还原）
+const workflowPlacements = computed(() => listWorkflowPlacements(workflowsStore.layout));
+const workflowFolderPaths = computed(() => new Map(workflowPlacements.value.map(({ id, folderPath }) => [id, folderPath])));
+const exportableWorkflows = computed(() => {
+  const workflowsById = new Map(workflowsStore.workflows.map(workflow => [workflow.id, workflow]));
+  return workflowPlacements.value.flatMap(({ id }) => workflowsById.get(id) ?? []);
+});
 const includeReferencedRequests = ref(true);
 const isExporting = ref(false);
 
@@ -98,7 +107,7 @@ const workflowsSupported = computed(() => exportFormat.value === 'apikit');
 
 const selectedExportWorkflows = computed(() => (
   workflowsSupported.value
-    ? workflowsStore.workflows.filter(workflow => exportWorkflowSelection.value[workflow.id])
+    ? exportableWorkflows.value.filter(workflow => exportWorkflowSelection.value[workflow.id])
     : []
 ));
 
@@ -167,23 +176,23 @@ const toggleSelectAllExport = () => {
 };
 
 const isAllWorkflowsSelected = computed(() => (
-  workflowsStore.workflows.length > 0 &&
-  workflowsStore.workflows.every(workflow => exportWorkflowSelection.value[workflow.id])
+  exportableWorkflows.value.length > 0 &&
+  exportableWorkflows.value.every(workflow => exportWorkflowSelection.value[workflow.id])
 ));
 
 const isSomeWorkflowsSelected = computed(() => (
   !isAllWorkflowsSelected.value &&
-  workflowsStore.workflows.some(workflow => exportWorkflowSelection.value[workflow.id])
+  exportableWorkflows.value.some(workflow => exportWorkflowSelection.value[workflow.id])
 ));
 
 const selectedWorkflowCount = computed(() => (
-  workflowsStore.workflows.filter(workflow => exportWorkflowSelection.value[workflow.id]).length
+  exportableWorkflows.value.filter(workflow => exportWorkflowSelection.value[workflow.id]).length
 ));
 
 const toggleSelectAllWorkflows = () => {
   exportWorkflowSelection.value = isAllWorkflowsSelected.value
     ? {}
-    : Object.fromEntries(workflowsStore.workflows.map(workflow => [workflow.id, true]));
+    : Object.fromEntries(exportableWorkflows.value.map(workflow => [workflow.id, true]));
 };
 
 const toggleExportWorkflow = (id: string) => {
@@ -191,7 +200,7 @@ const toggleExportWorkflow = (id: string) => {
 };
 
 const referencedRequestSummary = computed(() => {
-  const ids = collectWorkflowRequestIds(workflowsStore.workflows.filter(workflow => exportWorkflowSelection.value[workflow.id]));
+  const ids = collectWorkflowRequestIds(exportableWorkflows.value.filter(workflow => exportWorkflowSelection.value[workflow.id]));
   const nodes = exportRequestNodes.value.filter(node => ids.has(node.data.id));
   const collectionNames = [...new Set(nodes.map(node => (
     collectionsStore.collections.find(collection => collection.id === node.data.collectionId)?.name
@@ -327,7 +336,13 @@ const handleExport = async () => {
     const exported = await importExportService.exportBundle({
       collections: selectedCollections,
       requests: loadedRequests.filter(request => selectedRequestIds.has(request.id)),
-      workflows: workflows.map(workflow => inlineWorkflowReferences(workflow, requestMap, selectedRequestIds))
+      workflows: workflows.map(workflow => {
+        const folderPath = workflowFolderPaths.value.get(workflow.id) || [];
+        return {
+          ...inlineWorkflowReferences(workflow, requestMap, selectedRequestIds),
+          ...(folderPath.length > 0 ? { folderPath } : {})
+        };
+      })
     }, exportFormat.value);
 
     if (!exported) return;
@@ -412,7 +427,7 @@ defineExpose({ open: openExportDialog });
           @click="exportTab = 'workflows'"
         >
           Workflows
-          <span class="transfer-count">{{ selectedWorkflowCount }} / {{ workflowsStore.workflows.length }}</span>
+          <span class="transfer-count">{{ selectedWorkflowCount }} / {{ exportableWorkflows.length }}</span>
         </button>
       </div>
 
@@ -480,7 +495,7 @@ defineExpose({ open: openExportDialog });
               class="h-4 w-4 accent-primary"
               :checked="isAllWorkflowsSelected"
               :indeterminate="isSomeWorkflowsSelected"
-              :disabled="workflowsStore.workflows.length === 0"
+              :disabled="exportableWorkflows.length === 0"
               @change="toggleSelectAllWorkflows"
             />
             <span>Select all</span>
@@ -491,7 +506,7 @@ defineExpose({ open: openExportDialog });
         </div>
 
         <div class="transfer-list">
-          <label v-for="workflow in workflowsStore.workflows" :key="workflow.id" class="transfer-row">
+          <label v-for="workflow in exportableWorkflows" :key="workflow.id" class="transfer-row">
             <input
               type="checkbox"
               class="h-4 w-4 accent-primary shrink-0"
@@ -499,9 +514,14 @@ defineExpose({ open: openExportDialog });
               @change="toggleExportWorkflow(workflow.id)"
             />
             <span class="flex-1 min-w-0 truncate">{{ workflow.name }}</span>
+            <span
+              v-if="workflowFolderPaths.get(workflow.id)?.length"
+              class="transfer-meta truncate"
+              :title="workflowFolderPaths.get(workflow.id)?.join(' / ')"
+            ><i class="pi pi-folder text-xs mr-1"></i>{{ workflowFolderPaths.get(workflow.id)?.join(' / ') }}</span>
             <span class="transfer-meta">{{ workflowMeta(workflow) }}</span>
           </label>
-          <div v-if="workflowsStore.workflows.length === 0" class="p-4 text-sm text-surface-500 dark:text-surface-400">
+          <div v-if="exportableWorkflows.length === 0" class="p-4 text-sm text-surface-500 dark:text-surface-400">
             No workflows available.
           </div>
         </div>

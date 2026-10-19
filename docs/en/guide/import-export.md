@@ -41,6 +41,8 @@ Click **Export** in the top toolbar, or right-click a collection and choose **Ex
 
 When an exported workflow uses a request that is not in the exported collections, that step becomes an inline request (keeping the step's customizations), so the workflow still runs after import.
 
+ApiKit JSON keeps the sidebar folder of each workflow; on import the workflow goes back into a folder with the same name, which is created when missing. The import and export lists show the folder of each workflow.
+
 ## Environments
 
 In **Manage Environments**:

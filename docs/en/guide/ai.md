@@ -54,7 +54,7 @@ The MCP server is off by default, accepts only connections from this computer an
 
 | Group | Tools |
 |-------|-------|
-| Read | `list_collections`, `search_requests` (use `query` to find a name or URL fragment), `get_request`, `list_workflows`, `get_workflow`, `list_environments`, `list_builtin_variables`, `get_workflow_logs`, `list_request_logs`, `get_request_log` |
+| Read | `list_collections`, `search_requests` (use `query` to find a name or URL fragment), `get_request`, `list_workflows` (with the containing folders as `folderPath`), `get_workflow`, `list_environments`, `list_builtin_variables`, `get_workflow_logs`, `list_request_logs`, `get_request_log` |
 | Open and close tabs | `open_request`, `close_request`, `open_workflow`, `close_workflow` |
 | Create and edit | `create_collection`, `update_collection`, `create_folder`, `update_folder`, `create_request`, `import_curl` (create from a cURL command), `update_request`, `move_request`, `create_workflow`, `update_workflow`, `create_environment`, `update_environment`, `set_global_variables` |
 | Run (asks you first) | `send_request`, `run_workflow`, `set_active_environment` |

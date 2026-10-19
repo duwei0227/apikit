@@ -85,7 +85,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     name: 'list_workflows',
     title: 'List workflows',
     kind: 'read',
-    description: 'List all workflows with id, name and step count.',
+    description: 'List all workflows in sidebar order with id, name, step count and folderPath (names of the sidebar folders that contain it, empty at the top level).',
     inputSchema: objectSchema({}),
   },
   {

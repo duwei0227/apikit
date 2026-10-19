@@ -515,6 +515,7 @@ export function useWorkspaceTabs({ collectionsPanelRef, scrollTabIntoView }: Wor
     duplicatedWorkflow.updatedAt = now;
 
     await workflowsStore.saveWorkflow(duplicatedWorkflow);
+    await workflowsStore.placeWorkflowAfter(duplicatedWorkflow.id, workflow.id);
     const workflowIndex = openWorkflowTabs.value.indexOf(workflowTab.id);
     const workflows = [...openWorkflowTabs.value];
     workflows.splice(workflowIndex + 1, 0, duplicatedWorkflow.id);
