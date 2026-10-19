@@ -28,6 +28,7 @@
 - Windows uninstaller now explains that deleting the app cache also removes theme and MCP settings, while user data is controlled by a separate option.
 
 ### Fixed
+- The right-click menu in the **Workflows** sidebar now closes with `Esc`, also right after it opens.
 - **Move Up** / **Move Down** on a request now swaps it with the item right next to it in the collection tree, instead of jumping over folders in between.
 - Pressing the MCP status dot on the title-bar ✦ icon no longer starts dragging the window.
 - Variable suggestions and function parameter hints (for example after typing `{{$sequence(`) no longer extend past the window when there is not enough room above or below the field; they shrink to the space available and scroll.
@@ -52,6 +53,7 @@
 - Windows 卸载程序现在说明删除应用缓存也会移除主题和 MCP 设置，用户数据则由单独选项控制。
 
 ### 修复
+- 侧边栏 **Workflows** 的右键菜单可以按 `Esc` 关闭，刚打开时也可以。
 - 请求的 **Move Up** / **Move Down** 现在与集合树中紧挨着的一项交换位置，不再越过中间的文件夹。
 - 按下标题栏 ✦ 图标上的 MCP 状态点时不再拖动窗口。
 - 输入框上下空间都不够时，变量补全和函数参数提示（例如输入 `{{$sequence(` 后）不再超出窗口，而是缩小到可用的空间并可滚动。

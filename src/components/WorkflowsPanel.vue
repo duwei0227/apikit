@@ -3,6 +3,7 @@ import { dialogStyle } from '@/utils/dialogSize';
 import { computed, ref, watch } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import MoveWorkflowDialog from '@/components/MoveWorkflowDialog.vue';
+import { useContextMenuEscape } from '@/composables/useContextMenuEscape';
 import { usePointerTreeDrag } from '@/composables/usePointerTreeDrag';
 import { useWorkflowsStore } from '@/stores/workflows';
 import { collectExpandableKeys, findNodeByIndexPath, treeItemIndexPath } from '@/utils/treeDrop';
@@ -236,8 +237,9 @@ const deleteNode = (node: WorkflowTreeNode) => {
 };
 
 // 右键菜单
-const contextMenu = ref<{ show: (event: Event) => void } | null>(null);
+const contextMenu = ref<{ show: (event: Event) => void; hide: () => void } | null>(null);
 const contextMenuNode = ref<WorkflowTreeNode | null>(null);
+const { onShow: onContextMenuShow, onHide: onContextMenuHide } = useContextMenuEscape(contextMenu);
 const moveDialog = ref<InstanceType<typeof MoveWorkflowDialog> | null>(null);
 
 /** 上移、下移，Workflow 还可以移到其他文件夹；搜索时只显示部分节点，不提供 */
@@ -387,7 +389,7 @@ const onTreeContextMenu = (event: MouseEvent) => {
       </Tree>
     </div>
 
-    <ContextMenu ref="contextMenu" :model="menuItems" />
+    <ContextMenu ref="contextMenu" :model="menuItems" @before-show="onContextMenuShow" @hide="onContextMenuHide" />
     <MoveWorkflowDialog ref="moveDialog" />
 
     <Dialog v-model:visible="showNameDialog" :header="nameDialogText.header" :modal="true" :style="dialogStyle('sm')">

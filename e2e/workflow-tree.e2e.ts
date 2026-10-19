@@ -115,6 +115,23 @@ test('pressing Enter in the name dialog does not create the folder or workflow',
   await dialog(page).getByRole('button', { name: 'Cancel' }).click();
 });
 
+test('closes the right-click menu with Escape', async ({ app, page }) => {
+  await createOrders(app);
+  const menu = page.locator('.p-contextmenu');
+
+  await node(page, 'Login').click({ button: 'right' });
+  await expect(menu.getByText('Rename', { exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+
+  // 再次打开后同样可以关闭
+  await node(page, 'Orders').click({ button: 'right' });
+  await expect(menu.getByText('New Workflow', { exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(node(page, 'Orders')).toBeVisible();
+});
+
 test('searches workflows inside folders', async ({ app, page }) => {
   await createOrders(app);
   await expect(node(page, 'Refund')).toBeVisible();
