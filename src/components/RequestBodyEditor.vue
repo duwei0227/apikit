@@ -64,7 +64,7 @@ const onBodyKeydown = (event: KeyboardEvent) => {
   if (!isRawBody.value) return;
   if (!(event.ctrlKey || event.metaKey)) return;
   // 不劫持普通 <input>（如 Body 搜索框）的原生撤回；CM5 编辑器用的是 <textarea>，
-  // 工具栏按钮是 <button class="cursor-pointer">，两者都不是 <input>，所以仍会被下面正常处理。
+  // 工具栏按钮是 <button>，两者都不是 <input>，所以仍会被下面正常处理。
   if (event.target instanceof HTMLInputElement) return;
   const key = event.key.toLowerCase();
   if (key === 'z' && !event.shiftKey) {
