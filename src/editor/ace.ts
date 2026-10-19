@@ -304,6 +304,27 @@ export function applyBaseOptions(editor: AceEditor) {
   editor.renderer.setScrollMargin(8, 8, 0, 0);
   editor.renderer.setPadding(8);
   removeUnusedCommands(editor);
+  deleteSelectionBeforeComposition(editor);
+}
+
+// 选中文字后用输入法输入：组字开始前先删掉选中内容。compositionstart 的 data 是将被替换的
+// 选中文字，Ace 见到非空 data 会改为把组字直接写进文档（ace_composition_marker），Windows 上
+// 样式错乱，结束后选中内容也没有删除。按下输入法按键（keyCode 229）时就删除，此时输入法还没
+// 开始组字；没有这个按键时在 compositionstart 里删除，并清空 data，让 Ace 按无选中的方式组字。
+// 两个监听都挂在容器的捕获阶段，先于 Ace 在 textarea 上的处理。
+function deleteSelectionBeforeComposition(editor: AceEditor) {
+  const deleteSelection = () => {
+    if (editor.getReadOnly() || editor.selection.isEmpty()) return false;
+    editor.session.remove(editor.getSelectionRange());
+    editor.clearSelection();
+    return true;
+  };
+  editor.container.addEventListener('keydown', (event) => {
+    if (event.keyCode === 229) deleteSelection();
+  }, true);
+  editor.container.addEventListener('compositionstart', (event) => {
+    if (deleteSelection()) Object.defineProperty(event, 'data', { value: '' });
+  }, true);
 }
 
 /** 设置只读。Ace 在只读时按键会弹出 "Editing is disabled" 提示；查看器里不需要，与原编辑器一致只是不响应 */

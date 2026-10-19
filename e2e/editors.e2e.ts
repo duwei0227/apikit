@@ -233,6 +233,31 @@ test.describe('request body editor', () => {
     expect(await editor.value()).toBe('{"v": "{{变量"}');
   });
 
+  test('replaces the selection when typing with a Chinese IME', async ({ page }) => {
+    const selectOld = () => editor.host.evaluate((el: any) => el.env.editor.selection.selectWordRight());
+    await editor.setDoc('{"cn": "|old"}');
+    await selectOld();
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.imeSetComposition', { text: 'zh', selectionStart: 2, selectionEnd: 2 });
+    // 组字一开始就删掉选中内容，组字文字不会写进文档、盖在选中文字上
+    expect(await editor.value()).toBe('{"cn": ""}');
+    await cdp.send('Input.insertText', { text: '中文' });
+    expect(await editor.value()).toBe('{"cn": "中文"}');
+    await page.keyboard.press('Control+z');
+    await page.keyboard.press('Control+z');
+    expect(await editor.value()).toBe('{"cn": "old"}');
+
+    // Windows 上输入法按键先触发 keyCode 229 的 keydown，此时就删掉选中内容
+    await editor.setDoc('{"cn": "|old"}');
+    await selectOld();
+    await editor.host.locator('textarea').dispatchEvent('keydown', { keyCode: 229, key: 'Process' });
+    expect(await editor.value()).toBe('{"cn": ""}');
+    await cdp.send('Input.imeSetComposition', { text: 'wen', selectionStart: 3, selectionEnd: 3 });
+    await cdp.send('Input.insertText', { text: '文' });
+    await cdp.detach();
+    expect(await editor.value()).toBe('{"cn": "文"}');
+  });
+
   test('closes XML tags and expands Enter between them', async ({ app, page }) => {
     await app.selectBodyType('xml');
     await editor.setDoc('|');

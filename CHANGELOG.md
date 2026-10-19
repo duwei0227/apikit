@@ -29,6 +29,7 @@
 - Windows uninstaller now explains that deleting the app cache also removes theme and MCP settings, while user data is controlled by a separate option.
 
 ### Fixed
+- On Windows, typing Chinese (or other IME input) over selected text in the body editor now replaces the selection, instead of drawing the input over it with broken styling and keeping the selected text.
 - Right-click menus (the **Workflows**, **Collections** and **Mocks** sidebars, tabs, **More Options**, **Help**, and Cut / Copy / Paste in text fields) now close with `Esc`, also right after they open. `Esc` closes only the menu, not the dialog behind it.
 - **Move Up** / **Move Down** on a request now swaps it with the item right next to it in the collection tree, instead of jumping over folders in between.
 - Pressing the MCP status dot on the title-bar ✦ icon no longer starts dragging the window.
@@ -55,6 +56,7 @@
 - Windows 卸载程序现在说明删除应用缓存也会移除主题和 MCP 设置，用户数据则由单独选项控制。
 
 ### 修复
+- Windows 上在请求体编辑器中选中文字后用中文（或其他）输入法输入，现在会替换选中内容，不再出现组字文字盖在选中文字上、样式错乱且选中内容没有删除的问题。
 - 右键菜单（侧边栏 **Workflows**、**Collections**、**Mocks**，页签，**More Options**，**Help**，以及输入框的 Cut / Copy / Paste）可以按 `Esc` 关闭，刚打开时也可以；`Esc` 只关闭菜单，不会同时关闭后面的对话框。
 - 请求的 **Move Up** / **Move Down** 现在与集合树中紧挨着的一项交换位置，不再越过中间的文件夹。
 - 按下标题栏 ✦ 图标上的 MCP 状态点时不再拖动窗口。
