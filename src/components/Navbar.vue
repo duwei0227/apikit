@@ -374,27 +374,34 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
         <!-- Separator -->
         <div class="h-5 w-px bg-surface-300 dark:bg-surface-600 mx-2"></div>
         
-        <button 
-          @click="minimizeWindow"
-          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition cursor-pointer"
+        <Button
+          icon="pi pi-minus"
+          text
+          size="small"
+          severity="secondary"
           title="Minimize"
-        >
-          <i class="pi pi-minus text-xs"></i>
-        </button>
-        <button 
-          @click="toggleMaximize"
-          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition cursor-pointer"
+          aria-label="Minimize"
+          @click="minimizeWindow"
+        />
+        <Button
+          :icon="isMaximized ? 'pi pi-clone' : 'pi pi-stop'"
+          text
+          size="small"
+          severity="secondary"
           title="Maximize/Restore"
-        >
-          <i :class="isMaximized ? 'pi pi-clone' : 'pi pi-stop'" class="text-xs"></i>
-        </button>
-        <button 
-          @click="closeWindow"
-          class="px-2 py-1 rounded hover:bg-red-600 hover:text-white transition cursor-pointer"
+          aria-label="Maximize/Restore"
+          @click="toggleMaximize"
+        />
+        <Button
+          icon="pi pi-times"
+          text
+          size="small"
+          severity="secondary"
+          class="window-close"
           title="Close"
-        >
-          <i class="pi pi-times"></i>
-        </button>
+          aria-label="Close"
+          @click="closeWindow"
+        />
       </div>
     </div>
     
@@ -443,10 +450,11 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
   user-select: none;
 }
 
-/* Ensure buttons can receive click events */
-button {
-  cursor: pointer;
-  user-select: none;
+/* 关闭按钮悬停时显示红色，与系统窗口的关闭按钮一致；选择器要比 PrimeVue 文字按钮的悬停样式更具体 */
+.navbar .window-close.p-button:not(:disabled):hover {
+  background: var(--p-red-600);
+  border-color: var(--p-red-600);
+  color: #fff;
 }
 
 /* Ensure ContextMenu items have proper spacing for icons */
