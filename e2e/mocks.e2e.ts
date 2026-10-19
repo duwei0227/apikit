@@ -160,7 +160,7 @@ test('leaves the cursor after the dot when completing a $request field', async (
 
   // 响应头（单行输入框）
   await editor.getByRole('tab', { name: /^Headers/ }).click();
-  const value = editor.getByPlaceholder('Value').first();
+  const value = editor.getByPlaceholder('Value', { exact: true }).first();
   await value.click();
   await page.keyboard.type('id-{{$request.quer');
   await expect(page.locator('.variable-suggestions')).toContainText('$request.query.');

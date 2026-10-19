@@ -31,17 +31,17 @@ test.describe('URL and params', () => {
     await app.blurInputs();
     const panel = app.requestPanel;
 
-    await panel.getByPlaceholder('Value').first().click();
+    await panel.getByPlaceholder('Value', { exact: true }).first().click();
     await page.keyboard.press('Control+a');
     await page.keyboard.type('{{to');
     await expectOverlayVisible(page, SUGGESTIONS);
     await page.keyboard.press('Enter');
     await expect(app.url).toHaveValue('{{baseUrl}}/items?id={{token}}&q=1');
 
-    const newRow = (await panel.getByPlaceholder('Key').count()) - 1;
-    await panel.getByPlaceholder('Key').nth(newRow).click();
+    const newRow = (await panel.getByPlaceholder('Key', { exact: true }).count()) - 1;
+    await panel.getByPlaceholder('Key', { exact: true }).nth(newRow).click();
     await page.keyboard.type('ts');
-    await panel.getByPlaceholder('Value').nth(newRow).click();
+    await panel.getByPlaceholder('Value', { exact: true }).nth(newRow).click();
     await page.keyboard.type('{{$timestamp}}');
     await expect(app.url).toHaveValue('{{baseUrl}}/items?id={{token}}&q=1&ts={{$timestamp}}');
 
@@ -74,7 +74,7 @@ test.describe('URL and params', () => {
 test.describe('variable popups', () => {
   test('show above other areas in headers, auth and the body editor', async ({ app, page }) => {
     await app.requestTab('Headers');
-    await app.requestPanel.getByPlaceholder('Value').first().click();
+    await app.requestPanel.getByPlaceholder('Value', { exact: true }).first().click();
     await page.keyboard.type('{{');
     await expectOverlayVisible(page, SUGGESTIONS);
     await page.keyboard.press('Escape');
@@ -106,7 +106,7 @@ test.describe('variable popups', () => {
     // 新请求的响应区默认折叠，参数表格可以排到窗口底部
     await app.url.fill('{{baseUrl}}/x?' + Array.from({ length: 14 }, (_, i) => `p${i}=${i}`).join('&'));
     await app.blurInputs();
-    const lastValue = app.requestPanel.getByPlaceholder('Value').nth(13);
+    const lastValue = app.requestPanel.getByPlaceholder('Value', { exact: true }).nth(13);
     await lastValue.scrollIntoViewIfNeeded();
     await lastValue.click();
     await page.keyboard.press('End');
