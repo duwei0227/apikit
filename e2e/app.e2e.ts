@@ -422,3 +422,22 @@ test('newRequest waits for the new tab even when saving the request is slow', as
     .evaluateAll(inputs => inputs.map(input => (input as HTMLInputElement).value).sort());
   await expect.poll(allUrls).toEqual(['https://example.com/first', 'https://example.com/second']);
 });
+
+test('pressing the MCP status dot in the title bar does not drag the window', async ({ app, page }) => {
+  await page.evaluate(() => {
+    const internals = (window as any).__TAURI_INTERNALS__;
+    const invoke = internals.invoke;
+    (window as any).__dragCalls = 0;
+    internals.invoke = (cmd: string, args: any, options: any) => {
+      if (cmd === 'plugin:window|start_dragging') (window as any).__dragCalls++;
+      return invoke(cmd, args, options);
+    };
+  });
+  await app.run(() => { window.__store('mcp').running = true; });
+  const dot = page.locator('.navbar .p-overlaybadge .p-badge');
+  await expect(dot).toBeVisible();
+  await dot.click();
+  // 空白处仍可拖动，说明拦截只针对按钮及其状态点
+  await page.locator('.navbar h1').click();
+  await expect.poll(() => page.evaluate(() => (window as any).__dragCalls)).toBe(1);
+});

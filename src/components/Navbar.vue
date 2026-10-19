@@ -274,9 +274,9 @@ const showHelpMenu = (event: MouseEvent) => {
 
 // Manually handle titlebar click events
 const handleTitlebarMouseDown = async (e: MouseEvent) => {
-  // Check if clicking on a button
+  // 按钮和按钮上的状态点（OverlayBadge 的徽标在按钮外）不拖动窗口
   const target = e.target as HTMLElement;
-  if (target.tagName === 'BUTTON' || target.closest('button')) {
+  if (target.closest('button, .p-overlaybadge')) {
     return;
   }
   
