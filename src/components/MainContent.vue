@@ -668,7 +668,7 @@ defineExpose({
             type="button"
             aria-label="Clear search"
             title="Clear Search"
-            class="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-6 h-6 inline-flex items-center justify-center rounded-full text-surface-400 hover:text-surface-700 hover:bg-surface-100 dark:text-surface-500 dark:hover:text-surface-200 dark:hover:bg-surface-800 transition"
+            class="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-6 h-6 inline-flex items-center justify-center rounded-full text-surface-400 hover:text-surface-700 hover:bg-surface-100 dark:text-surface-500 dark:hover:text-surface-200 dark:hover:bg-surface-800 transition cursor-pointer"
             @mousedown.prevent
             @click="searchQuery = ''"
           >

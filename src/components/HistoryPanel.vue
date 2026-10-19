@@ -83,7 +83,7 @@ const clearHistory = () => historyStore.clearHistory();
     <div v-if="historyStore.history.length > 0" class="flex justify-end mb-1">
       <button
         @click="clearHistory"
-        class="text-xs text-surface-400 dark:text-surface-500 hover:text-red-500 dark:hover:text-red-400 transition"
+        class="text-xs text-surface-400 dark:text-surface-500 hover:text-red-500 dark:hover:text-red-400 transition cursor-pointer"
       >
         Clear All
       </button>
@@ -94,7 +94,7 @@ const clearHistory = () => historyStore.clearHistory();
     <template v-for="group in groupedHistoryItems" :key="group.date">
       <button
         type="button"
-        class="w-full flex items-center gap-1 text-xs font-semibold text-surface-400 dark:text-surface-500 px-1 pt-2 pb-1 select-none hover:text-surface-600 dark:hover:text-surface-300 transition"
+        class="w-full flex items-center gap-1 text-xs font-semibold text-surface-400 dark:text-surface-500 px-1 pt-2 pb-1 select-none hover:text-surface-600 dark:hover:text-surface-300 transition cursor-pointer"
         :aria-expanded="group.expanded"
         @click="toggleGroup(group)"
       >

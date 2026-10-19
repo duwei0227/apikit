@@ -337,21 +337,21 @@ const handleCreate = (type: 'request' | 'collection' | 'environment' | 'mock') =
         @contextmenu.prevent
       >
         <button
-          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700"
+          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700 cursor-pointer"
           @click="ctxCut"
         >
           <i class="pi pi-minus-circle text-meta opacity-60"></i>
           Cut
         </button>
         <button
-          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700"
+          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700 cursor-pointer"
           @click="ctxCopy"
         >
           <i class="pi pi-copy text-meta opacity-60"></i>
           Copy
         </button>
         <button
-          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700"
+          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700 cursor-pointer"
           @click="ctxPaste"
         >
           <i class="pi pi-clipboard text-meta opacity-60"></i>
@@ -359,7 +359,7 @@ const handleCreate = (type: 'request' | 'collection' | 'environment' | 'mock') =
         </button>
         <div class="mx-1 my-1 border-t border-surface-200 dark:border-surface-600"></div>
         <button
-          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700"
+          class="flex w-full items-center gap-2.5 px-3 py-[6px] text-left text-sm text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-700 cursor-pointer"
           @click="ctxSelectAll"
         >
           <i class="pi pi-check-square text-meta opacity-60"></i>

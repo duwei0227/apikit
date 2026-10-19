@@ -447,7 +447,7 @@ const selectAllPreContent = (event: KeyboardEvent) => {
           <span class="text-sm font-medium text-surface-500 dark:text-surface-400">Response</span>
           <button
             @click="toggleResponseCollapse"
-            class="p-1 rounded hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-400 transition"
+            class="p-1 rounded hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-400 transition cursor-pointer"
             title="Collapse response"
           >
             <i class="pi pi-chevron-down text-xs"></i>
@@ -511,7 +511,7 @@ const selectAllPreContent = (event: KeyboardEvent) => {
           />
           <button
             @click="toggleResponseCollapse"
-            class="p-1 rounded hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-500 dark:text-surface-400 transition"
+            class="p-1 rounded hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-500 dark:text-surface-400 transition cursor-pointer"
             title="Collapse response"
           >
             <i class="pi pi-chevron-down text-xs"></i>
@@ -525,7 +525,7 @@ const selectAllPreContent = (event: KeyboardEvent) => {
             <!-- Body View Tabs -->
             <div class="flex items-center justify-between bg-surface-0 dark:bg-surface-950">
               <div class="flex">
-                <button
+                <button class="cursor-pointer"
                   @click="activeBodyViewTab = 0"
                   :class="[
                     'px-4 py-2 text-sm font-medium transition',
@@ -536,7 +536,7 @@ const selectAllPreContent = (event: KeyboardEvent) => {
                 >
                   Pretty
                 </button>
-                <button
+                <button class="cursor-pointer"
                   @click="activeBodyViewTab = 1"
                   :class="[
                     'px-4 py-2 text-sm font-medium transition',

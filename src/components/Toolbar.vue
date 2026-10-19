@@ -20,21 +20,21 @@ const handleNewRequest = () => {
   <div class="toolbar bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-50 px-4 py-2 border-b border-surface-200 dark:border-surface-700 flex items-center gap-2">
     <button 
       @click="handleNewRequest"
-      class="px-3 py-1.5 text-sm bg-primary hover:bg-primary-600 text-primary-contrast rounded transition"
+      class="px-3 py-1.5 text-sm bg-primary hover:bg-primary-600 text-primary-contrast rounded transition cursor-pointer"
     >
       + New Request
     </button>
     
     <button 
       @click="importDialog?.open()"
-      class="px-3 py-1.5 text-sm bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 rounded transition"
+      class="px-3 py-1.5 text-sm bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 rounded transition cursor-pointer"
     >
       Import
     </button>
 
     <button 
       @click="exportDialog?.open()"
-      class="px-3 py-1.5 text-sm bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 rounded transition"
+      class="px-3 py-1.5 text-sm bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 rounded transition cursor-pointer"
     >
       Export
     </button>

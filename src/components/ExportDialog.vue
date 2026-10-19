@@ -411,7 +411,7 @@ defineExpose({ open: openExportDialog });
       <div class="transfer-tabs">
         <button
           type="button"
-          class="transfer-tab"
+          class="transfer-tab cursor-pointer"
           :class="{ active: exportTab === 'collections' }"
           @click="exportTab = 'collections'"
         >
@@ -420,7 +420,7 @@ defineExpose({ open: openExportDialog });
         </button>
         <button
           type="button"
-          class="transfer-tab"
+          class="transfer-tab enabled:cursor-pointer"
           :class="{ active: exportTab === 'workflows' }"
           :disabled="!workflowsSupported"
           :title="workflowsSupported ? '' : 'Postman format does not support workflows'"

@@ -303,7 +303,7 @@ const formatTime = (timestamp: number | string) => {
 
     <!-- Tab Headers -->
     <div class="flex border-b border-surface-200 dark:border-surface-700">
-      <button 
+      <button class="cursor-pointer" 
         @click="switchTab(0)"
         :class="[
           'px-4 py-2 text-xs font-medium transition',
@@ -314,7 +314,7 @@ const formatTime = (timestamp: number | string) => {
       >
         Find
       </button>
-      <button 
+      <button class="cursor-pointer" 
         @click="switchTab(1)"
         :class="[
           'px-4 py-2 text-xs font-medium transition',
@@ -327,7 +327,7 @@ const formatTime = (timestamp: number | string) => {
       </button>
       <div class="flex-1"></div>
       <button
-        class="mock-status-button px-3 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50 transition"
+        class="mock-status-button px-3 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50 transition cursor-pointer"
         :title="mocksStore.runningCount > 0 ? `${mocksStore.runningCount} mock service(s) running` : 'No mock services running'"
         @click="emit('open-mocks')"
       >
@@ -338,7 +338,7 @@ const formatTime = (timestamp: number | string) => {
       </button>
       <button
         @click="mcpStore.openDialog()"
-        class="mcp-status-button px-3 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50 transition"
+        class="mcp-status-button px-3 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50 transition cursor-pointer"
         :title="mcpStore.statusText"
       >
         <i class="pi pi-sparkles text-[11px]"></i>
@@ -349,7 +349,7 @@ const formatTime = (timestamp: number | string) => {
       <button 
         v-if="!isCollapsed"
         @click="toggleCollapse"
-        class="px-4 py-2 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50 transition"
+        class="px-4 py-2 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50 transition cursor-pointer"
       >
         <i class="pi pi-times"></i>
       </button>

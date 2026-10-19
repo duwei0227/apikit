@@ -99,7 +99,7 @@ const clear = () => {
           v-for="log in filtered"
           :key="log.id"
           type="button"
-          class="log-row w-full grid items-center gap-2 px-3 py-2 text-left border-b border-surface-100 dark:border-surface-800"
+          class="log-row w-full grid items-center gap-2 px-3 py-2 text-left border-b border-surface-100 dark:border-surface-800 cursor-pointer"
           :class="{ selected: log.id === selectedId }"
           :data-log-path="urlOf(log)"
           @click="select(log)"

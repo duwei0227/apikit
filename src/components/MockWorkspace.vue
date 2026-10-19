@@ -97,13 +97,13 @@ defineExpose({ showView: (next: View) => { view.value = next; } });
     </div>
 
     <div class="mock-views flex gap-5 px-4 border-b border-surface-200 dark:border-surface-700" role="tablist">
-      <button type="button" role="tab" :aria-selected="view === 'routes'" :class="{ active: view === 'routes' }" @click="view = 'routes'">
+      <button class="cursor-pointer" type="button" role="tab" :aria-selected="view === 'routes'" :class="{ active: view === 'routes' }" @click="view = 'routes'">
         Routes <span class="count">({{ local.routes.length }})</span>
       </button>
-      <button type="button" role="tab" :aria-selected="view === 'logs'" :class="{ active: view === 'logs' }" @click="view = 'logs'">
+      <button class="cursor-pointer" type="button" role="tab" :aria-selected="view === 'logs'" :class="{ active: view === 'logs' }" @click="view = 'logs'">
         Logs <span class="count">({{ logCount }} / {{ MAX_MOCK_LOGS }})</span>
       </button>
-      <button type="button" role="tab" :aria-selected="view === 'settings'" :class="{ active: view === 'settings' }" @click="view = 'settings'">
+      <button class="cursor-pointer" type="button" role="tab" :aria-selected="view === 'settings'" :class="{ active: view === 'settings' }" @click="view = 'settings'">
         Settings
       </button>
     </div>

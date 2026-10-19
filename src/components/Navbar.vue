@@ -332,7 +332,7 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
       <div class="flex items-center gap-1">
         <button
           @click="mcpStore.openDialog()"
-          class="mcp-button px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition"
+          class="mcp-button px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition cursor-pointer"
           :title="`AI Integration (MCP): ${mcpStore.statusText}`"
         >
           <i class="pi pi-sparkles"></i>
@@ -340,14 +340,14 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
         </button>
         <button 
           @click="showHelpMenu"
-          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition"
+          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition cursor-pointer"
           title="Help"
         >
           <i class="pi pi-question-circle"></i>
         </button>
         <button 
           @click="toggleTheme"
-          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition"
+          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition cursor-pointer"
           :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
         >
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'"></i>
@@ -358,21 +358,21 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
         
         <button 
           @click="minimizeWindow"
-          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition"
+          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition cursor-pointer"
           title="Minimize"
         >
           <i class="pi pi-minus text-xs"></i>
         </button>
         <button 
           @click="toggleMaximize"
-          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition"
+          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition cursor-pointer"
           title="Maximize/Restore"
         >
           <i :class="isMaximized ? 'pi pi-clone' : 'pi pi-stop'" class="text-xs"></i>
         </button>
         <button 
           @click="closeWindow"
-          class="px-2 py-1 rounded hover:bg-red-600 hover:text-white transition"
+          class="px-2 py-1 rounded hover:bg-red-600 hover:text-white transition cursor-pointer"
           title="Close"
         >
           <i class="pi pi-times"></i>

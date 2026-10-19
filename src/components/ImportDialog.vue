@@ -361,14 +361,14 @@ defineExpose({ open: openImportDialog });
             <i class="pi pi-file text-surface-500"></i>
             <span class="flex-1 min-w-0 truncate font-mono text-xs">{{ importPreview.fileName }}</span>
             <span class="transfer-tag">{{ importFormatLabel }}</span>
-            <button type="button" class="text-xs underline hover:text-primary" @click="pickImportFile">Change</button>
+            <button type="button" class="text-xs underline hover:text-primary cursor-pointer" @click="pickImportFile">Change</button>
           </div>
 
           <div class="transfer-tabs">
             <button
               v-if="previewCollections.length > 0"
               type="button"
-              class="transfer-tab"
+              class="transfer-tab cursor-pointer"
               :class="{ active: importTab === 'collections' }"
               @click="importTab = 'collections'"
             >
@@ -378,7 +378,7 @@ defineExpose({ open: openImportDialog });
             <button
               v-if="previewWorkflows.length > 0"
               type="button"
-              class="transfer-tab"
+              class="transfer-tab cursor-pointer"
               :class="{ active: importTab === 'workflows' }"
               @click="importTab = 'workflows'"
             >

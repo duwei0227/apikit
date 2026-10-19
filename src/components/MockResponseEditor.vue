@@ -157,13 +157,13 @@ const previewItemCount = computed(() => {
     </div>
 
     <div class="sections flex gap-4 border-b border-surface-200 dark:border-surface-700" role="tablist">
-      <button type="button" role="tab" :class="{ active: section === 'rules' }" :aria-selected="section === 'rules'" @click="section = 'rules'">
+      <button class="cursor-pointer" type="button" role="tab" :class="{ active: section === 'rules' }" :aria-selected="section === 'rules'" @click="section = 'rules'">
         Rules ({{ response.rules.length }})
       </button>
-      <button type="button" role="tab" :class="{ active: section === 'headers' }" :aria-selected="section === 'headers'" @click="section = 'headers'">
+      <button class="cursor-pointer" type="button" role="tab" :class="{ active: section === 'headers' }" :aria-selected="section === 'headers'" @click="section = 'headers'">
         Headers ({{ response.headers.filter(header => header.key.trim()).length }})
       </button>
-      <button type="button" role="tab" :class="{ active: section === 'body' }" :aria-selected="section === 'body'" @click="section = 'body'">
+      <button class="cursor-pointer" type="button" role="tab" :class="{ active: section === 'body' }" :aria-selected="section === 'body'" @click="section = 'body'">
         Body
       </button>
     </div>

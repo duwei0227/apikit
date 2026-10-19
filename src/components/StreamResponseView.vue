@@ -203,7 +203,7 @@ const copyCurrentView = async () => {
     <!-- View tabs -->
     <div class="flex items-center justify-between bg-surface-0 dark:bg-surface-950">
       <div class="flex">
-        <button
+        <button class="cursor-pointer"
           v-for="view in views"
           :key="view.id"
           @click="pickedView = view.id"
@@ -222,8 +222,8 @@ const copyCurrentView = async () => {
         <template v-if="activeView === 'text' && (stream.text || hasResults)">
           <span v-if="!hasResults" class="px-2 py-0.5 rounded font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30">{{ answerLabel }}</span>
           <span class="stream-mode-switch" :title="showSearch ? 'Search works on the source text' : ''">
-            <button :class="{ 'is-active': showRendered }" :disabled="showSearch" @click="textMode = 'rendered'">Rendered</button>
-            <button :class="{ 'is-active': !showRendered }" :disabled="showSearch" @click="textMode = 'source'">Source</button>
+            <button class="enabled:cursor-pointer" :class="{ 'is-active': showRendered }" :disabled="showSearch" @click="textMode = 'rendered'">Rendered</button>
+            <button class="enabled:cursor-pointer" :class="{ 'is-active': !showRendered }" :disabled="showSearch" @click="textMode = 'source'">Source</button>
           </span>
         </template>
         <template v-if="!stream.active">
@@ -232,7 +232,7 @@ const copyCurrentView = async () => {
         </template>
         <button
           v-if="stream.active"
-          class="flex items-center gap-1 px-2 py-1 rounded transition hover:bg-surface-100 dark:hover:bg-surface-800"
+          class="flex items-center gap-1 px-2 py-1 rounded transition hover:bg-surface-100 dark:hover:bg-surface-800 cursor-pointer"
           :class="{ 'text-primary': followOutput }"
           :title="followOutput ? 'Stop following new output' : 'Follow new output'"
           @click="toggleFollow"
@@ -283,7 +283,7 @@ const copyCurrentView = async () => {
 
         <div v-if="stream.thinking" class="rounded border border-surface-200 dark:border-surface-700">
           <button
-            class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-900 transition"
+            class="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-900 transition cursor-pointer"
             @click="toggleThinking"
           >
             <i :class="['pi text-xs', showThinking ? 'pi-chevron-down' : 'pi-chevron-right']"></i>
@@ -367,7 +367,7 @@ const copyCurrentView = async () => {
         </div>
         <button
           v-if="hiddenEventCount > 0 && stream.active"
-          class="w-full px-4 py-1.5 text-left text-primary hover:bg-surface-50 dark:hover:bg-surface-900"
+          class="w-full px-4 py-1.5 text-left text-primary hover:bg-surface-50 dark:hover:bg-surface-900 cursor-pointer"
           @click="eventLimit += EVENT_PAGE_SIZE"
         >
           Show {{ Math.min(hiddenEventCount, EVENT_PAGE_SIZE) }} earlier events ({{ hiddenEventCount }} hidden)
@@ -390,7 +390,7 @@ const copyCurrentView = async () => {
         </template>
         <button
           v-if="hiddenEventCount > 0 && !stream.active"
-          class="w-full px-4 py-1.5 text-left text-primary hover:bg-surface-50 dark:hover:bg-surface-900"
+          class="w-full px-4 py-1.5 text-left text-primary hover:bg-surface-50 dark:hover:bg-surface-900 cursor-pointer"
           @click="eventLimit += EVENT_PAGE_SIZE"
         >
           Show {{ Math.min(hiddenEventCount, EVENT_PAGE_SIZE) }} more events ({{ hiddenEventCount }} hidden)
