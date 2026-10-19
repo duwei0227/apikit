@@ -1,7 +1,8 @@
-import { onMounted, onUnmounted, type Ref } from 'vue';
+import type { Ref } from 'vue';
+import { usePointerTreeDrag } from '@/composables/usePointerTreeDrag';
 import { useCollectionsStore } from '@/stores/collections';
 import { useRequestsStore } from '@/stores/requests';
-import { computeDropResult, findNodeByIndexPath, treeItemIndexPath, type CollectionTreeNode, type DropPosition } from '@/utils/collectionTree';
+import type { CollectionTreeNode } from '@/utils/collectionTree';
 import type { Folder } from '@/types/models';
 
 /** 子节点中的请求引用，order 为它在子节点中的下标（与文件夹交错的显示顺序） */
@@ -10,17 +11,6 @@ const requestRefsOf = (children: CollectionTreeNode[]) => children.flatMap((c, i
     ? [{ id: c.data.id, name: c.data.name, method: c.data.method, url: c.data.url, order: idx }]
     : []
 ));
-
-interface PointerDragState {
-  node: CollectionTreeNode;
-  startX: number;
-  startY: number;
-  active: boolean;
-  ghostEl: HTMLElement | null;
-  lineEl: HTMLElement | null;
-  targetKey: string | null;
-  position: DropPosition;
-}
 
 /**
  * 集合树的拖放：Tree 组件的 node-drop 事件，以及 Windows 上用指针事件模拟的拖动
@@ -143,103 +133,14 @@ export function useTreeDragDrop(treeNodes: Ref<CollectionTreeNode[]>, usePointer
     }
   };
 
-  // Pointer-event drag (replaces HTML5 DnD — WebView2 on Windows does not support HTML5 DnD reliably)
-  let ptrDrag: PointerDragState | null = null;
-
-  const onNodePointerDown = (node: CollectionTreeNode, event: PointerEvent) => {
-    if (!usePointerDrag || event.button !== 0) return;
-    ptrDrag = { node, startX: event.clientX, startY: event.clientY, active: false, ghostEl: null, lineEl: null, targetKey: null, position: 'after' };
-  };
-
-  const onGlobalPointerMove = (event: PointerEvent) => {
-    if (!ptrDrag) return;
-    if (!ptrDrag.active && Math.hypot(event.clientX - ptrDrag.startX, event.clientY - ptrDrag.startY) > 5) {
-      ptrDrag.active = true;
-      ptrDrag.ghostEl = document.createElement('div');
-      Object.assign(ptrDrag.ghostEl.style, {
-        position: 'fixed', zIndex: '9999', pointerEvents: 'none',
-        background: 'var(--p-surface-100, #f1f5f9)', border: '1px solid var(--p-surface-300, #cbd5e1)',
-        borderRadius: '4px', padding: '3px 10px', fontSize: '12px',
-        whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', opacity: '0.9'
-      });
-      ptrDrag.ghostEl.textContent = ptrDrag.node.label;
-      document.body.appendChild(ptrDrag.ghostEl);
-      ptrDrag.lineEl = document.createElement('div');
-      Object.assign(ptrDrag.lineEl.style, {
-        position: 'fixed', height: '2px', zIndex: '9998', pointerEvents: 'none',
-        background: 'var(--p-primary-500, #3b82f6)', display: 'none'
-      });
-      document.body.appendChild(ptrDrag.lineEl);
-    }
-    if (!ptrDrag.active) return;
-    // 拖动开始后影子元素和指示线一定已创建
-    const ghostEl = ptrDrag.ghostEl as HTMLElement;
-    const lineEl = ptrDrag.lineEl as HTMLElement;
-    event.preventDefault();
-    ghostEl.style.left = `${event.clientX + 14}px`;
-    ghostEl.style.top = `${event.clientY - 14}px`;
-
-    ghostEl.style.visibility = 'hidden';
-    const els = document.elementsFromPoint(event.clientX, event.clientY);
-    ghostEl.style.visibility = '';
-
-    const treeItemEl = els.find(el => el.getAttribute('role') === 'treeitem');
-    if (!treeItemEl) { ptrDrag.targetKey = null; lineEl.style.display = 'none'; return; }
-
-    const targetNode = findNodeByIndexPath(treeNodes.value, treeItemIndexPath(treeItemEl));
-    if (!targetNode || targetNode.key === ptrDrag.node.key) { ptrDrag.targetKey = null; lineEl.style.display = 'none'; return; }
-
-    const contentEl = treeItemEl.querySelector('.p-tree-node-content') || treeItemEl;
-    const rect = contentEl.getBoundingClientRect();
-    // Hovering over a collection/folder with a non-collection drag → drop inside
-    const dragType = ptrDrag.node.data.type;
-    const targetType = targetNode.data.type;
-    const dropPos = (dragType !== 'collection' && (targetType === 'collection' || targetType === 'folder'))
-      ? 'inside'
-      : event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
-    ptrDrag.targetKey = targetNode.key;
-    ptrDrag.position = dropPos;
-    if (dropPos === 'inside') {
-      // Indented line at the bottom of the target row signals "will become a child"
-      Object.assign(lineEl.style, { display: 'block', left: `${rect.left + 16}px`, width: `${rect.width - 16}px`, top: `${rect.bottom - 1}px` });
-    } else {
-      const lineY = dropPos === 'before' ? rect.top : rect.bottom;
-      Object.assign(lineEl.style, { display: 'block', left: `${rect.left}px`, width: `${rect.width}px`, top: `${lineY - 1}px` });
-    }
-  };
-
-  const onGlobalPointerUp = async () => {
-    if (!ptrDrag) return;
-    const { active, node, targetKey, position, ghostEl, lineEl } = ptrDrag;
-    ptrDrag = null;
-    ghostEl?.remove();
-    lineEl?.remove();
-    if (!active || !targetKey) return;
-    const newTree = computeDropResult(treeNodes.value, node.key, targetKey, position);
-    if (newTree) await onNodeDrop({ value: newTree, dragNode: node });
-  };
-
-  /** 取消正在进行的指针拖动；有拖动被取消时返回 true */
-  const cancelPointerDrag = () => {
-    if (!ptrDrag?.active) return false;
-    ptrDrag.ghostEl?.remove();
-    ptrDrag.lineEl?.remove();
-    ptrDrag = null;
-    return true;
-  };
-
-  onMounted(() => {
-    if (!usePointerDrag) return;
-    window.addEventListener('pointermove', onGlobalPointerMove);
-    window.addEventListener('pointerup', onGlobalPointerUp);
-    window.addEventListener('pointercancel', onGlobalPointerUp);
-  });
-
-  onUnmounted(() => {
-    if (!usePointerDrag) return;
-    window.removeEventListener('pointermove', onGlobalPointerMove);
-    window.removeEventListener('pointerup', onGlobalPointerUp);
-    window.removeEventListener('pointercancel', onGlobalPointerUp);
+  // Windows 上用指针事件模拟拖动：拖到集合或文件夹上时放进去（集合只能排序）
+  const { onNodePointerDown, cancelPointerDrag } = usePointerTreeDrag(treeNodes, usePointerDrag, {
+    dropPosition: (dragNode, targetNode, offsetRatio) => {
+      const targetType = targetNode.data.type;
+      if (dragNode.data.type !== 'collection' && (targetType === 'collection' || targetType === 'folder')) return 'inside';
+      return offsetRatio < 0.5 ? 'before' : 'after';
+    },
+    onDrop: (newTree, dragNode) => onNodeDrop({ value: newTree, dragNode }),
   });
 
   return { onNodeDrop, onNodePointerDown, cancelPointerDrag };

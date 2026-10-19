@@ -2,20 +2,18 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCollectionTree,
   collectAllRequestIds,
-  collectExpandableKeys,
-  computeDropResult,
   copyFolderStructure,
   copyRequestData,
   copyRequestRefs,
   createCopyIdMaps,
   findFolderByPath,
   findFolderPath,
-  findNodeByIndexPath,
   findNodeByKey,
   findSiblingFolders,
   isRequestNameTaken,
   searchRequestReferences,
 } from '@/utils/collectionTree';
+import { collectExpandableKeys, computeDropResult, findNodeByIndexPath } from '@/utils/treeDrop';
 
 const ref = (id: string, extra: Record<string, any> = {}) => ({ id, name: `Request ${id}`, method: 'GET' as const, url: `https://example.com/${id}`, ...extra });
 

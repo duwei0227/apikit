@@ -1,4 +1,4 @@
-// 集合树：Tree 节点的构建、查找、拖放和复制用的纯函数，不依赖 store 和界面
+// 集合树：Tree 节点的构建、查找和复制用的纯函数，不依赖 store 和界面（拖放见 treeDrop.ts）
 
 import { cloneJson } from '@/utils/clone';
 import { generateId } from '@/utils/id-generator';
@@ -27,8 +27,6 @@ interface TreeContainer {
   requests?: RequestReference[];
   folders?: TreeContainer[];
 }
-
-export type DropPosition = 'before' | 'after' | 'inside';
 
 /** 请求的名称或 URL 包含搜索词（不区分大小写）；搜索词为空时都匹配 */
 export function requestMatchesSearch(request: { name?: string; url?: string }, searchQuery: string): boolean {
@@ -164,47 +162,6 @@ export function findNodeByKey(nodes: CollectionTreeNode[], key: string): Collect
   return null;
 }
 
-/** 按每层的下标（从 0 开始）找节点 */
-export function findNodeByIndexPath(nodes: CollectionTreeNode[], indexPath: number[]): CollectionTreeNode | null {
-  let node: CollectionTreeNode | null = null;
-  let currentNodes = nodes;
-  for (const idx of indexPath) {
-    if (currentNodes && idx >= 0 && idx < currentNodes.length) {
-      node = currentNodes[idx];
-      currentNodes = node.children || [];
-    } else {
-      return null;
-    }
-  }
-  return node;
-}
-
-/** 从 treeitem 元素收集从根到当前节点的下标路径（aria-posinset 从 1 开始） */
-export function treeItemIndexPath(treeItem: Element | null): number[] {
-  const indexPath: number[] = [];
-  while (treeItem) {
-    const posinset = parseInt(treeItem.getAttribute('aria-posinset') || '', 10);
-    if (!isNaN(posinset)) {
-      indexPath.unshift(posinset - 1);
-    }
-    // 向上找父级 treeitem
-    const parentGroup = treeItem.parentElement?.closest('[role="group"]');
-    treeItem = parentGroup ? parentGroup.closest('[role="treeitem"]') : null;
-  }
-  return indexPath;
-}
-
-/** 收集展开所有带子节点的节点需要的 key */
-export function collectExpandableKeys(nodes: CollectionTreeNode[], acc: Record<string, boolean> = {}): Record<string, boolean> {
-  for (const node of nodes) {
-    if (node.children && node.children.length > 0) {
-      acc[node.key] = true;
-      collectExpandableKeys(node.children, acc);
-    }
-  }
-  return acc;
-}
-
 export function findFolderById<T extends TreeContainer>(folders: T[], targetId: string): T | null {
   for (const folder of folders) {
     if (folder.id === targetId) return folder;
@@ -297,52 +254,6 @@ export function collectAllRequestIds(item: TreeContainer): string[] {
     }
   }
   return ids;
-}
-
-export function cloneTreeNodes(nodes: CollectionTreeNode[]): CollectionTreeNode[] {
-  return nodes.map(n => ({
-    ...n, data: { ...n.data }, children: cloneTreeNodes(n.children || [])
-  }));
-}
-
-/** 把 dragKey 节点移到 targetKey 的前面、后面或里面，返回新树；不能放（放到自己或子节点上）时返回 null */
-export function computeDropResult(
-  tree: CollectionTreeNode[],
-  dragKey: string,
-  targetKey: string,
-  position: DropPosition,
-): CollectionTreeNode[] | null {
-  if (targetKey === dragKey || targetKey.startsWith(dragKey + '/')) return null;
-  const newTree = cloneTreeNodes(tree);
-  let dragNode: CollectionTreeNode | null = null;
-  const remove = (nodes: CollectionTreeNode[]): boolean => {
-    for (let i = 0; i < nodes.length; i++) {
-      if (nodes[i].key === dragKey) { [dragNode] = nodes.splice(i, 1); return true; }
-      if (remove(nodes[i].children || [])) return true;
-    }
-    return false;
-  };
-  remove(newTree);
-  if (!dragNode) return null;
-  const moved: CollectionTreeNode = dragNode;
-  if (position === 'inside') {
-    const insertInside = (nodes: CollectionTreeNode[]): boolean => {
-      for (let i = 0; i < nodes.length; i++) {
-        if (nodes[i].key === targetKey) { (nodes[i].children = nodes[i].children || []).push(moved); return true; }
-        if (insertInside(nodes[i].children || [])) return true;
-      }
-      return false;
-    };
-    return insertInside(newTree) ? newTree : null;
-  }
-  const insert = (nodes: CollectionTreeNode[]): boolean => {
-    for (let i = 0; i < nodes.length; i++) {
-      if (nodes[i].key === targetKey) { nodes.splice(position === 'before' ? i : i + 1, 0, moved); return true; }
-      if (insert(nodes[i].children || [])) return true;
-    }
-    return false;
-  };
-  return insert(newTree) ? newTree : null;
 }
 
 /** 复制时旧 id 到新 id 的映射，用来给复制出的请求找到所属文件夹 */

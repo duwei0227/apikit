@@ -10,19 +10,17 @@ import { useTreeDragDrop } from '@/composables/useTreeDragDrop';
 import {
   buildCollectionTree,
   collectAllRequestIds,
-  collectExpandableKeys,
   copyFolderStructure,
   copyRequestData,
   copyRequestRefs,
   createCopyIdMaps,
   findFolderByPath,
   findFolderPath,
-  findNodeByIndexPath,
   findNodeByKey,
-  treeItemIndexPath,
   type CollectionTreeNode,
   type CollectionTreeNodeData,
 } from '@/utils/collectionTree';
+import { collectExpandableKeys, findNodeByIndexPath, treeItemIndexPath } from '@/utils/treeDrop';
 import type { Collection, Folder, HttpMethod, Request, RequestReference } from '@/types/models';
 import { formatShortcut, matchesShortcut } from '@/utils/shortcuts';
 import MoveRequestDialog from '@/components/MoveRequestDialog.vue';
