@@ -10,6 +10,8 @@
 | macOS | `.dmg` | |
 | Linux | `.AppImage`（`chmod +x` 后直接运行） | `.deb`、`.rpm`、`.tar.gz`（便携版） |
 
+Linux 的 `.deb`、`.rpm` 和便携版使用系统的 WebKitGTK，建议保持系统更新（WebKitGTK 2.40 或更高），否则粗体文字可能显示为常规粗细；AppImage 自带 WebKitGTK，不受影响。
+
 macOS 需要 11 Big Sur 或更高版本，且 Safari 已更新到 16.4 或更高。macOS 首次打开时，可能需要在"系统设置 → 隐私与安全性"中允许运行。安装后可以在 **Help → Check For Update** 中检查并安装新版本。
 
 ## 发送第一个请求
