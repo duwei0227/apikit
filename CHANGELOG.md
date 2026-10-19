@@ -8,7 +8,7 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
-## [Unreleased]
+## [0.5.0] - 2026-10-19
 
 ### Added
 - Braces and brackets in JSON, and tags in XML, are colored by nesting level in the request body editor and the response viewer. Each pair shares a color, three colors repeat by level, and a closing bracket or end tag without a pair is shown in red.
