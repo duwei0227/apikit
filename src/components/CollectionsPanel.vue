@@ -120,6 +120,11 @@ const menuItems = computed(() => {
       { label: 'Add Request', icon: 'pi pi-plus', command: () => handleAddRequest() },
       { label: 'Add Folder', icon: 'pi pi-folder-plus', command: () => handleAddFolder() },
       { separator: true },
+      ...(type === 'folder' ? [
+        { label: 'Move Up', icon: 'pi pi-arrow-up', command: () => handleReorder('up') },
+        { label: 'Move Down', icon: 'pi pi-arrow-down', command: () => handleReorder('down') },
+        { separator: true },
+      ] : []),
       { 
         label: 'Duplicate', 
         icon: 'pi pi-copy', 
@@ -553,10 +558,11 @@ const handleImport = async () => {
 // Reorder and Move handlers
 const handleReorder = async (direction: 'up' | 'down') => {
   const node = contextMenuNode.value;
-  if (!node || node.data.type !== 'request') return;
+  if (!node || node.data.type === 'collection') return;
   const { collection } = getCollectionAndFolder(node);
   if (!collection) return;
-  await collectionsStore.reorderRequest(collection.id, node.data.id, direction);
+  if (node.data.type === 'folder') await collectionsStore.reorderFolder(collection.id, node.data.id, direction);
+  else await collectionsStore.reorderRequest(collection.id, node.data.id, direction);
   contextMenuNode.value = null;
 };
 

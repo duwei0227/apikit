@@ -357,6 +357,30 @@ export const useCollectionsStore = defineStore('collections', () => {
     }
   }
 
+  /** 文件夹与同一层中相邻的子项（文件夹或请求，按显示顺序）交换位置；已在最上或最下时不变 */
+  async function reorderFolder(collectionId: string, folderId: string, direction: 'up' | 'down') {
+    try {
+      const collection = collections.value.find(c => c.id === collectionId);
+      if (!collection) throw new Error(`Collection ${collectionId} not found`);
+      const container = findFolderContainer(collection, folderId);
+      if (!container) return;
+      const entries = orderedChildEntries(container);
+      const index = entries.findIndex(entry => entry.kind === 'folder' && entry.item.id === folderId);
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (index === -1 || newIndex < 0 || newIndex >= entries.length) return;
+      [entries[index], entries[newIndex]] = [entries[newIndex], entries[index]];
+      // 重新编号，旧集合（子项没有 order）交换后也按新顺序显示
+      entries.forEach((entry, order) => {
+        entry.item.order = order;
+      });
+      collection.updatedAt = new Date().toISOString();
+      await storageService.saveCollection(collection);
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to reorder folder';
+      throw e;
+    }
+  }
+
   async function moveRequestToTarget(sourceCollectionId: string, requestId: string, targetCollectionId: string, targetFolderId?: string) {
     try {
       const srcCol = collections.value.find(c => c.id === sourceCollectionId);
@@ -403,6 +427,12 @@ export const useCollectionsStore = defineStore('collections', () => {
     if (r) return r;
     const folders = 'folders' in target ? target.folders : [];
     for (const f of folders) { const found = findRequestRefDeep(f, requestId); if (found) return found; }
+    return null;
+  }
+
+  function findFolderContainer(target: Collection | Folder, folderId: string): (Collection | Folder) | null {
+    if (target.folders.some(f => f.id === folderId)) return target;
+    for (const f of target.folders) { const found = findFolderContainer(f, folderId); if (found) return found; }
     return null;
   }
 
@@ -555,6 +585,7 @@ export const useCollectionsStore = defineStore('collections', () => {
     updateRequestReference,
     removeRequestReference,
     reorderRequest,
+    reorderFolder,
     reorderCollections,
     moveRequestToTarget,
     moveRequest

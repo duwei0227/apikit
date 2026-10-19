@@ -19,6 +19,7 @@
 | 操作 | 说明 |
 |------|------|
 | **Add Request** / **Add Folder** | 在其中新建请求或文件夹 |
+| **Move Up** / **Move Down** | 仅文件夹：在同一层中上移、下移 |
 | **Duplicate** | 复制，包括其中的文件夹和请求（选中后也可按 `Ctrl+D`） |
 | **Rename** | 重命名 |
 | **Import** / **Export** | 导入或导出，见[导入导出](./import-export) |

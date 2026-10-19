@@ -39,7 +39,7 @@ ApiKit 是一个跨平台的 API 测试工具，专为开发者设计，提供�
 | 🧪 测试与断言 | 状态码和 JSON 字段断言（期望值可用变量），从响应 JSON 或响应头提取变量 | [测试与断言](https://duwei0227.github.io/apikit/guide/tests) |
 | 📡 流式响应 | SSE 和逐行 JSON 边收边显示，自动合并大模型的回答、思考内容和 token 用量 | [响应](https://duwei0227.github.io/apikit/guide/responses) |
 | 🌍 变量 | 环境变量、全局变量和 `$guid`、`$randomInt`、`$sequence` 等内置动态变量，输入 `{{` 时自动补全 | [变量](https://duwei0227.github.io/apikit/guide/variables) |
-| 📁 集合 | 多层文件夹、拖拽排序；导入 Postman、OpenAPI / Swagger 和 cURL，导出 ApiKit JSON 或 Postman | [集合](https://duwei0227.github.io/apikit/guide/collections)、[导入导出](https://duwei0227.github.io/apikit/guide/import-export) |
+| 📁 集合 | 多层文件夹，拖拽或右键菜单排序；导入 Postman、OpenAPI / Swagger 和 cURL，导出 ApiKit JSON 或 Postman | [集合](https://duwei0227.github.io/apikit/guide/collections)、[导入导出](https://duwei0227.github.io/apikit/guide/import-export) |
 | 🔗 工作流 | 文件夹分类，拖动或右键菜单排序、移动；串联请求，条件分支和循环（多个条件、先后满足）、循环间隔、`$loopIndex`、Set Variables，运行日志逐步查看 | [工作流](https://duwei0227.github.io/apikit/guide/workflow) |
 | 🧩 Mock 服务 | 在本机端口模拟接口，按规则返回不同响应，响应模板可读取请求、批量生成列表 | [Mock 服务](https://duwei0227.github.io/apikit/guide/mock) |
 | 🤖 AI 集成（MCP） | AI 工具通过 MCP 读取和修改集合、请求、工作流和环境，发送请求和删除前由你确认 | [AI 集成](https://duwei0227.github.io/apikit/guide/ai) |

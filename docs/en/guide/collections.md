@@ -19,6 +19,7 @@ Right-click in the collection tree to open the menu.
 | Action | Description |
 |--------|-------------|
 | **Add Request** / **Add Folder** | Create a request or folder inside it |
+| **Move Up** / **Move Down** | Folders only: move it up or down within its level |
 | **Duplicate** | Copy it, with its folders and requests (or press `Ctrl+D` when selected) |
 | **Rename** | Rename it |
 | **Import** / **Export** | Import or export; see [Import and Export](./import-export) |

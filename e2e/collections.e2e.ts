@@ -165,6 +165,25 @@ test('moves requests with the Move dialog and searches the tree', async ({ app, 
   await expect(node(page, 'List')).toBeVisible();
 });
 
+test('moves folders up and down from the right-click menu', async ({ app, page }) => {
+  await createShop(app, page);
+  // Shop：文件夹 Orders（Create、Search）在请求 List 前面
+  await expect(tree(page)).toHaveText(/^\s*Shop\s*Orders\s*GET\s*Create\s*GET\s*Search\s*GET\s*List\s*$/i);
+
+  // 文件夹和相邻的请求交换位置
+  await contextMenu(page, 'Orders', 'Move Down');
+  await expect(tree(page)).toHaveText(/^\s*Shop\s*GET\s*List\s*Orders\s*GET\s*Create\s*GET\s*Search\s*$/i);
+  // 已在最下面时不变
+  await contextMenu(page, 'Orders', 'Move Down');
+  await contextMenu(page, 'Orders', 'Move Up');
+  await expect(tree(page)).toHaveText(/^\s*Shop\s*Orders\s*GET\s*Create\s*GET\s*Search\s*GET\s*List\s*$/i);
+
+  // 集合没有上移、下移
+  await node(page, 'Shop').click({ button: 'right' });
+  await expect(page.locator('.p-contextmenu').getByText('Rename', { exact: true })).toBeVisible();
+  await expect(page.locator('.p-contextmenu').getByText('Move Up', { exact: true })).toHaveCount(0);
+});
+
 test('reveals the request of the current tab in collapsed folders', async ({ app, page }) => {
   await app.run(async (request) => {
     const cols = window.__store('collections');
