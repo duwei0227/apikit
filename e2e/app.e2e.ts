@@ -26,7 +26,7 @@ test('exports collections and workflows and imports cURL', async ({ app, page })
   await expect(dialog.getByText('List orders')).toBeVisible();
   await dialog.getByText('Select all').click();
   await expect(dialog.locator('.tabular-nums')).toContainText('1');
-  await dialog.getByRole('button', { name: /Workflows/ }).click();
+  await dialog.getByRole('tab', { name: /Workflows/ }).click();
   await dialog.getByText('Checkout flow').click();
   await expect(dialog.locator('.transfer-meta').first()).toBeVisible();
   await dialog.getByRole('button', { name: 'Cancel' }).click();

@@ -313,28 +313,14 @@ const formatTime = (timestamp: number | string) => {
 
     <!-- Tab Headers -->
     <div class="flex border-b border-surface-200 dark:border-surface-700">
-      <button class="cursor-pointer" 
-        @click="switchTab(0)"
-        :class="[
-          'px-4 py-2 text-xs font-medium transition',
-          activeTab === 0 
-            ? 'text-primary border-b-2 border-primary bg-surface-0 dark:bg-surface-950' 
-            : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50'
-        ]"
-      >
-        Find
-      </button>
-      <button class="cursor-pointer" 
-        @click="switchTab(1)"
-        :class="[
-          'px-4 py-2 text-xs font-medium transition',
-          activeTab === 1 
-            ? 'text-primary border-b-2 border-primary bg-surface-0 dark:bg-surface-950' 
-            : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50'
-        ]"
-      >
-        Console
-      </button>
+      <!-- 再次点击当前标签收起面板，所以由 switchTab 处理点击，Tabs 只显示当前标签；
+           状态栏用紧凑的标签内边距（design token） -->
+      <Tabs :value="activeTab" :dt="{ tab: { padding: '0.5rem 1rem' } }">
+        <TabList>
+          <Tab :value="0" @click="switchTab(0)">Find</Tab>
+          <Tab :value="1" @click="switchTab(1)">Console</Tab>
+        </TabList>
+      </Tabs>
       <div class="flex-1"></div>
       <!-- 状态用按钮的徽标显示：运行中为绿色，启动失败为红色，未开启为灰色 -->
       <Button

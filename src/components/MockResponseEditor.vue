@@ -156,17 +156,13 @@ const previewItemCount = computed(() => {
       <Button icon="pi pi-trash" text rounded size="small" severity="danger" title="Delete Response" @click="emit('delete')" />
     </div>
 
-    <div class="sections flex gap-4 border-b border-surface-200 dark:border-surface-700" role="tablist">
-      <button class="cursor-pointer" type="button" role="tab" :class="{ active: section === 'rules' }" :aria-selected="section === 'rules'" @click="section = 'rules'">
-        Rules ({{ response.rules.length }})
-      </button>
-      <button class="cursor-pointer" type="button" role="tab" :class="{ active: section === 'headers' }" :aria-selected="section === 'headers'" @click="section = 'headers'">
-        Headers ({{ response.headers.filter(header => header.key.trim()).length }})
-      </button>
-      <button class="cursor-pointer" type="button" role="tab" :class="{ active: section === 'body' }" :aria-selected="section === 'body'" @click="section = 'body'">
-        Body
-      </button>
-    </div>
+    <Tabs v-model:value="section">
+      <TabList>
+        <Tab value="rules">Rules ({{ response.rules.length }})</Tab>
+        <Tab value="headers">Headers ({{ response.headers.filter(header => header.key.trim()).length }})</Tab>
+        <Tab value="body">Body</Tab>
+      </TabList>
+    </Tabs>
 
     <!-- 匹配规则 -->
     <div v-if="section === 'rules'" class="flex flex-col gap-2">
@@ -245,16 +241,6 @@ const previewItemCount = computed(() => {
 </template>
 
 <style scoped>
-.sections button {
-  padding: 0.375rem 0;
-  border-bottom: 2px solid transparent;
-  color: var(--p-text-muted-color);
-}
-.sections button.active {
-  color: var(--p-text-color);
-  font-weight: 600;
-  border-bottom-color: var(--p-text-color);
-}
 .rule-row { grid-template-columns: 9.5rem minmax(0, 1fr) 9rem minmax(0, 1fr) 2rem; }
 .body-editors.with-preview { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 /* 编辑器按 flex 撑满：JsonEditor 用 flex: 1，容器需要是 flex 布局 */

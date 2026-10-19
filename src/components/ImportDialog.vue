@@ -364,28 +364,18 @@ defineExpose({ open: openImportDialog });
             <Button label="Change" link size="small" @click="pickImportFile" />
           </div>
 
-          <div class="transfer-tabs">
-            <button
-              v-if="previewCollections.length > 0"
-              type="button"
-              class="transfer-tab cursor-pointer"
-              :class="{ active: importTab === 'collections' }"
-              @click="importTab = 'collections'"
-            >
-              Collections
-              <span class="transfer-count">{{ selectedImportCollections.length }} / {{ previewCollections.length }}</span>
-            </button>
-            <button
-              v-if="previewWorkflows.length > 0"
-              type="button"
-              class="transfer-tab cursor-pointer"
-              :class="{ active: importTab === 'workflows' }"
-              @click="importTab = 'workflows'"
-            >
-              Workflows
-              <span class="transfer-count">{{ selectedImportWorkflows.length }} / {{ previewWorkflows.length }}</span>
-            </button>
-          </div>
+          <Tabs v-model:value="importTab">
+            <TabList>
+              <Tab v-if="previewCollections.length > 0" value="collections">
+                Collections
+                <Badge :value="`${selectedImportCollections.length} / ${previewCollections.length}`" severity="secondary" class="ml-1.5" />
+              </Tab>
+              <Tab v-if="previewWorkflows.length > 0" value="workflows">
+                Workflows
+                <Badge :value="`${selectedImportWorkflows.length} / ${previewWorkflows.length}`" severity="secondary" class="ml-1.5" />
+              </Tab>
+            </TabList>
+          </Tabs>
 
           <template v-if="importTab === 'collections'">
             <div class="flex items-center justify-between gap-3">

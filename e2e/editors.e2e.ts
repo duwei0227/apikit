@@ -312,7 +312,7 @@ test.describe('response viewer', () => {
   test('shows request and response bodies in the Console', async ({ app, page }) => {
     await app.setMockResponse({ body: '{"small":true}' });
     await app.request.getByRole('button', { name: 'Send', exact: true }).click();
-    await page.getByRole('button', { name: /^\s*Console/ }).click();
+    await page.locator('footer').getByRole('tab', { name: 'Console' }).click();
     await page.locator('span.flex-1.truncate:visible', { hasText: 'api.example.com/items' }).first().click();
     const body = page.locator('.code-editor-container-auto-height');
     await expect(body).toHaveCount(1);
@@ -356,7 +356,7 @@ test.describe('response viewer', () => {
     expect(stored.consoleBodies).toEqual([{ requestBody: '{"order":7}', responseBody: '{"created":true}' }]);
     expect(stored.historyBodies).toEqual([{ body: '{"order":7}' }]);
 
-    await page.getByRole('button', { name: /^\s*Console/ }).click();
+    await page.locator('footer').getByRole('tab', { name: 'Console' }).click();
     await page.locator('span.flex-1.truncate:visible', { hasText: 'api.example.com/items' }).first().click();
     const bodies = page.locator('.code-editor-container-auto-height');
     await expect(bodies).toHaveCount(2);

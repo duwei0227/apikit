@@ -530,30 +530,12 @@ const selectAllPreContent = (event: KeyboardEvent) => {
           <div v-else class="flex flex-col h-full">
             <!-- Body View Tabs -->
             <div class="flex items-center justify-between bg-surface-0 dark:bg-surface-950">
-              <div class="flex">
-                <button class="cursor-pointer"
-                  @click="activeBodyViewTab = 0"
-                  :class="[
-                    'px-4 py-2 text-sm font-medium transition',
-                    activeBodyViewTab === 0
-                      ? 'text-primary border-b-2 border-primary'
-                      : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50'
-                  ]"
-                >
-                  Pretty
-                </button>
-                <button class="cursor-pointer"
-                  @click="activeBodyViewTab = 1"
-                  :class="[
-                    'px-4 py-2 text-sm font-medium transition',
-                    activeBodyViewTab === 1
-                      ? 'text-primary border-b-2 border-primary'
-                      : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50'
-                  ]"
-                >
-                  Raw
-                </button>
-              </div>
+              <Tabs v-model:value="activeBodyViewTab">
+                <TabList>
+                  <Tab :value="0">Pretty</Tab>
+                  <Tab :value="1">Raw</Tab>
+                </TabList>
+              </Tabs>
 
               <div class="flex items-center gap-2 mr-2">
                 <!-- Search Button -->

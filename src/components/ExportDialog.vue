@@ -408,28 +408,22 @@ defineExpose({ open: openExportDialog });
         </div>
       </div>
 
-      <div class="transfer-tabs">
-        <button
-          type="button"
-          class="transfer-tab cursor-pointer"
-          :class="{ active: exportTab === 'collections' }"
-          @click="exportTab = 'collections'"
-        >
-          Collections
-          <span class="transfer-count">{{ selectedRequestCount }} / {{ exportRequestNodes.length }}</span>
-        </button>
-        <button
-          type="button"
-          class="transfer-tab enabled:cursor-pointer"
-          :class="{ active: exportTab === 'workflows' }"
-          :disabled="!workflowsSupported"
-          :title="workflowsSupported ? '' : 'Postman format does not support workflows'"
-          @click="exportTab = 'workflows'"
-        >
-          Workflows
-          <span class="transfer-count">{{ selectedWorkflowCount }} / {{ exportableWorkflows.length }}</span>
-        </button>
-      </div>
+      <Tabs v-model:value="exportTab">
+        <TabList>
+          <Tab value="collections">
+            Collections
+            <Badge :value="`${selectedRequestCount} / ${exportRequestNodes.length}`" severity="secondary" class="ml-1.5" />
+          </Tab>
+          <Tab
+            value="workflows"
+            :disabled="!workflowsSupported"
+            :title="workflowsSupported ? '' : 'Postman format does not support workflows'"
+          >
+            Workflows
+            <Badge :value="`${selectedWorkflowCount} / ${exportableWorkflows.length}`" severity="secondary" class="ml-1.5" />
+          </Tab>
+        </TabList>
+      </Tabs>
 
       <template v-if="exportTab === 'collections'">
         <div class="flex items-center justify-between gap-3">

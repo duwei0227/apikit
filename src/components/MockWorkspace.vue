@@ -96,17 +96,13 @@ defineExpose({ showView: (next: View) => { view.value = next; } });
       />
     </div>
 
-    <div class="mock-views flex gap-5 px-4 border-b border-surface-200 dark:border-surface-700" role="tablist">
-      <button class="cursor-pointer" type="button" role="tab" :aria-selected="view === 'routes'" :class="{ active: view === 'routes' }" @click="view = 'routes'">
-        Routes <span class="count">({{ local.routes.length }})</span>
-      </button>
-      <button class="cursor-pointer" type="button" role="tab" :aria-selected="view === 'logs'" :class="{ active: view === 'logs' }" @click="view = 'logs'">
-        Logs <span class="count">({{ logCount }} / {{ MAX_MOCK_LOGS }})</span>
-      </button>
-      <button class="cursor-pointer" type="button" role="tab" :aria-selected="view === 'settings'" :class="{ active: view === 'settings' }" @click="view = 'settings'">
-        Settings
-      </button>
-    </div>
+    <Tabs v-model:value="view">
+      <TabList>
+        <Tab value="routes">Routes ({{ local.routes.length }})</Tab>
+        <Tab value="logs">Logs ({{ logCount }} / {{ MAX_MOCK_LOGS }})</Tab>
+        <Tab value="settings">Settings</Tab>
+      </TabList>
+    </Tabs>
 
     <div class="flex-1 min-h-0 overflow-hidden">
       <MockRoutesView
@@ -132,15 +128,4 @@ defineExpose({ showView: (next: View) => { view.value = next; } });
 .mock-state.stopped { background: var(--p-content-hover-background); color: var(--p-text-muted-color); }
 .mock-state.error { background: rgba(220, 38, 38, 0.12); color: #dc2626; }
 .mock-state-dot { width: 7px; height: 7px; border-radius: 999px; background: currentColor; }
-.mock-views button {
-  padding: 0.5rem 0;
-  border-bottom: 2px solid transparent;
-  color: var(--p-text-muted-color);
-}
-.mock-views button.active {
-  color: var(--p-text-color);
-  font-weight: 600;
-  border-bottom-color: var(--p-primary-color);
-}
-.mock-views .count { font-weight: 400; }
 </style>

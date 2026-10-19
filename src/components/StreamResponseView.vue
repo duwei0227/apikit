@@ -62,6 +62,13 @@ const toggleThinking = () => {
 
 // 回答的展示方式：按内容识别成 Markdown / JSON / HTML / SVG / XML
 const textMode = ref<'rendered' | 'source'>('rendered');
+const setTextMode = (value: 'rendered' | 'source') => {
+  textMode.value = value;
+};
+const TEXT_MODE_OPTIONS: Array<{ label: string; value: 'rendered' | 'source' }> = [
+  { label: 'Rendered', value: 'rendered' },
+  { label: 'Source', value: 'source' },
+];
 const answer = computed(() => detectAnswer(props.stream.text, props.stream.active));
 const answerLabel = computed(() => ({ markdown: 'Markdown', json: 'JSON', html: 'HTML', svg: 'SVG', xml: 'XML' })[answer.value.kind]);
 const formattedAnswer = computed(() => (
@@ -85,6 +92,10 @@ const views: Array<{ id: StreamViewMode; label: string }> = [
   { id: 'events', label: 'Events' },
   { id: 'raw', label: 'Raw' },
 ];
+const pickView = (value: string | number) => {
+  const view = views.find(item => item.id === value);
+  if (view) pickedView.value = view.id;
+};
 
 const normalizedQuery = computed(() => (showSearch.value ? searchQuery.value.trim().toLowerCase() : ''));
 // 搜索在原文上高亮，打开搜索时回答按原文显示
@@ -202,29 +213,26 @@ const copyCurrentView = async () => {
   <div class="flex flex-col h-full">
     <!-- View tabs -->
     <div class="flex items-center justify-between bg-surface-0 dark:bg-surface-950">
-      <div class="flex">
-        <button class="cursor-pointer"
-          v-for="view in views"
-          :key="view.id"
-          @click="pickedView = view.id"
-          :class="[
-            'px-4 py-2 text-sm font-medium transition',
-            activeView === view.id
-              ? 'text-primary border-b-2 border-primary'
-              : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50'
-          ]"
-        >
-          {{ view.label }}
-        </button>
-      </div>
+      <Tabs :value="activeView" @update:value="pickView">
+        <TabList>
+          <Tab v-for="view in views" :key="view.id" :value="view.id">{{ view.label }}</Tab>
+        </TabList>
+      </Tabs>
 
       <div class="flex items-center gap-3 mr-2 text-xs text-surface-500 dark:text-surface-400">
         <template v-if="activeView === 'text' && (stream.text || hasResults)">
           <span v-if="!hasResults" class="px-2 py-0.5 rounded font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30">{{ answerLabel }}</span>
-          <span class="stream-mode-switch" :title="showSearch ? 'Search works on the source text' : ''">
-            <button class="enabled:cursor-pointer" :class="{ 'is-active': showRendered }" :disabled="showSearch" @click="textMode = 'rendered'">Rendered</button>
-            <button class="enabled:cursor-pointer" :class="{ 'is-active': !showRendered }" :disabled="showSearch" @click="textMode = 'source'">Source</button>
-          </span>
+          <SelectButton
+            :modelValue="showRendered ? 'rendered' : 'source'"
+            :options="TEXT_MODE_OPTIONS"
+            optionLabel="label"
+            optionValue="value"
+            :allowEmpty="false"
+            :disabled="showSearch"
+            size="small"
+            :title="showSearch ? 'Search works on the source text' : ''"
+            @update:modelValue="setTextMode"
+          />
         </template>
         <template v-if="!stream.active">
           <span v-if="stream.finishReason">Finish: {{ stream.finishReason }}</span>
@@ -431,28 +439,6 @@ const copyCurrentView = async () => {
 .stream-thinking-capped {
   max-height: 40vh;
   overflow-y: auto;
-}
-
-.stream-mode-switch {
-  display: inline-flex;
-  border: 1px solid var(--p-content-border-color);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.stream-mode-switch button {
-  padding: 0.1rem 0.55rem;
-  cursor: pointer;
-}
-
-.stream-mode-switch button:disabled {
-  cursor: default;
-}
-
-.stream-mode-switch button.is-active {
-  background: var(--p-content-hover-background);
-  color: var(--p-text-color);
-  font-weight: 500;
 }
 
 .stream-raw {
