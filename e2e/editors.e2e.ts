@@ -247,19 +247,33 @@ test.describe('request body editor', () => {
     expect(await editor.value()).toBe('{"cn": ""}');
     await cdp.send('Input.insertText', { text: '中文' });
     expect(await editor.value()).toBe('{"cn": "中文"}');
-    await page.keyboard.press('Control+z');
+    // 删除选中内容和输入的文字一起撤销
     await page.keyboard.press('Control+z');
     expect(await editor.value()).toBe('{"cn": "old"}');
 
-    // Windows 上输入法按键先触发 keyCode 229 的 keydown，此时就删掉选中内容
+    // Windows 上输入法按键先触发 keyCode 229 的 keydown，紧接着（同一轮事件里）开始组字，
+    // compositionstart 的 data 是 textarea 里仍选中的文字。组字期间拼音不能写进文档，
+    // 撤销时也不能出现拼音
     await editor.setDoc('{"cn": "|old"}');
     await selectOld();
-    await editor.host.locator('textarea').dispatchEvent('keydown', { keyCode: 229, key: 'Process' });
+    await editor.host.locator('textarea').evaluate((textarea: HTMLTextAreaElement) => {
+      textarea.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 229, key: 'Process', bubbles: true }));
+      const data = textarea.value.slice(textarea.selectionStart, textarea.selectionEnd);
+      textarea.dispatchEvent(new CompositionEvent('compositionstart', { data, bubbles: true }));
+    });
     expect(await editor.value()).toBe('{"cn": ""}');
-    await cdp.send('Input.imeSetComposition', { text: 'wen', selectionStart: 3, selectionEnd: 3 });
-    await cdp.send('Input.insertText', { text: '文' });
+    for (const text of ['s', 'sh', 'shui']) {
+      await cdp.send('Input.imeSetComposition', { text, selectionStart: text.length, selectionEnd: text.length });
+      expect(await editor.value()).toBe('{"cn": ""}');
+    }
+    await cdp.send('Input.insertText', { text: '谁' });
+    await cdp.send('Input.imeSetComposition', { text: 'zhidao', selectionStart: 6, selectionEnd: 6 });
+    expect(await editor.value()).toBe('{"cn": "谁"}');
+    await cdp.send('Input.insertText', { text: '知道' });
     await cdp.detach();
-    expect(await editor.value()).toBe('{"cn": "文"}');
+    expect(await editor.value()).toBe('{"cn": "谁知道"}');
+    await page.keyboard.press('Control+z');
+    expect(await editor.value()).toBe('{"cn": "old"}');
   });
 
   test('colors brackets and XML tags by nesting level', async ({ app, page }) => {

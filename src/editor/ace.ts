@@ -368,23 +368,35 @@ export function applyBaseOptions(editor: AceEditor) {
   deleteSelectionBeforeComposition(editor);
 }
 
-// 选中文字后用输入法输入：组字开始前先删掉选中内容。compositionstart 的 data 是将被替换的
-// 选中文字，Ace 见到非空 data 会改为把组字直接写进文档（ace_composition_marker），Windows 上
-// 样式错乱，结束后选中内容也没有删除。按下输入法按键（keyCode 229）时就删除，此时输入法还没
-// 开始组字；没有这个按键时在 compositionstart 里删除，并清空 data，让 Ace 按无选中的方式组字。
-// 两个监听都挂在容器的捕获阶段，先于 Ace 在 textarea 上的处理。
+// 选中文字后用输入法输入：组字开始前先删掉选中内容。按下输入法按键（keyCode 229）时就删除，
+// 此时输入法还没开始组字；没有这个按键时在 compositionstart 里删除。
+// compositionstart 的 data 是 textarea 里将被替换的选中文字，Ace 见到非空 data 会改为把组字过程
+// （拼音）直接写进文档：Windows 上样式错乱、选中内容没删，撤销时还会一步步出现拼音。所以总是
+// 清空 data，让 Ace 只在组字结束后插入结果。删除后要立即同步 textarea：Ace 等操作结束才同步，
+// Windows 上输入法紧接着开始组字时，textarea 里还是选中的文字。
+// 删除和随后组字的结果合并成一步撤销。监听都挂在容器的捕获阶段，先于 Ace 在 textarea 上的处理。
 function deleteSelectionBeforeComposition(editor: AceEditor) {
+  const textInput = editor.textInput as unknown as { resetSelection(): void };
+  let mergeNextComposition = false;
   const deleteSelection = () => {
-    if (editor.getReadOnly() || editor.selection.isEmpty()) return false;
+    if (editor.getReadOnly() || editor.selection.isEmpty()) return;
     editor.session.remove(editor.getSelectionRange());
     editor.clearSelection();
-    return true;
+    textInput.resetSelection();
+    mergeNextComposition = true;
   };
   editor.container.addEventListener('keydown', (event) => {
     if (event.keyCode === 229) deleteSelection();
   }, true);
   editor.container.addEventListener('compositionstart', (event) => {
-    if (deleteSelection()) Object.defineProperty(event, 'data', { value: '' });
+    if (editor.getReadOnly()) return;
+    deleteSelection();
+    Object.defineProperty(event, 'data', { value: '' });
+  }, true);
+  editor.container.addEventListener('compositionend', () => {
+    // mergeUndoDeltas 是 Ace 内部字段，为 true 时下一次修改并入上一步撤销
+    if (mergeNextComposition) (editor.session as unknown as { mergeUndoDeltas: boolean }).mergeUndoDeltas = true;
+    mergeNextComposition = false;
   }, true);
 }
 
