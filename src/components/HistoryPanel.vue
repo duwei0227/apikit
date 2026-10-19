@@ -81,12 +81,7 @@ const clearHistory = () => historyStore.clearHistory();
 <template>
   <div class="p-2">
     <div v-if="historyStore.history.length > 0" class="flex justify-end mb-1">
-      <button
-        @click="clearHistory"
-        class="text-xs text-surface-400 dark:text-surface-500 hover:text-red-500 dark:hover:text-red-400 transition cursor-pointer"
-      >
-        Clear All
-      </button>
+      <Button label="Clear All" text size="small" severity="danger" @click="clearHistory" />
     </div>
     <div v-if="filteredHistoryItems.length === 0" class="text-surface-500 dark:text-surface-400 text-xs text-center py-4">
       {{ searchQuery ? 'No matching history found' : 'No history yet' }}

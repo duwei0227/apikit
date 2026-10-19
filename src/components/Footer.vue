@@ -21,6 +21,16 @@ const collectionsStore = useCollectionsStore();
 const appStateStore = useAppStateStore();
 const mocksStore = useMocksStore();
 const mcpStore = useMcpStore();
+const mcpStatusLabel = computed(() => {
+  if (mcpStore.status === 'running') return 'Running';
+  if (mcpStore.status === 'error') return 'Error';
+  return 'Off';
+});
+const mcpStatusSeverity = computed(() => {
+  if (mcpStore.status === 'running') return 'success';
+  if (mcpStore.status === 'error') return 'danger';
+  return 'secondary';
+});
 const consoleLogsStore = useConsoleLogsStore();
 
 const activeTab = ref(0); // 0: Find, 1: Console
@@ -326,33 +336,39 @@ const formatTime = (timestamp: number | string) => {
         Console
       </button>
       <div class="flex-1"></div>
-      <button
-        class="mock-status-button px-3 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50 transition cursor-pointer"
+      <!-- 状态用按钮的徽标显示：运行中为绿色，启动失败为红色，未开启为灰色 -->
+      <Button
+        icon="pi pi-server"
+        label="Mocks"
+        :badge="mocksStore.runningCount > 0 ? `${mocksStore.runningCount} running` : 'Off'"
+        :badgeSeverity="mocksStore.runningCount > 0 ? 'success' : 'secondary'"
+        text
+        size="small"
+        severity="secondary"
         :title="mocksStore.runningCount > 0 ? `${mocksStore.runningCount} mock service(s) running` : 'No mock services running'"
         @click="emit('open-mocks')"
-      >
-        <i class="pi pi-server text-[11px]"></i>
-        <span>Mocks</span>
-        <span class="mcp-status-dot" :class="mocksStore.runningCount > 0 ? 'running' : 'stopped'"></span>
-        <span>{{ mocksStore.runningCount > 0 ? `${mocksStore.runningCount} running` : 'Off' }}</span>
-      </button>
-      <button
-        @click="mcpStore.openDialog()"
-        class="mcp-status-button px-3 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50 transition cursor-pointer"
+      />
+      <Button
+        icon="pi pi-sparkles"
+        label="MCP"
+        :badge="mcpStatusLabel"
+        :badgeSeverity="mcpStatusSeverity"
+        text
+        size="small"
+        severity="secondary"
         :title="mcpStore.statusText"
-      >
-        <i class="pi pi-sparkles text-[11px]"></i>
-        <span>MCP</span>
-        <span class="mcp-status-dot" :class="mcpStore.status"></span>
-        <span>{{ mcpStore.status === 'running' ? 'Running' : mcpStore.status === 'error' ? 'Error' : 'Off' }}</span>
-      </button>
-      <button 
+        @click="mcpStore.openDialog()"
+      />
+      <Button
         v-if="!isCollapsed"
+        icon="pi pi-times"
+        text
+        size="small"
+        severity="secondary"
+        title="Close"
+        aria-label="Close panel"
         @click="toggleCollapse"
-        class="px-4 py-2 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-50 transition cursor-pointer"
-      >
-        <i class="pi pi-times"></i>
-      </button>
+      />
     </div>
 
     <!-- Tab Content (only when expanded) -->
@@ -510,31 +526,28 @@ const formatTime = (timestamp: number | string) => {
                         title="Copy"
                         @click="copyConsoleBody(getShownBody(side), BODY_LABELS[side])"
                       ></i>
-                      <button
-                        type="button"
-                        class="inline-flex text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 cursor-pointer transition"
+                      <Button
+                        :icon="isBodyExpanded(log.id, side) ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"
+                        text
+                        rounded
+                        size="small"
+                        severity="secondary"
                         :title="isBodyExpanded(log.id, side) ? 'Restore width' : 'Expand horizontally'"
                         :aria-label="isBodyExpanded(log.id, side) ? `Restore ${side} body width` : `Expand ${side} body horizontally`"
                         @click="toggleBodyExpansion(log.id, side)"
-                      >
-                        <i :class="['pi', isBodyExpanded(log.id, side) ? 'pi-window-minimize' : 'pi-window-maximize']"></i>
-                      </button>
-                      <button
+                      />
+                      <Button
                         v-if="canFormatBody(log, side)"
-                        type="button"
-                        :class="[
-                          'inline-flex cursor-pointer transition',
-                          formattedBodies[side] !== undefined
-                            ? 'text-primary'
-                            : 'text-surface-400 hover:text-surface-700 dark:hover:text-surface-200',
-                        ]"
+                        icon="pi pi-align-left"
+                        text
+                        rounded
+                        size="small"
+                        :severity="formattedBodies[side] !== undefined ? undefined : 'secondary'"
                         :title="formattedBodies[side] !== undefined ? 'Show original' : 'Format'"
                         :aria-label="formattedBodies[side] !== undefined ? `Show original ${side} body` : `Format ${side} body`"
                         :aria-pressed="formattedBodies[side] !== undefined"
                         @click="toggleBodyFormat(log, side)"
-                      >
-                        <i class="pi pi-align-left"></i>
-                      </button>
+                      />
                     </div>
                     <CodeEditor
                       class="mt-2"
@@ -555,27 +568,3 @@ const formatTime = (timestamp: number | string) => {
   </footer>
 </template>
 
-<style scoped>
-.mcp-status-button,
-.mock-status-button {
-  align-items: center;
-  display: inline-flex;
-  gap: 0.375rem;
-}
-
-.mcp-status-dot {
-  background: var(--p-surface-400);
-  border-radius: 999px;
-  height: 0.4375rem;
-  width: 0.4375rem;
-}
-
-.mcp-status-dot.running {
-  background: #16a34a;
-}
-
-.mcp-status-dot.error {
-  background: #dc2626;
-}
-
-</style>

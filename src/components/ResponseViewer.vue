@@ -445,13 +445,16 @@ const selectAllPreContent = (event: KeyboardEvent) => {
       <div v-if="!response" class="flex-1 flex flex-col">
         <div class="flex items-center justify-between px-4 py-2 border-b border-surface-200 dark:border-surface-700">
           <span class="text-sm font-medium text-surface-500 dark:text-surface-400">Response</span>
-          <button
-            @click="toggleResponseCollapse"
-            class="p-1 rounded hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-400 transition cursor-pointer"
+          <Button
+            icon="pi pi-chevron-down"
+            text
+            rounded
+            size="small"
+            severity="secondary"
             title="Collapse response"
-          >
-            <i class="pi pi-chevron-down text-xs"></i>
-          </button>
+            aria-label="Collapse response"
+            @click="toggleResponseCollapse"
+          />
         </div>
         <div class="flex-1 flex items-center justify-center">
           <div class="text-center text-surface-400 dark:text-surface-500">
@@ -509,13 +512,16 @@ const selectAllPreContent = (event: KeyboardEvent) => {
             outlined
             @click="$emit('cancel')"
           />
-          <button
-            @click="toggleResponseCollapse"
-            class="p-1 rounded hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-500 dark:text-surface-400 transition cursor-pointer"
+          <Button
+            icon="pi pi-chevron-down"
+            text
+            rounded
+            size="small"
+            severity="secondary"
             title="Collapse response"
-          >
-            <i class="pi pi-chevron-down text-xs"></i>
-          </button>
+            aria-label="Collapse response"
+            @click="toggleResponseCollapse"
+          />
         </div>
         <TabView v-model:activeIndex="activeResponseTab" class="response-tabs flex-1">
         <TabPanel>

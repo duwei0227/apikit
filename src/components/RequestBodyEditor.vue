@@ -447,24 +447,16 @@ watch([bodySearchQuery, bodySearchCaseSensitive, bodySearchRegex], () => {
                 :availableVariables="availableVariables"
                 @input="onFormDataChange"
               />
-              <button
-                v-else
-                type="button"
-                class="form-data-file-picker"
-                :title="row.filePath || row.value || 'Select file'"
-                @click="chooseFormDataFile(row)"
-              >
-                <span class="form-data-file-picker-action">
-                  <i class="pi pi-folder-open"></i>
-                  Select File
-                </span>
-                <span
-                  class="form-data-file-picker-name"
-                  :class="{ 'is-placeholder': !row.value }"
-                >
-                  {{ row.value || 'No file selected' }}
-                </span>
-              </button>
+              <InputGroup v-else :title="row.filePath || row.value || 'Select file'">
+                <Button icon="pi pi-folder-open" label="Select File" size="small" severity="secondary" @click="chooseFormDataFile(row)" />
+                <InputText
+                  :modelValue="row.value"
+                  placeholder="No file selected"
+                  size="small"
+                  readonly
+                  @click="chooseFormDataFile(row)"
+                />
+              </InputGroup>
             </div>
             <div class="flex justify-center" style="width: 40px;">
               <Button
@@ -565,23 +557,15 @@ watch([bodySearchQuery, bodySearchCaseSensitive, bodySearchRegex], () => {
 
     <!-- Binary file -->
     <div v-if="body.type === 'binary'" class="flex flex-col gap-3">
-      <button
-        type="button"
-        class="form-data-file-picker max-w-xl"
-        :title="body.filePath || 'Select file'"
-        @click="chooseBinaryFile"
-      >
-        <span class="form-data-file-picker-action">
-          <i class="pi pi-folder-open"></i>
-          Select File
-        </span>
-        <span
-          class="form-data-file-picker-name"
-          :class="{ 'is-placeholder': !body.filePath }"
-        >
-          {{ body.filePath ? getFileNameFromPath(body.filePath) : 'No file selected' }}
-        </span>
-      </button>
+      <InputGroup class="max-w-xl" :title="body.filePath || 'Select file'">
+        <Button icon="pi pi-folder-open" label="Select File" severity="secondary" @click="chooseBinaryFile" />
+        <InputText
+          :modelValue="body.filePath ? getFileNameFromPath(body.filePath) : ''"
+          placeholder="No file selected"
+          readonly
+          @click="chooseBinaryFile"
+        />
+      </InputGroup>
       <div class="text-xs text-surface-500 dark:text-surface-400">
         The selected file is sent as the request body without text conversion.
       </div>
@@ -671,85 +655,5 @@ watch([bodySearchQuery, bodySearchCaseSensitive, bodySearchRegex], () => {
 .form-data-row :deep(.p-inputtext) {
   min-height: 42px;
   height: 42px;
-}
-
-.form-data-file-picker {
-  width: 100%;
-  min-width: 0;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  padding: 0;
-  border: 1px solid var(--p-inputtext-border-color, #cbd5e1);
-  border-radius: 6px;
-  background: var(--p-inputtext-background, #ffffff);
-  color: var(--p-inputtext-color, #334155);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
-}
-
-.form-data-file-picker:hover {
-  border-color: var(--p-primary-400, #60a5fa);
-}
-
-.form-data-file-picker:focus-visible {
-  outline: none;
-  border-color: var(--p-primary-500, #3b82f6);
-  box-shadow: 0 0 0 1px var(--p-primary-500, #3b82f6);
-}
-
-.form-data-file-picker-action {
-  height: 100%;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex: 0 0 auto;
-  padding: 0 0.75rem;
-  border-right: 1px solid var(--p-inputtext-border-color, #cbd5e1);
-  background: var(--p-surface-100, #f1f5f9);
-  color: var(--p-surface-800, #1e293b);
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.form-data-file-picker-name {
-  min-width: 0;
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding: 0 0.75rem;
-  color: var(--p-surface-600, #475569);
-  font-size: 13px;
-}
-
-.form-data-file-picker-name.is-placeholder {
-  color: var(--p-surface-400, #94a3b8);
-}
-
-/* `.p-dark` is an ancestor on <html>, so :deep(.p-dark) compiled to
-   `[data-v] .p-dark …` and never matched (dark styles silently ignored).
-   Plain `.p-dark <scoped>` compiles to `.p-dark <scoped>[data-v]` and works. */
-.p-dark .form-data-file-picker {
-  border-color: var(--p-surface-600, #475569);
-  background: var(--p-surface-900, #0f172a);
-  color: var(--p-surface-100, #f1f5f9);
-}
-
-.p-dark .form-data-file-picker-action {
-  border-right-color: var(--p-surface-600, #475569);
-  background: var(--p-surface-800, #1e293b);
-  color: var(--p-surface-100, #f1f5f9);
-}
-
-.p-dark .form-data-file-picker-name {
-  color: var(--p-surface-300, #cbd5e1);
-}
-
-.p-dark .form-data-file-picker-name.is-placeholder {
-  color: var(--p-surface-500, #64748b);
 }
 </style>

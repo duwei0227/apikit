@@ -17,6 +17,7 @@
 
 ### Changed
 - ApiKit now requires macOS 11 Big Sur or later, with Safari 16.4 or later (before: macOS 10.13). The interface styles were updated to a newer toolkit that the older system WebKit cannot display.
+- Buttons in the toolbar, title bar, status bar and elsewhere now use the standard component style. The Mocks and MCP status in the status bar is shown as a badge, the dot on the title-bar ✦ icon appears only while the MCP server is running (green) or failed to start (red), and the file picker for form-data and binary bodies is a **Select File** button next to the file name.
 - Status, method and highlight colors (for example the unsaved tab title and **Status: 200 OK**) use the updated default color palette and look slightly more vivid, mainly in the dark theme.
 - The **Save Request** dialog now starts at the location you last saved to (or the only collection when there is just one), expands to it, and marks a collection's top level as **(collection root)**.
 - A new workflow is now added at the end of the sidebar list (or of its folder) instead of at the top; the order you set by dragging is kept.
@@ -34,6 +35,7 @@
 
 ### 变更
 - ApiKit 现在需要 macOS 11 Big Sur 或更高版本，且 Safari 为 16.4 或更高（之前为 macOS 10.13）。界面样式改用了新版工具，旧版系统 WebKit 无法正确显示。
+- 工具栏、标题栏、状态栏等处的按钮改用标准组件样式。状态栏中 Mocks 和 MCP 的状态以徽标显示；标题栏 ✦ 图标上的圆点只在 MCP 服务运行中（绿色）或启动失败（红色）时显示；form-data 和 binary 请求体的文件选择改为 **Select File** 按钮加文件名。
 - 状态、请求方法和强调色（例如未保存页签的标题和 **Status: 200 OK**）改用新版默认调色板，颜色略为鲜艳，主要体现在暗色主题。
 - **Save Request** 对话框默认选中上次保存的位置（只有一个集合时选中它）并展开到该位置，保存在集合根目录时标注 **(collection root)**。
 - 新建的工作流现在放在侧边栏列表（或所在文件夹）的末尾，而不是最前面；拖动调整的顺序会保留。

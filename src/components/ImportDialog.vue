@@ -361,7 +361,7 @@ defineExpose({ open: openImportDialog });
             <i class="pi pi-file text-surface-500"></i>
             <span class="flex-1 min-w-0 truncate font-mono text-xs">{{ importPreview.fileName }}</span>
             <span class="transfer-tag">{{ importFormatLabel }}</span>
-            <button type="button" class="text-xs underline hover:text-primary cursor-pointer" @click="pickImportFile">Change</button>
+            <Button label="Change" link size="small" @click="pickImportFile" />
           </div>
 
           <div class="transfer-tabs">

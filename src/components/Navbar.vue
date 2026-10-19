@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineAsyncComponent, ref, shallowRef, onMounted, onBeforeUnmount } from 'vue';
+import { computed, defineAsyncComponent, ref, shallowRef, onMounted, onBeforeUnmount } from 'vue';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { check, type DownloadEvent, type Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
@@ -23,6 +23,22 @@ const helpMenuRef = ref<{ toggle: (event: Event) => void } | null>(null);
 const showShortcutsDialog = ref(false);
 const showAboutDialog = ref(false);
 const mcpStore = useMcpStore();
+// MCP 状态点：运行中为绿色，启动失败为红色，未开启时不显示
+const mcpBadgeSeverity = computed(() => {
+  if (mcpStore.status === 'running') return 'success';
+  if (mcpStore.status === 'error') return 'danger';
+  return null;
+});
+const mcpButton = computed(() => ({
+  icon: 'pi pi-sparkles',
+  text: true,
+  rounded: true,
+  size: 'small',
+  severity: 'secondary',
+  title: `AI Integration (MCP): ${mcpStore.statusText}`,
+  'aria-label': `AI Integration (MCP): ${mcpStore.statusText}`,
+  onClick: () => mcpStore.openDialog(),
+}));
 
 // Update dialog state
 const showUpdateDialog = ref(false);
@@ -310,7 +326,7 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
 
 <template>
   <nav 
-    class="navbar bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-50 px-4 py-2 border-b border-surface-200 dark:border-surface-700 select-none"
+    class="navbar bg-surface-0 dark:bg-surface-900 text-surface-900 dark:text-surface-50 px-4 py-1.5 border-b border-surface-200 dark:border-surface-700 select-none"
     @mousedown="handleTitlebarMouseDown"
   >
     <div class="flex items-center justify-between">
@@ -318,40 +334,42 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
         <img src="../assets/logo.svg" class="w-6 h-6 rounded-md" alt="ApiKit" draggable="false" />
         <div class="flex items-center gap-2">
           <h1 class="text-sm font-semibold">ApiKit</h1>
-          <button
+          <Button
             v-if="updateInfo"
-            @click="openUpdateDialog"
-            class="update-badge"
+            :label="`New v${updateInfo.version}`"
+            size="small"
+            rounded
+            severity="help"
             :title="`ApiKit ${updateInfo.version} is available`"
-          >
-            <span class="update-badge-dot"></span>
-            New v{{ updateInfo.version }}
-          </button>
+            @click="openUpdateDialog"
+          />
         </div>
       </div>
       <div class="flex items-center gap-1">
-        <button
-          @click="mcpStore.openDialog()"
-          class="mcp-button px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition cursor-pointer"
-          :title="`AI Integration (MCP): ${mcpStore.statusText}`"
-        >
-          <i class="pi pi-sparkles"></i>
-          <span class="mcp-button-dot" :class="mcpStore.status"></span>
-        </button>
-        <button 
-          @click="showHelpMenu"
-          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition cursor-pointer"
+        <OverlayBadge v-if="mcpBadgeSeverity" :severity="mcpBadgeSeverity">
+          <Button v-bind="mcpButton" />
+        </OverlayBadge>
+        <Button v-else v-bind="mcpButton" />
+        <Button
+          icon="pi pi-question-circle"
+          text
+          rounded
+          size="small"
+          severity="secondary"
           title="Help"
-        >
-          <i class="pi pi-question-circle"></i>
-        </button>
-        <button 
-          @click="toggleTheme"
-          class="px-2 py-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 transition cursor-pointer"
+          aria-label="Help"
+          @click="showHelpMenu"
+        />
+        <Button
+          :icon="isDark ? 'pi pi-sun' : 'pi pi-moon'"
+          text
+          rounded
+          size="small"
+          severity="secondary"
           :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
-        >
-          <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'"></i>
-        </button>
+          :aria-label="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+          @click="toggleTheme"
+        />
         
         <!-- Separator -->
         <div class="h-5 w-px bg-surface-300 dark:bg-surface-600 mx-2"></div>
@@ -419,34 +437,6 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
 </template>
 
 <style scoped>
-.mcp-button {
-  position: relative;
-}
-
-/* 图标右上角的状态点：运行中为绿色，启动失败为红色，未开启为灰色 */
-.mcp-button-dot {
-  border: 1.5px solid var(--p-surface-0);
-  border-radius: 999px;
-  height: 0.5rem;
-  position: absolute;
-  right: 0.25rem;
-  top: 0.125rem;
-  width: 0.5rem;
-  background: var(--p-surface-400);
-}
-
-.p-dark .mcp-button-dot {
-  border-color: var(--p-surface-900);
-}
-
-.mcp-button-dot.running {
-  background: #16a34a;
-}
-
-.mcp-button-dot.error {
-  background: #dc2626;
-}
-
 /* Disable text selection for smoother dragging */
 .navbar {
   cursor: default;
@@ -457,52 +447,6 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
 button {
   cursor: pointer;
   user-select: none;
-}
-
-/* 标题旁的新版本标记 */
-.update-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 18px;
-  padding: 0 8px;
-  border-radius: 999px;
-  color: #fff;
-  background: linear-gradient(90deg, #7c3aed, #2563eb);
-  cursor: pointer;
-  transition: filter 0.15s;
-}
-
-.update-badge:hover {
-  filter: brightness(1.1);
-}
-
-.update-badge:focus-visible {
-  outline: 2px solid #7c3aed;
-  outline-offset: 2px;
-}
-
-/* 呼吸圆点，提示有新版本 */
-.update-badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: update-badge-pulse 1.6s ease-out infinite;
-}
-
-@keyframes update-badge-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
-  70% { box-shadow: 0 0 0 5px rgba(255, 255, 255, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .update-badge-dot {
-    animation: none;
-  }
 }
 
 /* Ensure ContextMenu items have proper spacing for icons */

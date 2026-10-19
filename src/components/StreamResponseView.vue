@@ -230,16 +230,16 @@ const copyCurrentView = async () => {
           <span v-if="stream.finishReason">Finish: {{ stream.finishReason }}</span>
           <span v-if="tokenSummary">Tokens: {{ tokenSummary }}</span>
         </template>
-        <button
+        <Button
           v-if="stream.active"
-          class="flex items-center gap-1 px-2 py-1 rounded transition hover:bg-surface-100 dark:hover:bg-surface-800 cursor-pointer"
-          :class="{ 'text-primary': followOutput }"
+          icon="pi pi-arrow-down"
+          label="Follow output"
+          text
+          size="small"
+          :severity="followOutput ? undefined : 'secondary'"
           :title="followOutput ? 'Stop following new output' : 'Follow new output'"
           @click="toggleFollow"
-        >
-          <i class="pi pi-arrow-down text-xs"></i>
-          <span>Follow output</span>
-        </button>
+        />
         <Button
           icon="pi pi-search"
           size="small"
@@ -365,13 +365,14 @@ const copyCurrentView = async () => {
         <div class="stream-event-row sticky top-0 z-10 bg-surface-50 dark:bg-surface-900 text-surface-500 dark:text-surface-400">
           <span>#</span><span>Time</span><span>Event</span><span>Data</span>
         </div>
-        <button
+        <Button
           v-if="hiddenEventCount > 0 && stream.active"
-          class="w-full px-4 py-1.5 text-left text-primary hover:bg-surface-50 dark:hover:bg-surface-900 cursor-pointer"
+          :label="`Show ${Math.min(hiddenEventCount, EVENT_PAGE_SIZE)} earlier events (${hiddenEventCount} hidden)`"
+          text
+          size="small"
+          class="w-full"
           @click="eventLimit += EVENT_PAGE_SIZE"
-        >
-          Show {{ Math.min(hiddenEventCount, EVENT_PAGE_SIZE) }} earlier events ({{ hiddenEventCount }} hidden)
-        </button>
+        />
         <template v-for="event in visibleEvents" :key="event.index">
           <div
             class="stream-event-row cursor-pointer hover:bg-surface-50 dark:hover:bg-surface-900"
@@ -388,13 +389,14 @@ const copyCurrentView = async () => {
             class="stream-event-detail"
           >{{ formatEventData(event) }}</pre>
         </template>
-        <button
+        <Button
           v-if="hiddenEventCount > 0 && !stream.active"
-          class="w-full px-4 py-1.5 text-left text-primary hover:bg-surface-50 dark:hover:bg-surface-900 cursor-pointer"
+          :label="`Show ${Math.min(hiddenEventCount, EVENT_PAGE_SIZE)} more events (${hiddenEventCount} hidden)`"
+          text
+          size="small"
+          class="w-full"
           @click="eventLimit += EVENT_PAGE_SIZE"
-        >
-          Show {{ Math.min(hiddenEventCount, EVENT_PAGE_SIZE) }} more events ({{ hiddenEventCount }} hidden)
-        </button>
+        />
         <div v-if="filteredEvents.length === 0" class="px-4 py-6 text-center text-surface-400 dark:text-surface-500">
           {{ normalizedQuery ? 'No events match the filter.' : (stream.active ? 'Waiting for the first event…' : 'No events received.') }}
         </div>
