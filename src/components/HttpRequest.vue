@@ -513,7 +513,7 @@ defineExpose({
         <InputText
           v-if="editableName"
           v-model="localRequest.name"
-          class="text-sm font-medium border-0 p-0 focus:ring-0 flex-1"
+          class="font-medium leading-[18px] flex-1"
           placeholder="Request Name"
         />
         <span v-else class="text-sm font-medium flex-1 truncate">{{ localRequest.name }}</span>
