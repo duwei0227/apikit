@@ -72,7 +72,7 @@ const removeGlobalVariable = (index: number) => {
             </p>
 
             <!-- Table Header -->
-            <div class="grid grid-cols-12 gap-2 mb-2 text-sm font-bold text-surface-700 dark:text-surface-300 px-2">
+            <div class="grid grid-cols-12 gap-2 text-sm font-bold text-surface-700 dark:text-surface-300 px-2">
               <div class="col-span-1"></div>
               <div class="col-span-3">Operator</div>
               <div class="col-span-2">Expected Value</div>
@@ -136,7 +136,6 @@ const removeGlobalVariable = (index: number) => {
               size="small"
               text
               @click="addStatusCodeTest"
-              class="mt-2"
             />
           </div>
         </AccordionContent>
@@ -160,7 +159,7 @@ const removeGlobalVariable = (index: number) => {
             </p>
 
             <!-- Table Header -->
-            <div class="grid grid-cols-12 gap-2 mb-2 text-sm font-bold text-surface-700 dark:text-surface-300 px-2">
+            <div class="grid grid-cols-12 gap-2 text-sm font-bold text-surface-700 dark:text-surface-300 px-2">
               <div class="col-span-1"></div>
               <div class="col-span-3">JSON Path</div>
               <div class="col-span-2">Operator</div>
@@ -234,7 +233,6 @@ const removeGlobalVariable = (index: number) => {
               size="small"
               text
               @click="addJsonFieldTest"
-              class="mt-2"
             />
           </div>
         </AccordionContent>
@@ -257,7 +255,7 @@ const removeGlobalVariable = (index: number) => {
             </p>
 
             <!-- Table Header -->
-            <div class="grid grid-cols-12 gap-2 mb-2 text-sm font-bold text-surface-700 dark:text-surface-300 px-2">
+            <div class="grid grid-cols-12 gap-2 text-sm font-bold text-surface-700 dark:text-surface-300 px-2">
               <div class="col-span-1"></div>
               <div class="col-span-2">Variable Name</div>
               <div class="col-span-2">Type</div>
@@ -349,7 +347,6 @@ const removeGlobalVariable = (index: number) => {
               size="small"
               text
               @click="addGlobalVariable"
-              class="mt-2"
             />
           </div>
         </AccordionContent>

@@ -447,7 +447,7 @@ defineExpose({ undo, redo, focus });
               :key="idx"
               class="flex items-start gap-2 p-2 bg-surface-50 dark:bg-surface-800 rounded"
             >
-              <code class="text-primary font-mono flex-shrink-0">{{ example.syntax }}</code>
+              <code class="text-primary font-mono shrink-0">{{ example.syntax }}</code>
               <span class="text-surface-500 dark:text-surface-400">- {{ example.desc }}</span>
             </div>
           </div>

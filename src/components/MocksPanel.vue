@@ -120,7 +120,7 @@ const showMenu = (event: MouseEvent, service: MockService) => {
         @keydown.enter="openService(service)"
         @contextmenu="showMenu($event, service)"
       >
-        <span class="mock-status-dot flex-shrink-0" :class="stateOf(service)" :title="stateOf(service)"></span>
+        <span class="mock-status-dot shrink-0" :class="stateOf(service)" :title="stateOf(service)"></span>
         <span class="flex-1 min-w-0 flex flex-col">
           <span class="flex items-center gap-2 min-w-0">
             <span class="truncate text-sm" :class="{ 'font-semibold': isActive(service) }">{{ service.name }}</span>

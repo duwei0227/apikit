@@ -65,6 +65,8 @@ Download the latest version from the [Releases](https://github.com/duwei0227/api
 |---------|-------------|-------------|
 | `.dmg` | macOS disk image | ⭐ Recommended |
 
+**Requirements**: macOS 11 Big Sur or later, with Safari updated to 16.4 or later (the interface is shown with the system WebKit).
+
 **Note**: The first time you open ApiKit on macOS, you may need to allow it in "System Settings → Privacy & Security".
 
 ### Linux

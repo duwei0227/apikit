@@ -379,7 +379,7 @@ const selectAllPreContent = (event: KeyboardEvent) => {
 <template>
   <!-- Response Section -->
   <div
-    class="border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-950 flex flex-col relative flex-shrink-0"
+    class="border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-950 flex flex-col relative shrink-0"
     :style="{ height: isResponseCollapsed ? '40px' : `${responseHeight}px` }"
     :aria-busy="isLoading"
   >
@@ -781,7 +781,7 @@ const selectAllPreContent = (event: KeyboardEvent) => {
                     >
                       <i
                         :class="result.passed ? 'pi pi-check text-green-600 dark:text-green-400' : 'pi pi-times text-red-600 dark:text-red-400'"
-                        class="mt-0.5 flex-shrink-0"
+                        class="mt-0.5 shrink-0"
                       ></i>
                       <div class="flex-1 min-w-0">
                         <div class="text-sm font-medium mb-1" :class="result.passed ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'">
@@ -813,7 +813,7 @@ const selectAllPreContent = (event: KeyboardEvent) => {
                       <div class="flex items-start gap-3">
                         <i
                           :class="result.passed ? 'pi pi-check text-green-600 dark:text-green-400' : 'pi pi-times text-red-600 dark:text-red-400'"
-                          class="mt-0.5 flex-shrink-0"
+                          class="mt-0.5 shrink-0"
                         ></i>
                         <div class="flex-1 min-w-0">
                           <div class="text-xs font-semibold text-surface-500 dark:text-surface-400 mb-1">

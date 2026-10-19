@@ -82,7 +82,7 @@ const clear = () => {
 
 <template>
   <div class="mock-logs h-full flex min-h-0">
-    <div class="logs-list flex-shrink-0 w-[26rem] max-w-[45%] border-r border-surface-200 dark:border-surface-700 flex flex-col min-h-0">
+    <div class="logs-list shrink-0 w-104 max-w-[45%] border-r border-surface-200 dark:border-surface-700 flex flex-col min-h-0">
       <div class="flex gap-2 p-2 border-b border-surface-200 dark:border-surface-700 items-center flex-wrap">
         <InputText v-model="filter" placeholder="Filter by path or status" aria-label="Filter logs" size="small" class="flex-1 min-w-32" />
         <label class="flex items-center gap-1.5 text-xs"><Checkbox v-model="unmatchedOnly" binary /> Unmatched only</label>

@@ -10,7 +10,7 @@ Download the package for your system from the [Releases](https://github.com/duwe
 | macOS | `.dmg` | |
 | Linux | `.AppImage` (run it after `chmod +x`) | `.deb`, `.rpm`, `.tar.gz` (portable) |
 
-The first time you open ApiKit on macOS, you may need to allow it in "System Settings → Privacy & Security". After installing, use **Help → Check For Update** to check for and install new versions.
+On macOS, ApiKit requires macOS 11 Big Sur or later with Safari updated to 16.4 or later. The first time you open ApiKit on macOS, you may need to allow it in "System Settings → Privacy & Security". After installing, use **Help → Check For Update** to check for and install new versions.
 
 ## Send your first request
 

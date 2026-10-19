@@ -16,6 +16,7 @@
 - ApiKit JSON export keeps the folder of each workflow, and import puts it back into a folder with the same name. The AI (MCP) `list_workflows` tool returns workflows in sidebar order with their `folderPath`.
 
 ### Changed
+- ApiKit now requires macOS 11 Big Sur or later, with Safari 16.4 or later (before: macOS 10.13). The interface styles were updated to a newer toolkit that the older system WebKit cannot display.
 - The **Save Request** dialog now starts at the location you last saved to (or the only collection when there is just one), expands to it, and marks a collection's top level as **(collection root)**.
 - A new workflow is now added at the end of the sidebar list (or of its folder) instead of at the top; the order you set by dragging is kept.
 - Params, Headers, form-data and x-www-form-urlencoded now support Postman-style Bulk Edit with one `key: value` pair per line.
@@ -31,6 +32,7 @@
 - ApiKit JSON 导出会记录工作流所在的文件夹，导入时放回同名文件夹。AI（MCP）的 `list_workflows` 按侧边栏顺序返回工作流及其 `folderPath`。
 
 ### 变更
+- ApiKit 现在需要 macOS 11 Big Sur 或更高版本，且 Safari 为 16.4 或更高（之前为 macOS 10.13）。界面样式改用了新版工具，旧版系统 WebKit 无法正确显示。
 - **Save Request** 对话框默认选中上次保存的位置（只有一个集合时选中它）并展开到该位置，保存在集合根目录时标注 **(collection root)**。
 - 新建的工作流现在放在侧边栏列表（或所在文件夹）的末尾，而不是最前面；拖动调整的顺序会保留。
 - Params、Headers、form-data 和 x-www-form-urlencoded 现支持 Postman 风格的 Bulk Edit，每行使用 `key: value` 编辑；form-data 文件字段在批量编辑时保留。

@@ -218,7 +218,7 @@ defineExpose({ addRoute });
 <template>
   <div class="mock-routes h-full flex min-h-0">
     <!-- 路由列表 -->
-    <div class="routes-list flex-shrink-0 w-64 border-r border-surface-200 dark:border-surface-700 p-2 flex flex-col gap-1.5 overflow-y-auto">
+    <div class="routes-list shrink-0 w-64 border-r border-surface-200 dark:border-surface-700 p-2 flex flex-col gap-1.5 overflow-y-auto">
       <div class="flex gap-1.5">
         <InputText v-model="filter" placeholder="Filter routes" aria-label="Filter routes" size="small" class="flex-1 min-w-0" />
         <Button label="Route" icon="pi pi-plus" size="small" severity="secondary" @click="addRoute()" />
@@ -235,7 +235,7 @@ defineExpose({ addRoute });
         :data-route="`${route.method} ${route.path}`"
         @click="selectRoute(route)"
       >
-        <span class="font-mono text-[11px] w-12 flex-shrink-0" :class="methodColor(route.method)">{{ route.method }}</span>
+        <span class="font-mono text-[11px] w-12 shrink-0" :class="methodColor(route.method)">{{ route.method }}</span>
         <span class="flex-1 min-w-0 truncate font-mono text-xs">{{ route.path }}</span>
         <span class="text-[11px] text-surface-500">{{ route.responses.length }}</span>
       </button>

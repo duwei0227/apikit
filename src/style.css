@@ -1,6 +1,48 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import './styles/tailwind-v3-colors.css';
+
+@import 'tailwindcss-primeui';
+
+@custom-variant dark (&:where([class="p-dark"], [class="p-dark"] *));
+
+@theme {
+  --text-badge: 10px;
+  --text-badge--line-height: 14px;
+  --text-meta: 11px;
+  --text-meta--line-height: 16px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 18px;
+  --text-base: 14px;
+  --text-base--line-height: 20px;
+  --text-lg: 16px;
+  --text-lg--line-height: 22px;
+}
+
+/* Tailwind CSS v3 的默认样式：v4 的默认边框颜色改为 currentcolor，这里保持 v3 的 gray-200。
+   去掉之前，要给依赖默认边框颜色的元素加上明确的边框颜色类。 */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  /* Tailwind CSS v4 的按钮默认不再显示手形光标，保持 v3 的行为 */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* v4 的占位符颜色改为当前文字颜色的 50%，保持 v3 的 gray-400 */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+  }
+}
 
 :root {
     --body-bg: var(--p-surface-50);

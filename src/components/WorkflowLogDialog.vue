@@ -77,11 +77,11 @@ const lifecycleRowClasses = [
   'bg-cyan-50/80 dark:bg-cyan-950/30',
 ];
 const lifecycleBadgeClasses = [
-  '!bg-sky-500 !text-white dark:!bg-sky-400 dark:!text-sky-950',
-  '!bg-emerald-500 !text-white dark:!bg-emerald-400 dark:!text-emerald-950',
-  '!bg-violet-500 !text-white dark:!bg-violet-400 dark:!text-violet-950',
-  '!bg-amber-500 !text-white dark:!bg-amber-400 dark:!text-amber-950',
-  '!bg-cyan-500 !text-white dark:!bg-cyan-400 dark:!text-cyan-950',
+  'bg-sky-500! text-white! dark:bg-sky-400! dark:text-sky-950!',
+  'bg-emerald-500! text-white! dark:bg-emerald-400! dark:text-emerald-950!',
+  'bg-violet-500! text-white! dark:bg-violet-400! dark:text-violet-950!',
+  'bg-amber-500! text-white! dark:bg-amber-400! dark:text-amber-950!',
+  'bg-cyan-500! text-white! dark:bg-cyan-400! dark:text-cyan-950!',
 ];
 
 const expandedKeys = ref<Record<string, boolean>>({});
@@ -258,7 +258,7 @@ const getStatusBadgeClass = (log: WorkflowLogTreeRow) => {
     return '';
   }
   if (log.status === 'running') {
-    return '!bg-violet-500 !text-white dark:!bg-violet-400 dark:!text-violet-950 ring-1 ring-inset ring-violet-600/20';
+    return 'bg-violet-500! text-white! dark:bg-violet-400! dark:text-violet-950! ring-1 ring-inset ring-violet-600/20';
   }
   if (log.lifecycleDepth === undefined) {
     return '';
@@ -449,7 +449,7 @@ const copyLogBody = async (value: unknown, label: string) => {
                     :key="summary.kind"
                     :title="summary.title"
                     :class="[
-                      'inline-block flex-shrink-0 max-w-64 truncate rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                      'inline-block shrink-0 max-w-64 truncate rounded-full px-2 py-0.5 text-[10px] font-semibold',
                       summary.severity === 'success'
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300'
                         : summary.severity === 'warn'
@@ -491,7 +491,7 @@ const copyLogBody = async (value: unknown, label: string) => {
 
       <div
         v-if="selectedLog"
-        class="flex-shrink-0 h-[82.5%] max-h-[calc(100%-5rem)] min-h-80 overflow-y-auto border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-950 p-3"
+        class="shrink-0 h-[82.5%] max-h-[calc(100%-5rem)] min-h-80 overflow-y-auto border-t border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-950 p-3"
       >
         <div class="sticky top-0 z-20 flex items-center justify-between gap-3 -mx-3 -mt-3 mb-3 px-3 py-3 border-b border-surface-200 dark:border-surface-700 bg-surface-0 dark:bg-surface-950 shadow-sm">
           <div class="min-w-0">

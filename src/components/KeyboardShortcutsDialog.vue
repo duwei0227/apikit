@@ -103,7 +103,7 @@ const closeDialog = () => {
             <span class="text-sm text-surface-700 dark:text-surface-300">
               {{ item.description }}
             </span>
-            <div class="flex items-center gap-1 flex-shrink-0">
+            <div class="flex items-center gap-1 shrink-0">
               <template v-for="(combo, comboIndex) in combosOf(item)" :key="comboIndex">
                 <span v-if="comboIndex > 0" class="text-xs text-surface-400 px-0.5">/</span>
                 <kbd

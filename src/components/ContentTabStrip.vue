@@ -246,7 +246,7 @@ defineExpose({ scrollTabIntoView });
           <div class="flex items-center gap-1 min-w-0 flex-1">
             <span
               v-if="isUnsaved(tab)"
-              class="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0"
+              class="w-2 h-2 rounded-full bg-orange-500 shrink-0"
             ></span>
             <i v-if="tab.type === 'workflow'" class="pi pi-sitemap text-xs text-primary-500"></i>
             <i v-else-if="tab.type === 'mock'" class="pi pi-server text-xs text-teal-600 dark:text-teal-400"></i>

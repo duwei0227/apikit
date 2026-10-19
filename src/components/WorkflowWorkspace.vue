@@ -300,7 +300,7 @@ defineExpose({
 
 <template>
   <div class="h-full flex flex-col bg-surface-0 dark:bg-surface-950 overflow-hidden">
-    <div class="px-4 py-3 border-b border-surface-200 dark:border-surface-700 flex-shrink-0">
+    <div class="px-4 py-3 border-b border-surface-200 dark:border-surface-700 shrink-0">
       <InputText
         v-if="localWorkflow"
         v-model="localWorkflow.name"
@@ -311,7 +311,7 @@ defineExpose({
       <span v-else class="text-sm text-surface-500">No workflow selected</span>
     </div>
 
-    <div class="flex items-center gap-2 px-4 py-3 border-b border-surface-200 dark:border-surface-700 flex-shrink-0">
+    <div class="flex items-center gap-2 px-4 py-3 border-b border-surface-200 dark:border-surface-700 shrink-0">
       <Button label="Existing Request" icon="pi pi-link" size="small" outlined :disabled="!localWorkflow" @click="addReferenceRequest" />
       <Button label="Inline Request" icon="pi pi-plus" size="small" outlined :disabled="!localWorkflow" @click="addInlineRequest" />
       <Button label="If" icon="pi pi-code" size="small" outlined :disabled="!localWorkflow" @click="addControlStep('if')" />

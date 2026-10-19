@@ -10,7 +10,7 @@
 | macOS | `.dmg` | |
 | Linux | `.AppImage`（`chmod +x` 后直接运行） | `.deb`、`.rpm`、`.tar.gz`（便携版） |
 
-macOS 首次打开时，可能需要在"系统设置 → 隐私与安全性"中允许运行。安装后可以在 **Help → Check For Update** 中检查并安装新版本。
+macOS 需要 11 Big Sur 或更高版本，且 Safari 已更新到 16.4 或更高。macOS 首次打开时，可能需要在"系统设置 → 隐私与安全性"中允许运行。安装后可以在 **Help → Check For Update** 中检查并安装新版本。
 
 ## 发送第一个请求
 

@@ -773,7 +773,7 @@ defineExpose({
 
 <template>
   <div class="h-full min-h-0 flex flex-col overflow-hidden p-2 bg-surface-0 dark:bg-surface-950">
-    <div class="mb-2 flex-shrink-0">
+    <div class="mb-2 shrink-0">
       <Button
         @click="openCreateDialog('collection')"
         label="New Collection"

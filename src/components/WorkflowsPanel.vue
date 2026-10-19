@@ -275,7 +275,7 @@ const onTreeContextMenu = (event: MouseEvent) => {
 
 <template>
   <div class="h-full min-h-0 flex flex-col overflow-hidden p-2 bg-surface-0 dark:bg-surface-950">
-    <div class="mb-2 flex-shrink-0 flex items-center gap-1">
+    <div class="mb-2 shrink-0 flex items-center gap-1">
       <Button
         label="New Workflow"
         icon="pi pi-plus"

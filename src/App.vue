@@ -331,7 +331,7 @@ const handleCreate = (type: 'request' | 'collection' | 'environment' | 'mock') =
     <Teleport to="body">
       <div
         v-if="editCtxMenu.visible"
-        class="fixed z-[9999] min-w-[140px] rounded-lg border border-surface-200 bg-surface-0 py-1 shadow-xl dark:border-surface-600 dark:bg-surface-800"
+        class="fixed z-9999 min-w-[140px] rounded-lg border border-surface-200 bg-surface-0 py-1 shadow-xl dark:border-surface-600 dark:bg-surface-800"
         :style="{ left: editCtxMenu.x + 'px', top: editCtxMenu.y + 'px' }"
         @mousedown.stop.prevent
         @contextmenu.prevent
