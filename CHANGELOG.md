@@ -11,7 +11,7 @@
 ## [Unreleased]
 
 ### Added
-- Workflows in the sidebar can be organized in folders, which can be nested. Create folders with **New Folder**, create a workflow in a folder from the folder row or its right-click menu, and drag workflows and folders to reorder them or move them into folders. Deleting a folder also deletes the workflows in it.
+- Workflows in the sidebar can be organized in folders, which can be nested. Create folders with **New Folder**, create a workflow in a folder from the folder row or its right-click menu, and drag workflows and folders to reorder them or move them into folders. Right-click a workflow and choose **Move Up**, **Move Down** or **Move to...** to reorder it or move it to another folder, as with requests. Deleting a folder also deletes the workflows in it.
 - The **Save Request** dialog has a **New Collection** button, so a new request can be saved even before any collection exists.
 - ApiKit JSON export keeps the folder of each workflow, and import puts it back into a folder with the same name. The AI (MCP) `list_workflows` tool returns workflows in sidebar order with their `folderPath`.
 

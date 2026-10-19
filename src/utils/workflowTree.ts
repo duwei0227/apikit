@@ -109,6 +109,19 @@ export function buildWorkflowTree(
   return allNodes.map(filterNode).filter((node): node is WorkflowTreeNode => Boolean(node));
 }
 
+/** 只含文件夹的 Tree 节点（选择移动目标用），key 为文件夹 id */
+export function buildWorkflowFolderTree(items: WorkflowLayoutItem[]): WorkflowTreeNode[] {
+  return items
+    .filter((item): item is WorkflowFolder => item.type === 'folder')
+    .map(folder => ({
+      key: folder.id,
+      label: folder.name,
+      data: { type: 'folder', id: folder.id, name: folder.name },
+      icon: 'pi pi-folder',
+      children: buildWorkflowFolderTree(folder.children),
+    }));
+}
+
 /** 拖放后的 Tree 节点转回文件夹结构 */
 export function layoutFromTree(nodes: WorkflowTreeNode[]): WorkflowLayout {
   const toItems = (list: WorkflowTreeNode[]): WorkflowLayoutItem[] => list.map(node => (
@@ -177,6 +190,22 @@ export function insertWorkflowAfter(layout: WorkflowLayout, workflowId: string, 
     return false;
   };
   if (!insert(next.items)) next.items.push({ type: 'workflow', id: workflowId });
+  return next;
+}
+
+/** Workflow 与同一文件夹中相邻的条目（文件夹或 Workflow）交换位置；已在最上或最下时不变 */
+export function moveWorkflowInLayout(layout: WorkflowLayout, workflowId: string, direction: 'up' | 'down'): WorkflowLayout {
+  const next = cloneJson(layout);
+  const move = (items: WorkflowLayoutItem[]): boolean => {
+    const index = items.findIndex(item => item.type === 'workflow' && item.id === workflowId);
+    if (index !== -1) {
+      const target = direction === 'up' ? index - 1 : index + 1;
+      if (target >= 0 && target < items.length) [items[index], items[target]] = [items[target], items[index]];
+      return true;
+    }
+    return items.some(item => item.type === 'folder' && move(item.children));
+  };
+  move(next.items);
   return next;
 }
 

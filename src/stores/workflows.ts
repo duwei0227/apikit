@@ -14,6 +14,7 @@ import {
   ensureWorkflowFolderPath,
   insertWorkflowAfter,
   listWorkflowPlacements,
+  moveWorkflowInLayout,
   normalizeWorkflowLayout,
   removeFolderFromLayout,
   removeWorkflowFromLayout,
@@ -182,6 +183,11 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     await saveLayout(addWorkflowToLayout(layout.value, workflowId, folderId));
   }
 
+  /** Workflow 在所在文件夹中上移或下移一位 */
+  async function moveWorkflow(workflowId: string, direction: 'up' | 'down') {
+    await saveLayout(moveWorkflowInLayout(layout.value, workflowId, direction));
+  }
+
   /** 把 Workflow 放在 referenceId 的后面（如复制出的 Workflow 放在原 Workflow 后面） */
   async function placeWorkflowAfter(workflowId: string, referenceId: string) {
     await saveLayout(insertWorkflowAfter(layout.value, workflowId, referenceId));
@@ -294,6 +300,7 @@ export const useWorkflowsStore = defineStore('workflows', () => {
     renameFolder,
     deleteFolder,
     moveWorkflowToFolder,
+    moveWorkflow,
     placeWorkflowAfter,
     ensureFolderPath,
     setLayout,

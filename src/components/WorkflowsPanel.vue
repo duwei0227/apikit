@@ -2,6 +2,7 @@
 import { dialogStyle } from '@/utils/dialogSize';
 import { computed, ref, watch } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
+import MoveWorkflowDialog from '@/components/MoveWorkflowDialog.vue';
 import { usePointerTreeDrag } from '@/composables/usePointerTreeDrag';
 import { useWorkflowsStore } from '@/stores/workflows';
 import { collectExpandableKeys, findNodeByIndexPath, treeItemIndexPath } from '@/utils/treeDrop';
@@ -237,6 +238,15 @@ const deleteNode = (node: WorkflowTreeNode) => {
 // 右键菜单
 const contextMenu = ref<{ show: (event: Event) => void } | null>(null);
 const contextMenuNode = ref<WorkflowTreeNode | null>(null);
+const moveDialog = ref<InstanceType<typeof MoveWorkflowDialog> | null>(null);
+
+/** 上移、下移和移到其他文件夹；搜索时只显示部分节点，不提供 */
+const moveMenuItems = (workflow: { id: string; name: string }) => (isSearching.value ? [] : [
+  { label: 'Move Up', icon: 'pi pi-arrow-up', command: () => workflowsStore.moveWorkflow(workflow.id, 'up') },
+  { label: 'Move Down', icon: 'pi pi-arrow-down', command: () => workflowsStore.moveWorkflow(workflow.id, 'down') },
+  { label: 'Move to...', icon: 'pi pi-folder-open', command: () => moveDialog.value?.open(workflow) },
+  { separator: true },
+]);
 
 const menuItems = computed(() => {
   const node = contextMenuNode.value;
@@ -247,8 +257,13 @@ const menuItems = computed(() => {
     { label: 'Delete', icon: 'pi pi-trash', class: 'text-red-600', command: () => deleteNode(node) },
   ];
   if (node.data.type === 'workflow') {
-    const workflowId = node.data.id;
-    return [{ label: 'Open', icon: 'pi pi-external-link', command: () => openWorkflow(workflowId) }, { separator: true }, ...common];
+    const workflow = { id: node.data.id, name: node.data.name };
+    return [
+      { label: 'Open', icon: 'pi pi-external-link', command: () => openWorkflow(workflow.id) },
+      { separator: true },
+      ...moveMenuItems(workflow),
+      ...common,
+    ];
   }
   const folderId = node.data.id;
   return [
@@ -367,6 +382,7 @@ const onTreeContextMenu = (event: MouseEvent) => {
     </div>
 
     <ContextMenu ref="contextMenu" :model="menuItems" />
+    <MoveWorkflowDialog ref="moveDialog" />
 
     <Dialog v-model:visible="showNameDialog" :header="nameDialogText.header" :modal="true" :style="dialogStyle('sm')">
       <div>

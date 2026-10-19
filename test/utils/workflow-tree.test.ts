@@ -4,6 +4,7 @@ import { computeDropResult } from '@/utils/treeDrop';
 import {
   addFolderToLayout,
   addWorkflowToLayout,
+  buildWorkflowFolderTree,
   buildWorkflowTree,
   ensureWorkflowFolderPath,
   findParentFolderId,
@@ -11,6 +12,7 @@ import {
   isWorkflowFolderNameTaken,
   layoutFromTree,
   listWorkflowPlacements,
+  moveWorkflowInLayout,
   normalizeWorkflowLayout,
   readWorkflowFolderPath,
   removeFolderFromLayout,
@@ -124,6 +126,28 @@ describe('修改结构', () => {
       { id: 'w4', folderPath: ['Orders'] },
     ]);
     expect(listWorkflowPlacements(insertWorkflowAfter(layout, 'w4', 'missing')).at(-1)).toEqual({ id: 'w4', folderPath: [] });
+  });
+
+  it('Workflow 与同一文件夹中相邻的条目交换位置，到头时不变', () => {
+    const shape = (value: WorkflowLayout) => value.items.map(item => (item.id));
+
+    expect(shape(moveWorkflowInLayout(layout, 'w1', 'up'))).toEqual(['w1', 'f1']);
+    expect(shape(moveWorkflowInLayout(layout, 'w1', 'down'))).toEqual(['f1', 'w1']);
+    expect(shape(moveWorkflowInLayout(layout, 'missing', 'up'))).toEqual(['f1', 'w1']);
+    expect(shape(layout)).toEqual(['f1', 'w1']);
+
+    // 文件夹中：和相邻的子文件夹交换
+    const down = moveWorkflowInLayout(layout, 'w2', 'down');
+    expect(listWorkflowPlacements(down).map(item => item.id)).toEqual(['w3', 'w2', 'w1']);
+    expect(listWorkflowPlacements(moveWorkflowInLayout(layout, 'w2', 'up'))).toEqual(listWorkflowPlacements(layout));
+    expect(listWorkflowPlacements(moveWorkflowInLayout(layout, 'w3', 'down'))).toEqual(listWorkflowPlacements(layout));
+  });
+
+  it('只含文件夹的树用于选择移动目标', () => {
+    const folders = buildWorkflowFolderTree(layout.items);
+    expect(folders.map(node => [node.key, node.label, node.children.map(child => child.key)])).toEqual([
+      ['f1', 'Orders', ['f2']],
+    ]);
   });
 
   it('新建、重命名和删除文件夹，删除时返回其中的全部 Workflow', () => {

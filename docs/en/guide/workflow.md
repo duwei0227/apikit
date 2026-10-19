@@ -19,6 +19,7 @@ When you have many workflows, group them in folders under **Workflows** in the s
 - Click the folder button next to **New Workflow** (**New Folder**) to create a folder at the top level; right-click a folder and choose **New Folder** to create a subfolder.
 - To create a workflow in a folder, click **+** (**New Workflow in Folder**) on the folder row, or right-click the folder and choose **New Workflow**.
 - Click a folder to expand or collapse it. Right-click a folder or workflow to **Rename** or **Delete** it; deleting a folder also deletes all workflows in it, including those in subfolders.
+- Right-click a workflow and choose **Move Up** / **Move Down** to move it up or down within its folder, or **Move to...** to move it to another folder or the top level (**Workflows**), at the end. These options are hidden while searching.
 - Drag workflows and folders to reorder them: drop on the middle of a folder to move into it, or on the top or bottom edge of a row to place before or after it. Dragging is off while searching.
 - A workflow copied with **Duplicate Tab** (right-click its tab) is placed right after the original, in the same folder.
 - Folders in the same place cannot share a name; workflow names must be unique across all workflows.

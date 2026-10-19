@@ -149,6 +149,44 @@ test('drags workflows into folders and reorders them', async ({ app, page }) => 
   await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Refund']], 'Checkout', 'Login']);
 });
 
+test('moves workflows up, down and to another folder from the right-click menu', async ({ app, page }) => {
+  await createOrders(app);
+  await expect(node(page, 'Refund')).toBeVisible();
+  await setExpanded(page, 'Orders', true);
+
+  // 和同一文件夹中相邻的条目（含文件夹）交换位置
+  await contextMenu(page, 'Refund', 'Move Up');
+  await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Checkout']], 'Refund', 'Login']);
+  await contextMenu(page, 'Refund', 'Move Up');
+  await expect.poll(() => treeShape(app)).toEqual(['Refund', ['Orders', ['Checkout']], 'Login']);
+  // 已在最上面时不变
+  await contextMenu(page, 'Refund', 'Move Up');
+  await contextMenu(page, 'Refund', 'Move Down');
+  await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Checkout']], 'Refund', 'Login']);
+
+  // Move to... 放到目标文件夹末尾
+  await contextMenu(page, 'Login', 'Move to...');
+  await expect(dialog(page)).toContainText('Move Workflow');
+  await expect(dialog(page).getByRole('button', { name: 'Move' })).toBeDisabled();
+  await dialog(page).locator('.p-tree-node-content', { hasText: 'Orders' }).click();
+  await expect(dialog(page)).toContainText('Target: Workflows / Orders');
+  await dialog(page).getByRole('button', { name: 'Move' }).click();
+  await expect(dialog(page)).toBeHidden();
+  await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Checkout', 'Login']], 'Refund']);
+
+  // 移回根目录
+  await contextMenu(page, 'Checkout', 'Move to...');
+  await dialog(page).locator('.p-tree-node-content', { hasText: /^\s*Workflows\s*$/ }).first().click();
+  await dialog(page).getByRole('button', { name: 'Move' }).click();
+  await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Login']], 'Refund', 'Checkout']);
+
+  // 搜索时只显示部分节点，不提供移动
+  await page.getByPlaceholder('Search...').fill('refund');
+  await node(page, 'Refund').click({ button: 'right' });
+  await expect(page.locator('.p-contextmenu').getByText('Rename', { exact: true })).toBeVisible();
+  await expect(page.locator('.p-contextmenu').getByText('Move Up', { exact: true })).toHaveCount(0);
+});
+
 test.describe('pointer drag (Windows)', () => {
   test.use({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' });
 
