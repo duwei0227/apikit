@@ -240,13 +240,18 @@ const contextMenu = ref<{ show: (event: Event) => void } | null>(null);
 const contextMenuNode = ref<WorkflowTreeNode | null>(null);
 const moveDialog = ref<InstanceType<typeof MoveWorkflowDialog> | null>(null);
 
-/** 上移、下移和移到其他文件夹；搜索时只显示部分节点，不提供 */
-const moveMenuItems = (workflow: { id: string; name: string }) => (isSearching.value ? [] : [
-  { label: 'Move Up', icon: 'pi pi-arrow-up', command: () => workflowsStore.moveWorkflow(workflow.id, 'up') },
-  { label: 'Move Down', icon: 'pi pi-arrow-down', command: () => workflowsStore.moveWorkflow(workflow.id, 'down') },
-  { label: 'Move to...', icon: 'pi pi-folder-open', command: () => moveDialog.value?.open(workflow) },
-  { separator: true },
-]);
+/** 上移、下移，Workflow 还可以移到其他文件夹；搜索时只显示部分节点，不提供 */
+const moveMenuItems = (node: WorkflowTreeNode) => {
+  if (isSearching.value) return [];
+  const { type, id, name } = node.data;
+  const moveTo = { label: 'Move to...', icon: 'pi pi-folder-open', command: () => moveDialog.value?.open({ id, name }) };
+  return [
+    { label: 'Move Up', icon: 'pi pi-arrow-up', command: () => workflowsStore.moveItem(type, id, 'up') },
+    { label: 'Move Down', icon: 'pi pi-arrow-down', command: () => workflowsStore.moveItem(type, id, 'down') },
+    ...(type === 'workflow' ? [moveTo] : []),
+    { separator: true },
+  ];
+};
 
 const menuItems = computed(() => {
   const node = contextMenuNode.value;
@@ -257,11 +262,11 @@ const menuItems = computed(() => {
     { label: 'Delete', icon: 'pi pi-trash', class: 'text-red-600', command: () => deleteNode(node) },
   ];
   if (node.data.type === 'workflow') {
-    const workflow = { id: node.data.id, name: node.data.name };
+    const workflowId = node.data.id;
     return [
-      { label: 'Open', icon: 'pi pi-external-link', command: () => openWorkflow(workflow.id) },
+      { label: 'Open', icon: 'pi pi-external-link', command: () => openWorkflow(workflowId) },
       { separator: true },
-      ...moveMenuItems(workflow),
+      ...moveMenuItems(node),
       ...common,
     ];
   }
@@ -270,6 +275,7 @@ const menuItems = computed(() => {
     { label: 'New Workflow', icon: 'pi pi-plus', command: () => openCreateWorkflowDialog(folderId) },
     { label: 'New Folder', icon: 'pi pi-folder-plus', command: () => openCreateFolderDialog(folderId) },
     { separator: true },
+    ...moveMenuItems(node),
     ...common,
   ];
 });

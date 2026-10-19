@@ -12,7 +12,7 @@ import {
   isWorkflowFolderNameTaken,
   layoutFromTree,
   listWorkflowPlacements,
-  moveWorkflowInLayout,
+  moveLayoutItem,
   normalizeWorkflowLayout,
   readWorkflowFolderPath,
   removeFolderFromLayout,
@@ -128,19 +128,25 @@ describe('修改结构', () => {
     expect(listWorkflowPlacements(insertWorkflowAfter(layout, 'w4', 'missing')).at(-1)).toEqual({ id: 'w4', folderPath: [] });
   });
 
-  it('Workflow 与同一文件夹中相邻的条目交换位置，到头时不变', () => {
+  it('Workflow 和文件夹与同一位置中相邻的条目交换位置，到头时不变', () => {
     const shape = (value: WorkflowLayout) => value.items.map(item => (item.id));
 
-    expect(shape(moveWorkflowInLayout(layout, 'w1', 'up'))).toEqual(['w1', 'f1']);
-    expect(shape(moveWorkflowInLayout(layout, 'w1', 'down'))).toEqual(['f1', 'w1']);
-    expect(shape(moveWorkflowInLayout(layout, 'missing', 'up'))).toEqual(['f1', 'w1']);
+    expect(shape(moveLayoutItem(layout, { type: 'workflow', id: 'w1' }, 'up'))).toEqual(['w1', 'f1']);
+    expect(shape(moveLayoutItem(layout, { type: 'workflow', id: 'w1' }, 'down'))).toEqual(['f1', 'w1']);
+    expect(shape(moveLayoutItem(layout, { type: 'workflow', id: 'missing' }, 'up'))).toEqual(['f1', 'w1']);
     expect(shape(layout)).toEqual(['f1', 'w1']);
 
     // 文件夹中：和相邻的子文件夹交换
-    const down = moveWorkflowInLayout(layout, 'w2', 'down');
+    const down = moveLayoutItem(layout, { type: 'workflow', id: 'w2' }, 'down');
     expect(listWorkflowPlacements(down).map(item => item.id)).toEqual(['w3', 'w2', 'w1']);
-    expect(listWorkflowPlacements(moveWorkflowInLayout(layout, 'w2', 'up'))).toEqual(listWorkflowPlacements(layout));
-    expect(listWorkflowPlacements(moveWorkflowInLayout(layout, 'w3', 'down'))).toEqual(listWorkflowPlacements(layout));
+    expect(listWorkflowPlacements(moveLayoutItem(layout, { type: 'workflow', id: 'w2' }, 'up'))).toEqual(listWorkflowPlacements(layout));
+    expect(listWorkflowPlacements(moveLayoutItem(layout, { type: 'workflow', id: 'w3' }, 'down'))).toEqual(listWorkflowPlacements(layout));
+
+    // 文件夹：和相邻的 Workflow 交换，类型不同的同 id 条目不受影响
+    expect(shape(moveLayoutItem(layout, { type: 'folder', id: 'f1' }, 'down'))).toEqual(['w1', 'f1']);
+    expect(shape(moveLayoutItem(layout, { type: 'folder', id: 'f1' }, 'up'))).toEqual(['f1', 'w1']);
+    expect(shape(moveLayoutItem(layout, { type: 'workflow', id: 'f1' }, 'down'))).toEqual(['f1', 'w1']);
+    expect(listWorkflowPlacements(moveLayoutItem(layout, { type: 'folder', id: 'f2' }, 'up')).map(item => item.id)).toEqual(['w3', 'w2', 'w1']);
   });
 
   it('只含文件夹的树用于选择移动目标', () => {

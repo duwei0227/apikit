@@ -149,7 +149,7 @@ test('drags workflows into folders and reorders them', async ({ app, page }) => 
   await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Refund']], 'Checkout', 'Login']);
 });
 
-test('moves workflows up, down and to another folder from the right-click menu', async ({ app, page }) => {
+test('moves workflows and folders up, down and workflows to another folder from the right-click menu', async ({ app, page }) => {
   await createOrders(app);
   await expect(node(page, 'Refund')).toBeVisible();
   await setExpanded(page, 'Orders', true);
@@ -179,6 +179,17 @@ test('moves workflows up, down and to another folder from the right-click menu',
   await dialog(page).locator('.p-tree-node-content', { hasText: /^\s*Workflows\s*$/ }).first().click();
   await dialog(page).getByRole('button', { name: 'Move' }).click();
   await expect.poll(() => treeShape(app)).toEqual([['Orders', ['Login']], 'Refund', 'Checkout']);
+
+  // 文件夹也可以上移、下移（没有 Move to...）
+  await contextMenu(page, 'Orders', 'Move Down');
+  await expect.poll(() => treeShape(app)).toEqual(['Refund', ['Orders', ['Login']], 'Checkout']);
+  await contextMenu(page, 'Orders', 'Move Down');
+  await expect.poll(() => treeShape(app)).toEqual(['Refund', 'Checkout', ['Orders', ['Login']]]);
+  await contextMenu(page, 'Orders', 'Move Up');
+  await expect.poll(() => treeShape(app)).toEqual(['Refund', ['Orders', ['Login']], 'Checkout']);
+  await node(page, 'Orders').click({ button: 'right' });
+  await expect(page.locator('.p-contextmenu').getByText('Move Up', { exact: true })).toBeVisible();
+  await expect(page.locator('.p-contextmenu').getByText('Move to...', { exact: true })).toHaveCount(0);
 
   // 搜索时只显示部分节点，不提供移动
   await page.getByPlaceholder('Search...').fill('refund');

@@ -193,14 +193,18 @@ export function insertWorkflowAfter(layout: WorkflowLayout, workflowId: string, 
   return next;
 }
 
-/** Workflow 与同一文件夹中相邻的条目（文件夹或 Workflow）交换位置；已在最上或最下时不变 */
-export function moveWorkflowInLayout(layout: WorkflowLayout, workflowId: string, direction: 'up' | 'down'): WorkflowLayout {
+/** Workflow 或文件夹与同一位置中相邻的条目交换位置；已在最上或最下时不变 */
+export function moveLayoutItem(
+  layout: WorkflowLayout,
+  target: { type: WorkflowLayoutItem['type']; id: string },
+  direction: 'up' | 'down',
+): WorkflowLayout {
   const next = cloneJson(layout);
   const move = (items: WorkflowLayoutItem[]): boolean => {
-    const index = items.findIndex(item => item.type === 'workflow' && item.id === workflowId);
+    const index = items.findIndex(item => item.type === target.type && item.id === target.id);
     if (index !== -1) {
-      const target = direction === 'up' ? index - 1 : index + 1;
-      if (target >= 0 && target < items.length) [items[index], items[target]] = [items[target], items[index]];
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+      if (swapIndex >= 0 && swapIndex < items.length) [items[index], items[swapIndex]] = [items[swapIndex], items[index]];
       return true;
     }
     return items.some(item => item.type === 'folder' && move(item.children));
