@@ -365,39 +365,32 @@ export function applyBaseOptions(editor: AceEditor) {
   editor.renderer.setScrollMargin(8, 8, 0, 0);
   editor.renderer.setPadding(8);
   removeUnusedCommands(editor);
-  deleteSelectionBeforeComposition(editor);
+  keepTextareaSelectionCollapsed(editor);
 }
 
-// 选中文字后用输入法输入：组字开始前先删掉选中内容。按下输入法按键（keyCode 229）时就删除，
-// 此时输入法还没开始组字；没有这个按键时在 compositionstart 里删除。
-// compositionstart 的 data 是 textarea 里将被替换的选中文字，Ace 见到非空 data 会改为把组字过程
-// （拼音）直接写进文档：Windows 上样式错乱、选中内容没删，撤销时还会一步步出现拼音。所以总是
-// 清空 data，让 Ace 只在组字结束后插入结果。删除后要立即同步 textarea：Ace 等操作结束才同步，
-// Windows 上输入法紧接着开始组字时，textarea 里还是选中的文字。
-// 删除和随后组字的结果合并成一步撤销。监听都挂在容器的捕获阶段，先于 Ace 在 textarea 上的处理。
-function deleteSelectionBeforeComposition(editor: AceEditor) {
-  const textInput = editor.textInput as unknown as { resetSelection(): void };
-  let mergeNextComposition = false;
-  const deleteSelection = () => {
-    if (editor.getReadOnly() || editor.selection.isEmpty()) return;
-    editor.session.remove(editor.getSelectionRange());
-    editor.clearSelection();
-    textInput.resetSelection();
-    mergeNextComposition = true;
+// 选中文字后用输入法输入：Ace 会把编辑器的选中内容同步成隐藏 textarea 里的选中文字，输入法把这段
+// 文字当作组字要替换的范围，compositionstart 的 data 也不再为空，Ace 随即改为把拼音直接写进文档。
+// Windows 上（第三方输入法尤其明显）会样式错乱、多出空格或点、按 Enter 上屏后内容变空。在组字开始
+// 时改文档或 textarea 也不行：输入法记着旧的文字和选中范围，和 textarea 对不上。
+// 所以 textarea 里始终不带选中，只留一个光标：输入法按无选中的方式组字，上屏时 Ace 的插入命令
+// 替换编辑器中的选中内容，替换在一步撤销里。
+function keepTextareaSelectionCollapsed(editor: AceEditor) {
+  // resetSelection、inComposition、lastSelectionStart/End 是 Ace 内部字段，不在类型声明中
+  const textInput = editor.textInput as unknown as {
+    resetSelection: (...args: unknown[]) => void;
+    inComposition: unknown;
+    lastSelectionStart: number;
+    lastSelectionEnd: number;
   };
-  editor.container.addEventListener('keydown', (event) => {
-    if (event.keyCode === 229) deleteSelection();
-  }, true);
-  editor.container.addEventListener('compositionstart', (event) => {
-    if (editor.getReadOnly()) return;
-    deleteSelection();
-    Object.defineProperty(event, 'data', { value: '' });
-  }, true);
-  editor.container.addEventListener('compositionend', () => {
-    // mergeUndoDeltas 是 Ace 内部字段，为 true 时下一次修改并入上一步撤销
-    if (mergeNextComposition) (editor.session as unknown as { mergeUndoDeltas: boolean }).mergeUndoDeltas = true;
-    mergeNextComposition = false;
-  }, true);
+  const textarea = editor.textInput.getElement() as HTMLTextAreaElement;
+  const resetSelection = textInput.resetSelection;
+  textInput.resetSelection = (...args: unknown[]) => {
+    resetSelection.apply(textInput, args);
+    if (textInput.inComposition || textarea.selectionStart === textarea.selectionEnd) return;
+    const caret = textarea.selectionEnd;
+    textarea.setSelectionRange(caret, caret);
+    textInput.lastSelectionStart = textInput.lastSelectionEnd = caret;
+  };
 }
 
 /** 设置只读。Ace 在只读时按键会弹出 "Editing is disabled" 提示；查看器里不需要，与原编辑器一致只是不响应 */

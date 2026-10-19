@@ -8,6 +8,14 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
+## [Unreleased]
+
+### Fixed
+- On Windows, typing Chinese with an IME (especially third-party ones) over selected text in the body editor no longer shows an extra space or dot, garbled styling, or leaves the text empty after pressing `Enter` to commit. The selection is replaced when the input is committed.
+
+### 修复
+- Windows 上在请求体编辑器中选中文字后用输入法（尤其是第三方输入法）输入中文，不再多出空格或点、样式错乱，按 `Enter` 上屏后也不会变成空白；输入上屏时替换选中内容。
+
 ## [0.5.0] - 2026-10-19
 
 ### Added

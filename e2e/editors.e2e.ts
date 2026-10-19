@@ -239,41 +239,45 @@ test.describe('request body editor', () => {
 
   test('replaces the selection when typing with a Chinese IME', async ({ page }) => {
     const selectOld = () => editor.host.evaluate((el: any) => el.env.editor.selection.selectWordRight());
-    await editor.setDoc('{"cn": "|old"}');
-    await selectOld();
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send('Input.imeSetComposition', { text: 'zh', selectionStart: 2, selectionEnd: 2 });
-    // 组字一开始就删掉选中内容，组字文字不会写进文档、盖在选中文字上
-    expect(await editor.value()).toBe('{"cn": ""}');
-    await cdp.send('Input.insertText', { text: '中文' });
-    expect(await editor.value()).toBe('{"cn": "中文"}');
-    // 删除选中内容和输入的文字一起撤销
-    await page.keyboard.press('Control+z');
-    expect(await editor.value()).toBe('{"cn": "old"}');
-
-    // Windows 上输入法按键先触发 keyCode 229 的 keydown，紧接着（同一轮事件里）开始组字，
-    // compositionstart 的 data 是 textarea 里仍选中的文字。组字期间拼音不能写进文档，
-    // 撤销时也不能出现拼音
-    await editor.setDoc('{"cn": "|old"}');
-    await selectOld();
-    await editor.host.locator('textarea').evaluate((textarea: HTMLTextAreaElement) => {
-      textarea.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 229, key: 'Process', bubbles: true }));
-      const data = textarea.value.slice(textarea.selectionStart, textarea.selectionEnd);
-      textarea.dispatchEvent(new CompositionEvent('compositionstart', { data, bubbles: true }));
+    const textarea = editor.host.locator('textarea');
+    // 输入法看到的 textarea 不带选中：组字按无选中的方式进行，compositionstart 的 data 为空，
+    // 拼音不会写进文档（Windows 上会样式错乱、多出空格或点、Enter 上屏后内容变空）
+    await textarea.evaluate((el: HTMLTextAreaElement) => {
+      el.addEventListener('compositionstart', (event) => { el.dataset.compositionData = event.data; });
     });
-    expect(await editor.value()).toBe('{"cn": ""}');
+    await editor.setDoc('{"cn": "|old"}');
+    await selectOld();
+    await expect.poll(() => textarea.evaluate((el: HTMLTextAreaElement) => el.selectionEnd - el.selectionStart)).toBe(0);
+
+    const cdp = await page.context().newCDPSession(page);
     for (const text of ['s', 'sh', 'shui']) {
       await cdp.send('Input.imeSetComposition', { text, selectionStart: text.length, selectionEnd: text.length });
-      expect(await editor.value()).toBe('{"cn": ""}');
+      expect(await editor.value()).toBe('{"cn": "old"}');
     }
+    expect(await textarea.getAttribute('data-composition-data')).toBe('');
     await cdp.send('Input.insertText', { text: '谁' });
+    expect(await editor.value()).toBe('{"cn": "谁"}');
     await cdp.send('Input.imeSetComposition', { text: 'zhidao', selectionStart: 6, selectionEnd: 6 });
     expect(await editor.value()).toBe('{"cn": "谁"}');
     await cdp.send('Input.insertText', { text: '知道' });
-    await cdp.detach();
     expect(await editor.value()).toBe('{"cn": "谁知道"}');
+    // 撤销时恢复选中内容，不会出现拼音
     await page.keyboard.press('Control+z');
     expect(await editor.value()).toBe('{"cn": "old"}');
+
+    // 按 Enter 直接上屏拼音字母
+    await editor.setDoc('{"cn": "|old"}');
+    await selectOld();
+    await cdp.send('Input.imeSetComposition', { text: 'ni', selectionStart: 2, selectionEnd: 2 });
+    await cdp.send('Input.insertText', { text: 'ni' });
+    await cdp.detach();
+    expect(await editor.value()).toBe('{"cn": "ni"}');
+
+    // 普通键盘输入仍然替换选中内容
+    await editor.setDoc('{"cn": "|old"}');
+    await selectOld();
+    await page.keyboard.type('new');
+    expect(await editor.value()).toBe('{"cn": "new"}');
   });
 
   test('colors brackets and XML tags by nesting level', async ({ app, page }) => {
