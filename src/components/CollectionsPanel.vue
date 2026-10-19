@@ -6,6 +6,7 @@ import { useCollectionsStore } from '@/stores/collections';
 import { useRequestsStore } from '@/stores/requests';
 import { importExportService } from '@/services/import-export';
 import { generateId } from '@/utils/id-generator';
+import { useContextMenuEscape } from '@/composables/useContextMenuEscape';
 import { useTreeDragDrop } from '@/composables/useTreeDragDrop';
 import {
   buildCollectionTree,
@@ -66,7 +67,8 @@ const renameDialog = ref<InstanceType<typeof RenameItemDialog> | null>(null);
 const moveDialog = ref<InstanceType<typeof MoveRequestDialog> | null>(null);
 
 // Context menu
-const contextMenu = ref<{ show: (event: Event) => void } | null>(null);
+const contextMenu = ref<{ show: (event: Event) => void; hide: () => void } | null>(null);
+const { onShow: onContextMenuShow, onHide: onContextMenuHide } = useContextMenuEscape(contextMenu);
 // 右键菜单或快捷键操作的节点（数据为深拷贝，避免操作中被树的更新影响）
 const contextMenuNode = ref<CollectionTreeNode | null>(null);
 
@@ -845,7 +847,7 @@ defineExpose({
       </Tree>
     </div>
 
-    <ContextMenu ref="contextMenu" :model="menuItems">
+    <ContextMenu ref="contextMenu" :model="menuItems" @before-show="onContextMenuShow" @hide="onContextMenuHide">
       <template #item="{ item, props }">
         <a v-ripple class="flex items-center" v-bind="props.action">
           <span :class="item.icon" />

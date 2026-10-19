@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
+import { useContextMenuEscape } from '@/composables/useContextMenuEscape';
 import { useMocksStore } from '@/stores/mocks';
 import type { MockService } from '@/types/models';
 
@@ -14,7 +15,8 @@ const emit = defineEmits<{
 
 const confirm = useConfirm();
 const mocksStore = useMocksStore();
-const contextMenu = ref<{ show: (event: Event) => void } | null>(null);
+const contextMenu = ref<{ show: (event: Event) => void; hide: () => void } | null>(null);
+const { onShow: onContextMenuShow, onHide: onContextMenuHide } = useContextMenuEscape(contextMenu);
 const menuService = ref<MockService | null>(null);
 
 const filteredServices = computed(() => {
@@ -143,7 +145,7 @@ const showMenu = (event: MouseEvent, service: MockService) => {
       </div>
     </div>
 
-    <ContextMenu ref="contextMenu" :model="menuItems" />
+    <ContextMenu ref="contextMenu" :model="menuItems" @before-show="onContextMenuShow" @hide="onContextMenuHide" />
   </div>
 </template>
 

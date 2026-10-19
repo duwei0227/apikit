@@ -7,6 +7,7 @@ import { Channel, invoke } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { docsUrlFor } from '@/utils/appLinks';
 import { useMcpStore } from '@/stores/mcp';
+import { useContextMenuEscape } from '@/composables/useContextMenuEscape';
 import { useTheme } from '@/composables/useTheme';
 import { matchesShortcut } from '@/utils/shortcuts';
 const KeyboardShortcutsDialog = defineAsyncComponent(() => import('./KeyboardShortcutsDialog.vue'));
@@ -19,7 +20,8 @@ const isMaximized = ref(false);
 const appWindow = getCurrentWindow();
 
 // Help menu state
-const helpMenuRef = ref<{ toggle: (event: Event) => void } | null>(null);
+const helpMenuRef = ref<{ toggle: (event: Event) => void; hide: () => void } | null>(null);
+const { onShow: onHelpMenuShow, onHide: onHelpMenuHide } = useContextMenuEscape(helpMenuRef);
 const showShortcutsDialog = ref(false);
 const showAboutDialog = ref(false);
 const mcpStore = useMcpStore();
@@ -406,7 +408,7 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
     </div>
     
     <!-- Help Menu -->
-    <ContextMenu ref="helpMenuRef" :model="helpMenuItems" :style="{ minWidth: '220px' }">
+    <ContextMenu ref="helpMenuRef" :model="helpMenuItems" :style="{ minWidth: '220px' }" @before-show="onHelpMenuShow" @hide="onHelpMenuHide">
       <template #item="{ item, props }">
         <a v-ripple class="flex items-center gap-2" v-bind="props.action">
           <i v-if="item.icon" :class="item.icon"></i>

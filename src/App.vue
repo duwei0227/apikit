@@ -15,6 +15,7 @@ import { useMocksStore } from '@/stores/mocks';
 import { useConsoleLogsStore } from '@/stores/consoleLogs';
 import { useMcpStore } from '@/stores/mcp';
 import { consoleLogToHistoryItem } from '@/utils/history';
+import { useContextMenuEscape } from '@/composables/useContextMenuEscape';
 import { useTheme } from '@/composables/useTheme';
 import Navbar from "@/components/Navbar.vue";
 import Footer from "@/components/Footer.vue";
@@ -61,6 +62,7 @@ const mocksStore = useMocksStore();
 // 输入框、文本框和可编辑区域的右键菜单（剪切、复制、粘贴、全选）。
 // 菜单打开时焦点会移到菜单上，执行命令前先把焦点和选区还给原来的元素。
 const editMenu = ref<{ show: (event: Event) => void; hide: () => void } | null>(null);
+const { onShow: onEditMenuShow, onHide: onEditMenuHide } = useContextMenuEscape(editMenu);
 let editCtxTarget: HTMLElement | null = null;
 let editCtxRange: Range | null = null;
 
@@ -335,7 +337,7 @@ const handleCreate = (type: 'request' | 'collection' | 'environment' | 'mock') =
     <ConfirmDialog />
 
     <!-- 可编辑区域的右键菜单 -->
-    <ContextMenu ref="editMenu" :model="editMenuItems" />
+    <ContextMenu ref="editMenu" :model="editMenuItems" @before-show="onEditMenuShow" @hide="onEditMenuHide" />
 
     <CreateNewModal
       v-if="showCreateNewModal"

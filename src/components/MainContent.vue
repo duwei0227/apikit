@@ -14,6 +14,7 @@ import {
   createTemporaryRequest,
   createTemporaryRequestFromHistory,
 } from '@/utils/temporaryRequest';
+import { useContextMenuEscape } from '@/composables/useContextMenuEscape';
 import { useSidebarResize } from '@/composables/useSidebarResize';
 import {
   useWorkspaceTabs,
@@ -68,6 +69,7 @@ type TabAction = 'duplicate' | 'close' | 'closeOthers' | 'closeAll' | 'closeAllS
 /** PrimeVue Menu / ContextMenu 实例 */
 interface PopupMenuHandle {
   show: (event: Event) => void;
+  hide: () => void;
 }
 
 // Stores
@@ -82,6 +84,8 @@ const activeTab = ref(1);
 const searchQuery = ref('');
 const toolbarMenu = ref<PopupMenuHandle | null>(null);
 const tabContextMenu = ref<PopupMenuHandle | null>(null);
+const { onShow: onToolbarMenuShow, onHide: onToolbarMenuHide } = useContextMenuEscape(toolbarMenu);
+const { onShow: onTabContextMenuShow, onHide: onTabContextMenuHide } = useContextMenuEscape(tabContextMenu);
 const selectedTabIndex = ref(-1);
 const environmentManagerRef = ref<InstanceType<typeof EnvironmentManager> | null>(null);
 const collectionsPanelRef = ref<CollectionsPanelHandle | null>(null);
@@ -836,12 +840,12 @@ defineExpose({
     </main>
 
     <!-- Toolbar Menu -->
-    <ContextMenu ref="toolbarMenu" :model="toolbarMenuModel" />
+    <ContextMenu ref="toolbarMenu" :model="toolbarMenuModel" @before-show="onToolbarMenuShow" @hide="onToolbarMenuHide" />
     
     <NewMockDialog v-if="showNewMockDialog" v-model:visible="showNewMockDialog" @created="handleOpenMock" />
 
     <!-- Tab Context Menu -->
-    <ContextMenu ref="tabContextMenu" :model="tabContextMenuModel" />
+    <ContextMenu ref="tabContextMenu" :model="tabContextMenuModel" @before-show="onTabContextMenuShow" @hide="onTabContextMenuHide" />
   </div>
 </template>
 

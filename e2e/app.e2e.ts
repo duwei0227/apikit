@@ -441,3 +441,32 @@ test('pressing the MCP status dot in the title bar does not drag the window', as
   await page.locator('.navbar h1').click();
   await expect.poll(() => page.evaluate(() => (window as any).__dragCalls)).toBe(1);
 });
+
+test('closes every right-click menu with Escape right after it opens', async ({ app, page }) => {
+  const menu = page.locator('.p-contextmenu');
+  /** 打开菜单后立即按 Esc，菜单关闭 */
+  const closesWithEscape = async (open: () => Promise<void>, item: string) => {
+    await open();
+    await expect(menu.getByText(item, { exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+  };
+
+  await app.newRequest();
+  await closesWithEscape(() => app.url.click({ button: 'right' }), 'Select All');
+  await closesWithEscape(() => page.locator('.content-tabs [data-content-tab-index="0"]').click({ button: 'right' }), 'Duplicate Tab');
+  await closesWithEscape(() => page.locator('button[title="More Options"]').click(), 'Close All Tabs');
+  await closesWithEscape(() => page.locator('button[title="Help"]').click(), 'Check For Update');
+
+  await app.run(() => window.__store('collections').createCollection('Shop'));
+  await closesWithEscape(() => page.locator('.p-tree-node-content', { hasText: 'Shop' }).first().click({ button: 'right' }), 'Add Folder');
+
+  await page.getByRole('tab', { name: 'Mocks' }).click();
+  await page.getByRole('button', { name: 'New Mock Service' }).click();
+  // 对话框中的输入框：Esc 只关闭菜单，对话框保持打开
+  await closesWithEscape(() => page.locator('.p-dialog:visible').getByLabel('Port').click({ button: 'right' }), 'Select All');
+  await expect(page.locator('.p-dialog:visible')).toHaveCount(1);
+  await page.locator('.p-dialog:visible').getByRole('button', { name: 'Create' }).click();
+  await expect(page.locator('.p-dialog:visible')).toHaveCount(0);
+  await closesWithEscape(() => page.locator('[data-mock-service="Mock Service"]').click({ button: 'right' }), 'Duplicate');
+});
