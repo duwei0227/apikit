@@ -96,6 +96,25 @@ test('creates, renames and deletes folders and the workflows in them', async ({ 
   await expect(page.getByText('No workflows yet')).toBeVisible();
 });
 
+test('pressing Enter in the name dialog does not create the folder or workflow', async ({ app, page }) => {
+  // 和集合的 New Folder / Rename 对话框一致：只能点按钮提交（输入法按 Enter 上屏时不会误创建）
+  await page.getByRole('button', { name: 'New Folder' }).click();
+  await dialog(page).locator('input').fill('Orders');
+  await dialog(page).locator('input').press('Enter');
+  await expect(dialog(page)).toBeVisible();
+  await expect(dialog(page).locator('input')).toHaveValue('Orders');
+  await expect.poll(() => treeShape(app)).toEqual([]);
+  await dialog(page).getByRole('button', { name: 'Create' }).click();
+  await expect.poll(() => treeShape(app)).toEqual([['Orders', []]]);
+
+  await page.getByRole('button', { name: 'New Workflow', exact: true }).click();
+  await dialog(page).locator('input').fill('Login');
+  await dialog(page).locator('input').press('Enter');
+  await expect(dialog(page)).toBeVisible();
+  await expect.poll(() => treeShape(app)).toEqual([['Orders', []]]);
+  await dialog(page).getByRole('button', { name: 'Cancel' }).click();
+});
+
 test('searches workflows inside folders', async ({ app, page }) => {
   await createOrders(app);
   await expect(node(page, 'Refund')).toBeVisible();

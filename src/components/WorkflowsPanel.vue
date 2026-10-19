@@ -377,7 +377,6 @@ const onTreeContextMenu = (event: MouseEvent) => {
           :placeholder="nameDialogText.placeholder"
           :invalid="isNameDuplicate"
           autofocus
-          @keydown.enter="submitNameDialog"
         />
         <small v-if="isNameDuplicate" class="text-red-500">This name already exists</small>
       </div>
