@@ -22,7 +22,7 @@ URL、参数、请求头、请求体和鉴权中都可以使用 `{{变量}}`，�
 | none | 不发送请求体 |
 | form-data | `multipart/form-data`，每行可选 Text 或 File；文件以流的方式上传 |
 | x-www-form-urlencoded | 表单键值对 |
-| json | JSON 编辑器，**Beautify** 格式化 |
+| json | JSON 编辑器，**Beautify** 格式化；可以写注释，发送时去掉 |
 | xml | XML 编辑器，自动闭合标签 |
 | text | 纯文本 |
 | binary | 选择一个文件作为请求体 |
@@ -34,6 +34,31 @@ URL、参数、请求头、请求体和鉴权中都可以使用 `{{变量}}`，�
 - `Ctrl+F` 搜索，可区分大小写（**Aa**）和使用正则表达式（**.\***）。
 - 自动补全括号和引号，支持 Ace 的常用快捷键，例如 `Ctrl+/` 切换注释、`Alt+↑/↓` 移动行，见[参考](./reference#快捷键)。
 - 大整数保持原值，不会因为 JavaScript 精度而改变。
+
+### JSON 中的注释
+
+json 请求体中可以写 `//` 行注释和 `/* */` 块注释，用来临时停用某个字段或写说明。发送请求时会先去掉注释，再替换变量：
+
+- 只去掉字符串外的注释，`"http://example.com"` 这类字符串里的 `//` 保留。
+- 去掉注释后只剩空白的行整行删除；注释掉最后一项后，留在 `}` 或 `]` 前的逗号也一并删除。
+- 保存的请求保留注释。Workflow 和 AI（MCP）发送的请求、复制的 cURL 命令以及 Console 中记录的请求体，都是去掉注释后的内容。
+
+```jsonc
+{
+  "name": "apikit", // 名称
+  // "debug": true,
+  "url": "http://example.com"
+}
+```
+
+实际发送：
+
+```json
+{
+  "name": "apikit",
+  "url": "http://example.com"
+}
+```
 
 ## 鉴权（Authorization）
 

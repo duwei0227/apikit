@@ -96,4 +96,15 @@ describe('cURL command generation', () => {
     const command = generateCurlCommand(request, settings, resolverFor({ DIR: '/tmp/data' }));
     expect(command).toContain("--data-binary '@/tmp/data/archive.bin'");
   });
+
+  it('copies JSON bodies without comments', () => {
+    const request = makeRequest({
+      method: 'POST',
+      url: 'https://api.example.com/users',
+      body: { type: 'json', raw: '{\n  "a": 1,\n  // "b": 2\n}', formData: [], urlencoded: [] },
+    });
+    const command = generateCurlCommand(request, settings, value => value);
+    expect(command).toContain(`-d '{\n  "a": 1\n}'`);
+    expect(command).not.toContain('"b"');
+  });
 });

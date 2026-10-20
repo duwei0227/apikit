@@ -8,6 +8,14 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
+## [Unreleased]
+
+### Added
+- JSON request bodies can contain `//` and `/* */` comments. They are removed before the request is sent, together with lines left empty and a comma left before `}` or `]`; `//` inside strings is kept. The saved request keeps its comments. Workflows, AI (MCP), copied cURL commands and the Console all use the body without comments.
+
+### 新增
+- JSON 请求体中可以写 `//` 和 `/* */` 注释，发送前去掉，同时删除因此留下的空行和 `}`、`]` 前多余的逗号；字符串里的 `//` 保留。保存的请求保留注释，Workflow、AI（MCP）、复制的 cURL 命令和 Console 中都是去掉注释后的请求体。
+
 ## [0.5.2] - 2026-10-20
 
 ### Changed

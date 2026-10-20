@@ -2,6 +2,7 @@ import type { Request } from '@/types/models';
 import { canSendRequestBody } from '@/utils/httpMethods';
 import { setDefaultHeader } from '@/utils/httpHeaders';
 import { buildRequestUrl } from '@/utils/urlQuery';
+import { stripJsonComments } from '@/utils/jsonComments';
 
 export interface CurlGenerationSettings {
   followRedirects: boolean;
@@ -72,7 +73,7 @@ export const generateCurlCommand = (
   if (!canSendRequestBody(request.method)) return curl;
 
   if (request.body.type === 'json' && request.body.raw) {
-    curl += ` \\\n  -d '${escapeShellSingleQuotes(resolveVariables(request.body.raw))}'`;
+    curl += ` \\\n  -d '${escapeShellSingleQuotes(resolveVariables(stripJsonComments(request.body.raw)))}'`;
   } else if (request.body.type === 'xml' && request.body.raw) {
     curl += ` \\\n  -d '${escapeShellSingleQuotes(resolveVariables(request.body.raw))}'`;
   } else if (request.body.type === 'text' && request.body.raw) {

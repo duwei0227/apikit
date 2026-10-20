@@ -22,7 +22,7 @@ Select **Bulk Edit** on the right side of the table to edit headers as text, one
 | none | No body |
 | form-data | `multipart/form-data`; each row is Text or File, and files are streamed |
 | x-www-form-urlencoded | Form key-value pairs |
-| json | JSON editor; **Beautify** formats it |
+| json | JSON editor; **Beautify** formats it; comments are allowed and removed when sending |
 | xml | XML editor that closes tags automatically |
 | text | Plain text |
 | binary | A file as the body |
@@ -34,6 +34,31 @@ The body editor is based on Ace:
 - `Ctrl+F` searches, with match case (**Aa**) and regular expressions (**.\***).
 - Brackets and quotes close automatically, and Ace's common shortcuts work, such as `Ctrl+/` to toggle a comment and `Alt+↑/↓` to move lines; see [Reference](./reference#keyboard-shortcuts).
 - Large integers keep their exact value instead of being rounded by JavaScript.
+
+### Comments in JSON
+
+A json body can contain `//` line comments and `/* */` block comments, for example to switch off a field for a while or to add a note. When the request is sent, comments are removed first, then variables are replaced:
+
+- Only comments outside strings are removed; the `//` in a string such as `"http://example.com"` is kept.
+- Lines that are empty once their comment is removed are deleted, and when the last item is commented out, the comma left before `}` or `]` is removed too.
+- The saved request keeps its comments. Requests sent by Workflows and AI (MCP), copied cURL commands and the request body recorded in the Console all have the comments removed.
+
+```jsonc
+{
+  "name": "apikit", // name
+  // "debug": true,
+  "url": "http://example.com"
+}
+```
+
+Sent as:
+
+```json
+{
+  "name": "apikit",
+  "url": "http://example.com"
+}
+```
 
 ## Authorization
 

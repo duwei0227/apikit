@@ -35,7 +35,7 @@ ApiKit 是一个跨平台的 API 测试工具，专为开发者设计，提供�
 
 | 功能 | 说明 | 文档 |
 |------|------|------|
-| 🌐 HTTP 请求 | 常用方法和请求体类型、Bearer / Basic 鉴权、文件上传下载、生成和导入 cURL | [发送请求](https://duwei0227.github.io/apikit/guide/requests) |
+| 🌐 HTTP 请求 | 常用方法和请求体类型（JSON 请求体可写注释，发送时去掉）、Bearer / Basic 鉴权、文件上传下载、生成和导入 cURL | [发送请求](https://duwei0227.github.io/apikit/guide/requests) |
 | 🧪 测试与断言 | 状态码和 JSON 字段断言（期望值可用变量），从响应 JSON 或响应头提取变量 | [测试与断言](https://duwei0227.github.io/apikit/guide/tests) |
 | 📡 流式响应 | SSE 和逐行 JSON 边收边显示，自动合并大模型的回答、思考内容和 token 用量 | [响应](https://duwei0227.github.io/apikit/guide/responses) |
 | 🌍 变量 | 环境变量、全局变量和 `$guid`、`$randomInt`、`$sequence` 等内置动态变量，输入 `{{` 时自动补全 | [变量](https://duwei0227.github.io/apikit/guide/variables) |

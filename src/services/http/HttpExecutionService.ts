@@ -3,6 +3,7 @@ import { markRaw } from 'vue';
 import { StreamAccumulator, describeStream, detectStreamFormat, formatByteSize, formatDuration, parseStreamBody } from '@/utils/streamResponse';
 import type { ConsoleLog, GlobalVariableConfig, HttpResponseView, Request, RequestTestResults } from '@/types/models';
 import { parseJsonPreservingNumbers } from '@/utils/jsonFormat';
+import { stripJsonComments } from '@/utils/jsonComments';
 import { canSendRequestBody } from '@/utils/httpMethods';
 import { removeHttpHeader, setDefaultHeader } from '@/utils/httpHeaders';
 import { normalizeTestConfig } from '@/utils/requestTests';
@@ -403,7 +404,8 @@ export const prepareHttpRequest = async (
   if (canSendRequestBody(request.method)) {
     if (request.body.type === 'json') {
       setDefaultHeader(headers, 'Content-Type', 'application/json');
-      if (request.body.raw) body = replaceVariables(request.body.raw);
+      // 先去掉注释再替换变量，变量值里的 // 不受影响
+      if (request.body.raw) body = replaceVariables(stripJsonComments(request.body.raw));
     } else if (request.body.type === 'xml') {
       setDefaultHeader(headers, 'Content-Type', 'application/xml');
       if (request.body.raw) body = replaceVariables(request.body.raw);

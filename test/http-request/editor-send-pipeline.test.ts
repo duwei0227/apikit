@@ -108,4 +108,21 @@ describe('shared send pipeline', () => {
     expect(suggestDownloadFileName({}, 'not a url', '')).toBe('download');
     expect(suggestDownloadFileName({ 'content-disposition': "attachment; filename*=UTF-8''%E6%8A%A5%E5%91%8A.csv" }, '', '')).toBe('报告.csv');
   });
+
+  it('PIPE-006 sends JSON bodies without comments, before resolving variables', async () => {
+    const vars: Record<string, string> = { path: 'a//b' };
+    const raw = '{\n  "p": "{{path}}", // path\n  // "debug": true\n}';
+    const prepared = await prepareHttpRequest(makeRequest({
+      method: 'POST',
+      body: { type: 'json', raw, formData: [], urlencoded: [] },
+    } as any), value => value.replace(/\{\{(\w+)\}\}/g, (match, name) => vars[name] ?? match));
+    expect(prepared.body).toBe('{\n  "p": "a//b"\n}');
+
+    // 文本类型的请求体不处理注释
+    const text = await prepareHttpRequest(makeRequest({
+      method: 'POST',
+      body: { type: 'text', raw: '// keep', formData: [], urlencoded: [] },
+    } as any), value => value);
+    expect(text.body).toBe('// keep');
+  });
 });
