@@ -8,7 +8,7 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
-## [Unreleased]
+## [0.5.2] - 2026-10-20
 
 ### Changed
 - Windows uninstaller: the **Delete the app cache and interface settings** option is removed. Uninstalling now always deletes the app cache, theme and MCP settings, and keeps your collections, workflows, environments, mocks and history unless you check **Also delete my collections, workflows, environments, mocks and history (cannot be undone)**. When a new version is installed with "Uninstall before installing", the cache and settings are kept too.
