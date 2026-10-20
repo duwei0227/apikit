@@ -13,8 +13,14 @@
 ### Added
 - JSON request bodies can contain `//` and `/* */` comments. They are removed before the request is sent, together with lines left empty and a comma left before `}` or `]`; `//` inside strings is kept. The saved request keeps its comments. Workflows, AI (MCP), copied cURL commands and the Console all use the body without comments.
 
+### Fixed
+- The **New v…** update badge in the title bar has its purple-to-blue look and pulsing dot again; they were lost in 0.5.0.
+
 ### 新增
 - JSON 请求体中可以写 `//` 和 `/* */` 注释，发送前去掉，同时删除因此留下的空行和 `}`、`]` 前多余的逗号；字符串里的 `//` 保留。保存的请求保留注释，Workflow、AI（MCP）、复制的 cURL 命令和 Console 中都是去掉注释后的请求体。
+
+### 修复
+- 标题栏的新版本标记 **New v…** 恢复紫蓝渐变底色和呼吸圆点，0.5.0 中丢失了这个样式。
 
 ## [0.5.2] - 2026-10-20
 

@@ -338,13 +338,15 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
           <h1 class="text-sm font-semibold">ApiKit</h1>
           <Button
             v-if="updateInfo"
-            :label="`New v${updateInfo.version}`"
+            class="update-badge"
             size="small"
             rounded
-            severity="help"
             :title="`ApiKit ${updateInfo.version} is available`"
             @click="openUpdateDialog"
-          />
+          >
+            <span class="update-badge-dot"></span>
+            New v{{ updateInfo.version }}
+          </Button>
         </div>
       </div>
       <div class="flex items-center gap-1">
@@ -457,6 +459,51 @@ const handleGlobalShortcuts = (event: KeyboardEvent) => {
   background: var(--p-red-600);
   border-color: var(--p-red-600);
   color: #fff;
+}
+
+/* 新版本标记：渐变底色加呼吸圆点 */
+.update-badge.p-button {
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  padding: 0 8px;
+  border: none;
+  color: #fff;
+  background: linear-gradient(90deg, #7c3aed, #2563eb);
+  transition: filter 0.15s;
+}
+
+.update-badge.p-button:not(:disabled):hover {
+  color: #fff;
+  border: none;
+  background: linear-gradient(90deg, #7c3aed, #2563eb);
+  filter: brightness(1.1);
+}
+
+.update-badge.p-button:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+.update-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: update-badge-pulse 1.6s ease-out infinite;
+}
+
+@keyframes update-badge-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+  70% { box-shadow: 0 0 0 5px rgba(255, 255, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .update-badge-dot {
+    animation: none;
+  }
 }
 
 /* Ensure ContextMenu items have proper spacing for icons */

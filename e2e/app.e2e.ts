@@ -348,6 +348,23 @@ test('stops the MCP and mock servers before restarting to apply an update', asyn
   await expect.poll(commands).toEqual(['stop_local_servers', 'plugin:process|restart']);
 });
 
+test('marks an available update with the gradient badge and pulsing dot', async ({ app, page }) => {
+  await app.run(() => {
+    window.__invokeResults['plugin:updater|check'] = { rid: 1, currentVersion: '0.4.1', version: '9.0.0', date: null, body: '', rawJson: {} };
+  });
+  await page.locator('button[title="Help"]').click();
+  await page.getByRole('menuitem', { name: 'Check For Update' }).click();
+  await expect(page.getByRole('button', { name: 'Install & Restart' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  const badge = page.locator('button[title="ApiKit 9.0.0 is available"]');
+  await expect(badge).toHaveText('New v9.0.0');
+  expect(await badge.evaluate(el => getComputedStyle(el).backgroundImage)).toContain('linear-gradient');
+  const dot = badge.locator('.update-badge-dot');
+  await expect(dot).toBeVisible();
+  expect(await dot.evaluate(el => getComputedStyle(el).animationName)).toContain('update-badge-pulse');
+});
+
 test('opens the documentation from the Help menu', async ({ app, page }) => {
   await page.locator('button[title="Help"]').click();
   await page.getByRole('menuitem', { name: 'Documentation' }).click();
