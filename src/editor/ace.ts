@@ -297,9 +297,9 @@ defineTheme(LIGHT_THEME, 'ace-apikit-light', false, {
   meta: '#032f62',
   func: '#6f42c1',
   invalid: '#cb2431',
-  rainbow0: '#9a6700',
-  rainbow1: '#8250df',
-  rainbow2: '#0969da',
+  rainbow0: '#0431fa',
+  rainbow1: '#319331',
+  rainbow2: '#7b3814',
 });
 
 defineTheme(DARK_THEME, 'ace-apikit-dark', true, {

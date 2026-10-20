@@ -13,11 +13,17 @@
 ### Added
 - JSON request bodies can contain `//` and `/* */` comments. They are removed before the request is sent, together with lines left empty and a comma left before `}` or `]`; `//` inside strings is kept. The saved request keeps its comments. Workflows, AI (MCP), copied cURL commands and the Console all use the body without comments.
 
+### Changed
+- Light theme: bracket colors by nesting level now use VS Code's blue, green and brown, so they no longer look like the purple keys and blue numbers. The dark theme already used VS Code's colors.
+
 ### Fixed
 - The **New v…** update badge in the title bar has its purple-to-blue look and pulsing dot again; they were lost in 0.5.0.
 
 ### 新增
 - JSON 请求体中可以写 `//` 和 `/* */` 注释，发送前去掉，同时删除因此留下的空行和 `}`、`]` 前多余的逗号；字符串里的 `//` 保留。保存的请求保留注释，Workflow、AI（MCP）、复制的 cURL 命令和 Console 中都是去掉注释后的请求体。
+
+### 变更
+- 浅色主题：按嵌套层级着色的括号改用 VS Code 的蓝、绿、棕三色，不再和紫色的键名、蓝色的数字混在一起；深色主题本来就是 VS Code 的配色。
 
 ### 修复
 - 标题栏的新版本标记 **New v…** 恢复紫蓝渐变底色和呼吸圆点，0.5.0 中丢失了这个样式。
