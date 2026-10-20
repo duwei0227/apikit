@@ -444,6 +444,7 @@ Function un.ConfirmShow ; Add the app data note and the `Delete my data` check b
   ; $5 y
   ; $6 width
   ; $7 height
+  ; $8 dir control HWND / offset, $9 RECT buffer
   ${If} $KeepDataMode = 1
     Return
   ${EndIf}
@@ -456,13 +457,22 @@ Function un.ConfirmShow ; Add the app data note and the `Delete my data` check b
     StrCpy $3 "${__NSD_CheckBox_EXSTYLE}"
     IntOp $4 0 * $2
   ${EndIf}
-  IntOp $5 100 * $2
   IntOp $6 400 * $2
   IntOp $7 56 * $2
   IntOp $4 $4 / 96
-  IntOp $5 $5 / 96
   IntOp $6 $6 / 96
   IntOp $7 $7 / 96
+  ; 页面上的控件按字体换算的对话框单位排布，字体或缩放不同时卸载目录框的位置也不同，
+  ; 所以说明放在卸载目录框（控件 ID 1000）实际的下边缘之下 12 像素
+  GetDlgItem $8 $1 1000
+  System::Call '*(i, i, i, i) p .r9'
+  System::Call 'user32::GetWindowRect(p r8, p r9)'
+  System::Call 'user32::MapWindowPoints(p 0, p r1, p r9, i 2)'
+  System::Call '*$9(i, i, i, i .r5)'
+  System::Free $9
+  IntOp $8 12 * $2
+  IntOp $8 $8 / 96
+  IntOp $5 $5 + $8
   SendMessage $HWNDPARENT ${WM_GETFONT} 0 0 $0
 
   ; Explain what is always removed and that user data is kept by default
@@ -471,8 +481,9 @@ Function un.ConfirmShow ; Add the app data note and the `Delete my data` check b
   SendMessage $DeleteAppDataNote ${WM_SETFONT} $0 1
 
   ; Place the user-data option below the note
-  IntOp $5 164 * $2
-  IntOp $5 $5 / 96
+  IntOp $8 64 * $2
+  IntOp $8 $8 / 96
+  IntOp $5 $5 + $8
   IntOp $7 40 * $2
   IntOp $7 $7 / 96
   System::Call 'user32::CreateWindowEx(i r3, w "${__NSD_CheckBox_CLASS}", w "$(deleteUserData)", i ${__NSD_CheckBox_STYLE}, i r4, i r5, i r6, i r7, p r1, i0, i0, i0) i .s'
