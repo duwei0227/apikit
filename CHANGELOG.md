@@ -8,6 +8,14 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
+## [Unreleased]
+
+### Changed
+- Windows uninstaller: the **Delete the app cache and interface settings** option is removed. Uninstalling now always deletes the app cache, theme and MCP settings, and keeps your collections, workflows, environments, mocks and history unless you check **Also delete my collections, workflows, environments, mocks and history (cannot be undone)**. When a new version is installed with "Uninstall before installing", the cache and settings are kept too.
+
+### 变更
+- Windows 卸载程序：去掉“删除应用缓存和界面设置”选项。卸载时总是删除应用缓存、主题和 MCP 设置；集合、工作流、环境、Mock 和历史记录默认保留，勾选“同时删除我的集合、工作流、环境、Mock 和历史记录（无法恢复）”才会删除。安装新版本时选择“安装前卸载”，缓存和设置也会保留。
+
 ## [0.5.1] - 2026-10-19
 
 ### Fixed

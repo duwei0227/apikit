@@ -62,12 +62,13 @@ The `collections`, `requests`, `workflows`, `environments`, `history` and `mocks
 
 ### Data when uninstalling (Windows)
 
-The uninstall confirmation page has two options, both unchecked by default:
+Uninstalling always deletes `%LOCALAPPDATA%\cn.probiecoder.apikit`, which holds the interface cache and the theme and MCP settings. The data folder above is kept by default; the uninstall confirmation page has one option, unchecked by default:
 
-- **Delete the app cache and interface settings**: deletes `%LOCALAPPDATA%\cn.probiecoder.apikit`, which holds the interface cache and the theme and MCP settings.
 - **Also delete my collections, workflows, environments, mocks and history (cannot be undone)**: deletes the data folder above.
 
-When you install a new version and choose "Uninstall before installing", the second option is not shown and the data folder is always kept. This applies to versions after 0.4.1: the uninstaller that runs is the one of the installed version, so when upgrading from an earlier version, the old uninstaller still shows a single "Delete the application data" option, which deletes the data folder when checked.
+When you install a new version and choose "Uninstall before installing", this option is not shown and the cache, settings and data folder are all kept.
+
+The uninstaller that runs is the one of the installed version, so this applies only when uninstalling or upgrading from versions after 0.5.1. Uninstallers from 0.4.2 to 0.5.1 also have a "Delete the app cache and interface settings" option; earlier uninstallers have a single "Delete the application data" option, which deletes the data folder when checked.
 
 ## Updates
 

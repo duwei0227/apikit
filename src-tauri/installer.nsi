@@ -428,16 +428,15 @@ FunctionEnd
 
 ; Uninstaller Pages
 ; 1. Confirm uninstall page
-; 应用数据分两部分：%LOCALAPPDATA% 下是 WebView 的缓存和本地存储（主题、MCP 设置），
-; %APPDATA% 下是用户数据（集合、请求、工作流、环境、Mock、历史、备份），默认保留
-Var DeleteAppDataCheckbox
-Var DeleteAppDataCheckboxState
+; 应用数据分两部分：%LOCALAPPDATA% 下是 WebView 的缓存和本地存储（主题、MCP 设置），卸载时总是删除；
+; %APPDATA% 下是用户数据（集合、请求、工作流、环境、Mock、历史、备份），默认保留，勾选后才删除。
+; 安装前卸载（/KEEPDATA）和更新时两者都保留，确认页也不显示说明和勾选框。
 Var DeleteAppDataNote
 Var DeleteUserDataCheckbox
 Var DeleteUserDataCheckboxState
 !define /ifndef WS_EX_LAYOUTRTL         0x00400000
 !define MUI_PAGE_CUSTOMFUNCTION_SHOW un.ConfirmShow
-Function un.ConfirmShow ; Add `Delete app cache` and `Delete my data` check boxes
+Function un.ConfirmShow ; Add the app data note and the `Delete my data` check box
   ; $1 inner dialog HWND
   ; $2 window DPI
   ; $3 style
@@ -445,6 +444,9 @@ Function un.ConfirmShow ; Add `Delete app cache` and `Delete my data` check boxe
   ; $5 y
   ; $6 width
   ; $7 height
+  ${If} $KeepDataMode = 1
+    Return
+  ${EndIf}
   FindWindow $1 "#32770" "" $HWNDPARENT ; Find inner dialog
   System::Call "user32::GetDpiForWindow(p r1) i .r2"
   ${If} $(^RTL) = 1
@@ -456,40 +458,29 @@ Function un.ConfirmShow ; Add `Delete app cache` and `Delete my data` check boxe
   ${EndIf}
   IntOp $5 100 * $2
   IntOp $6 400 * $2
-  IntOp $7 25 * $2
+  IntOp $7 56 * $2
   IntOp $4 $4 / 96
   IntOp $5 $5 / 96
   IntOp $6 $6 / 96
   IntOp $7 $7 / 96
-  System::Call 'user32::CreateWindowEx(i r3, w "${__NSD_CheckBox_CLASS}", w "$(deleteAppCache)", i ${__NSD_CheckBox_STYLE}, i r4, i r5, i r6, i r7, p r1, i0, i0, i0) i .s'
-  Pop $DeleteAppDataCheckbox
   SendMessage $HWNDPARENT ${WM_GETFONT} 0 0 $0
-  SendMessage $DeleteAppDataCheckbox ${WM_SETFONT} $0 1
 
-  ; Explain which settings are removed and that user data is controlled separately
-  IntOp $5 126 * $2
-  IntOp $5 $5 / 96
-  IntOp $7 42 * $2
-  IntOp $7 $7 / 96
-  System::Call 'user32::CreateWindowEx(i r3, w "STATIC", w "$(deleteAppCacheNote)", i 0x50000000, i r4, i r5, i r6, i r7, p r1, i0, i0, i0) i .s'
+  ; Explain what is always removed and that user data is kept by default
+  System::Call 'user32::CreateWindowEx(i r3, w "STATIC", w "$(appDataNote)", i 0x50000000, i r4, i r5, i r6, i r7, p r1, i0, i0, i0) i .s'
   Pop $DeleteAppDataNote
   SendMessage $DeleteAppDataNote ${WM_SETFONT} $0 1
 
-  ; 安装前卸载时不提供删除用户数据
-  ${If} $KeepDataMode <> 1
-    ; Place the user-data option below the cache explanation
-    IntOp $5 172 * $2
-    IntOp $5 $5 / 96
-    IntOp $7 40 * $2
-    IntOp $7 $7 / 96
-    System::Call 'user32::CreateWindowEx(i r3, w "${__NSD_CheckBox_CLASS}", w "$(deleteUserData)", i ${__NSD_CheckBox_STYLE}, i r4, i r5, i r6, i r7, p r1, i0, i0, i0) i .s'
-    Pop $DeleteUserDataCheckbox
-    SendMessage $DeleteUserDataCheckbox ${WM_SETFONT} $0 1
-  ${EndIf}
+  ; Place the user-data option below the note
+  IntOp $5 164 * $2
+  IntOp $5 $5 / 96
+  IntOp $7 40 * $2
+  IntOp $7 $7 / 96
+  System::Call 'user32::CreateWindowEx(i r3, w "${__NSD_CheckBox_CLASS}", w "$(deleteUserData)", i ${__NSD_CheckBox_STYLE}, i r4, i r5, i r6, i r7, p r1, i0, i0, i0) i .s'
+  Pop $DeleteUserDataCheckbox
+  SendMessage $DeleteUserDataCheckbox ${WM_SETFONT} $0 1
 FunctionEnd
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE un.ConfirmLeave
 Function un.ConfirmLeave
-  SendMessage $DeleteAppDataCheckbox ${BM_GETCHECK} 0 0 $DeleteAppDataCheckboxState
   ${If} $KeepDataMode <> 1
     SendMessage $DeleteUserDataCheckbox ${BM_GETCHECK} 0 0 $DeleteUserDataCheckboxState
   ${EndIf}
@@ -509,11 +500,9 @@ FunctionEnd
   !include "{{this}}"
 {{/each}}
 
-; 卸载确认页的两个勾选框
-LangString deleteAppCache ${LANG_ENGLISH} "Delete the app cache and interface settings"
-LangString deleteAppCache ${LANG_SIMPCHINESE} "删除应用缓存和界面设置"
-LangString deleteAppCacheNote ${LANG_ENGLISH} "This removes the WebView cache, theme and MCP settings. Collections, requests, workflows and other user data are kept unless you select the next option."
-LangString deleteAppCacheNote ${LANG_SIMPCHINESE} "此项会删除 WebView 缓存、主题和 MCP 设置。集合、请求、工作流等用户数据会保留；如需删除，请同时勾选下一项。"
+; 卸载确认页的说明和勾选框
+LangString appDataNote ${LANG_ENGLISH} "Uninstalling deletes the app cache and interface settings (WebView cache, theme and MCP settings). Collections, requests, workflows, mocks and other user data are kept by default."
+LangString appDataNote ${LANG_SIMPCHINESE} "卸载时会删除应用缓存和界面设置（WebView 缓存、主题和 MCP 设置）。集合、请求、工作流、Mock 等用户数据默认保留。"
 LangString deleteUserData ${LANG_ENGLISH} "Also delete my collections, workflows, environments, mocks and history (cannot be undone)"
 LangString deleteUserData ${LANG_SIMPCHINESE} "同时删除我的集合、工作流、环境、Mock 和历史记录（无法恢复）"
 
@@ -913,10 +902,9 @@ Section Uninstall
     DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${PRODUCTNAME}"
   ${EndIf}
 
-  ; Delete app data if the checkbox is selected
-  ; and if not updating
-  ${If} $DeleteAppDataCheckboxState = 1
-  ${AndIf} $UpdateMode <> 1
+  ; 应用缓存和界面设置在卸载时总是删除，安装前卸载和更新时保留
+  ${If} $UpdateMode <> 1
+  ${AndIf} $KeepDataMode <> 1
     ; Clear the install location $INSTDIR from registry
     DeleteRegKey SHCTX "${MANUPRODUCTKEY}"
     DeleteRegKey /ifempty SHCTX "${MANUKEY}"
