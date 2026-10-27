@@ -8,6 +8,14 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
+## [Unreleased]
+
+### Fixed
+- Workflows: closing a workflow's tab now clears its highlight in the sidebar, and clicking a highlighted workflow opens it again. Before, the workflow stayed highlighted and clicking it did nothing.
+
+### 修复
+- Workflows：关闭 Workflow 页签后取消侧边栏的选中；点击已选中的 Workflow 也会重新打开。此前关闭后仍保持选中，再次点击没有反应。
+
 ## [0.5.3] - 2026-10-20
 
 ### Added

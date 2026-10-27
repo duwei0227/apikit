@@ -95,6 +95,7 @@ const toggleFolder = (node: WorkflowTreeNode) => {
   expandedKeys.value = next;
 };
 
+// 单选模式下点击已选中的节点会触发 node-unselect，同样按点击处理，否则重新打开时没有反应
 const onNodeSelect = (node: WorkflowTreeNode) => {
   if (node.data.type === 'workflow') openWorkflow(node.data.id);
   else toggleFolder(node);
@@ -338,6 +339,7 @@ const onTreeContextMenu = (event: MouseEvent) => {
         scrollHeight="flex"
         class="w-full h-full min-w-0"
         @node-select="onNodeSelect"
+        @node-unselect="onNodeSelect"
         @node-drop="onNodeDrop"
       >
         <template #default="slotProps">

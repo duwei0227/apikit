@@ -314,6 +314,8 @@ export function useWorkspaceTabs({ collectionsPanelRef, scrollTabIntoView }: Wor
     delete workflowUnsavedChangesMap.value[workflowId];
     workflowsStore.clearWorkflowDraft(workflowId);
     removeMountedWorkflow(workflowId);
+    // 关闭后取消侧边栏的选中；切换到的页签是 Workflow 时由 selectContentTab 重新选中
+    if (workflowsStore.activeWorkflowId === workflowId) workflowsStore.activeWorkflowId = null;
 
     if (contentTabs.value.length === 0) {
       selectContentTab(0);
@@ -356,6 +358,7 @@ export function useWorkspaceTabs({ collectionsPanelRef, scrollTabIntoView }: Wor
   const clearWorkflowTabs = () => {
     openWorkflowTabs.value.forEach(id => workflowsStore.clearWorkflowDraft(id));
     openWorkflowTabs.value = [];
+    workflowsStore.activeWorkflowId = null;
     mountedWorkflowIds.value = [];
     workflowWorkspaceRefs.value = {};
     showWorkflowWorkspace.value = false;

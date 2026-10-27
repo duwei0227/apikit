@@ -255,3 +255,25 @@ test.describe('pointer drag (Windows)', () => {
     await expect.poll(() => treeShape(app)).toEqual([['Orders', [['Archive', ['Login']]]], 'Refund', 'Checkout']);
   });
 });
+
+test('reopens a workflow from the tree after its tab is closed', async ({ app, page }) => {
+  await app.run(() => window.__store('workflows').createWorkflow('Login'));
+  const tabs = page.locator('.content-tabs [data-content-tab-index]');
+  const selected = tree(page).locator('.p-tree-node-content.p-tree-node-selected');
+
+  // 新建后侧边栏已选中它，点击已选中的 Workflow 也要打开
+  await expect(selected).toHaveText(/Login/);
+  await node(page, 'Login').click();
+  await expect(tabs.filter({ hasText: 'Login' })).toHaveCount(1);
+  await expect(selected).toHaveText(/Login/);
+
+  // 关闭页签后取消侧边栏的选中
+  await tabs.filter({ hasText: 'Login' }).locator('.content-tab-close').click();
+  await expect(tabs.filter({ hasText: 'Login' })).toHaveCount(0);
+  await expect(selected).toHaveCount(0);
+
+  // 再次点击重新打开
+  await node(page, 'Login').click();
+  await expect(tabs.filter({ hasText: 'Login' })).toHaveCount(1);
+  await expect(selected).toHaveText(/Login/);
+});
