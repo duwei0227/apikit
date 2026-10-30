@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { cloneJson } from '@/utils/clone';
-import { ref, watch, computed, onUnmounted } from 'vue';
+import { ref, watch, computed, nextTick, onUnmounted } from 'vue';
 import VariableInput from './VariableInput.vue';
 import SaveRequestDialog from './SaveRequestDialog.vue';
 import ResponseViewer from './ResponseViewer.vue';
@@ -22,7 +22,8 @@ import { canSendRequestBody } from '@/utils/httpMethods';
 import { parseRequestUrl } from '@/utils/urlQuery';
 import { useRequestsStore } from '@/stores/requests';
 import { normalizeTestConfig } from '@/utils/requestTests';
-import { getAvailableVariables, replaceVariables, variableContext } from '@/services/variables/resolver';
+import { createVariableResolver, getAvailableVariables, replaceVariables, variableContext } from '@/services/variables/resolver';
+import { validateRawBody } from '@/utils/bodyValidation';
 import { downloadHttpResponse, executeHttpRequest } from '@/services/http/HttpExecutionService';
 import { suggestDownloadFileName } from '@/utils/download';
 import { createEmptyRequest } from '@/utils/requestFactory';
@@ -356,8 +357,37 @@ const finishLoading = async (requestId: string | null, startTime: number) => {
   }
 };
 
+const BODY_TAB_INDEX = 3;
+const requestBodyEditorRef = ref<{ revealPosition: (line: number, column: number) => void } | null>(null);
+
+// 发送前校验 JSON / XML 请求体（变量替换后的实际内容），不合法时提示并定位到 Body 编辑器里的出错位置
+const validateBodyBeforeSend = async (): Promise<boolean> => {
+  const { method, body } = localRequest.value;
+  const type = body.type;
+  if (!canSendRequestBody(method) || (type !== 'json' && type !== 'xml')) return true;
+
+  // 预览式解析：不推进序列变量
+  const resolve = createVariableResolver({ consumeSequences: false });
+  const error = validateRawBody(type, body.raw || '', placeholder => resolve(placeholder));
+  if (!error) return true;
+
+  const label = type === 'json' ? 'JSON' : 'XML';
+  const variableHint = error.placeholder ? `; check the value of ${error.placeholder}` : '';
+  window.$toast?.add({
+    severity: 'error',
+    summary: `Invalid ${label} Body`,
+    detail: `${error.message} (line ${error.line}, column ${error.column})${variableHint}`,
+    life: 5000
+  });
+  activeParamTab.value = BODY_TAB_INDEX;
+  await nextTick();
+  requestBodyEditorRef.value?.revealPosition(error.line, error.column);
+  return false;
+};
+
 // 发送请求：拼请求、发送、解析响应、执行断言都由 HttpExecutionService 完成，与 Workflow、MCP 一致
 const sendRequest = async () => {
+  if (!(await validateBodyBeforeSend())) return;
   let requestId: string | null = null;
   isLoading.value = true;
   isResponseCollapsed.value = false; // 发送请求时展开响应区域
@@ -389,6 +419,7 @@ const sendRequest = async () => {
 };
 
 const sendAndDownload = async () => {
+  if (!(await validateBodyBeforeSend())) return;
   let requestId: string | null = null;
   isLoading.value = true;
   isResponseCollapsed.value = false;
@@ -695,6 +726,7 @@ defineExpose({
           <TabPanel header="Body">
             <template v-if="isParamTabVisited(3)">
             <RequestBodyEditor
+              ref="requestBodyEditorRef"
               v-model:body="localRequest.body"
               :availableVariables="availableVariables"
             />

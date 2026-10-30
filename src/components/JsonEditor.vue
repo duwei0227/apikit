@@ -377,8 +377,15 @@ const redo = () => {
   }
 };
 const focus = () => { if (editor) editor.focus(); };
+// 把光标移到指定位置（行列号从 1 开始）并滚动到可见，用于定位请求体的语法错误
+const revealPosition = (line: number, column: number) => {
+  if (!editor) return;
+  editor.gotoLine(line, column - 1, false);
+  editor.scrollToLine(line - 1, true, false, () => {});
+  editor.focus();
+};
 
-defineExpose({ undo, redo, focus });
+defineExpose({ undo, redo, focus, revealPosition });
 </script>
 
 <template>

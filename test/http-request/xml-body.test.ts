@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseCurl } from '@/utils/curl-parser';
-import { beautifyXmlText } from '@/utils/beautifyXml';
+import { beautifyXmlText, findXmlSyntaxError, repairXmlText } from '@/utils/beautifyXml';
 
 describe('XML request body support', () => {
   it('XML-BODY-001 formats nested XML while preserving declarations and variables', () => {
@@ -40,12 +40,47 @@ describe('XML request body support', () => {
   });
 
   it.each([
-    '<root><item></root>',
     '<root attr=bad/>',
     '<root>&broken;</root>',
     '<root duplicate="one" duplicate="two"/>',
   ])('XML-BODY-003 rejects malformed XML: %s', invalidXml => {
     expect(() => beautifyXmlText(invalidXml)).toThrow(/Invalid XML/);
+  });
+
+  it.each([
+    ['closes unclosed tags in nesting order', '<a><b>x', '<a><b>x</b></a>'],
+    ['closes a tag left open before its parent closes', '<root><item></root>', '<root><item></item></root>'],
+    ['completes a truncated attribute and tag', '<a id="1', '<a id="1"></a>'],
+    ['completes a truncated tag before the next one', '<a><b id="1"<c/></a>', '<a><b id="1"><c/></b></a>'],
+    ['completes a truncated closing tag', '<a>x</a', '<a>x</a>'],
+    ['escapes bare & in text and attributes', '<a b="x & y">1 & 2 &amp; &#38; &lt;</a>', '<a b="x &amp; y">1 &amp; 2 &amp; &#38; &lt;</a>'],
+    ['escapes bare < in text', '<a>1 < 2</a>', '<a>1 &lt; 2</a>'],
+    ['closes an unterminated comment and CDATA', '<a><!-- note', '<a><!-- note--></a>'],
+    ['leaves CDATA and comments alone', '<a><![CDATA[1 & 2 < 3]]><!-- a & b --></a>', '<a><![CDATA[1 & 2 < 3]]><!-- a & b --></a>'],
+    ['keeps variables', '<a id="{{id}}">{{name}}', '<a id="{{id}}">{{name}}</a>'],
+  ])('repairXmlText %s', (_name, input, expected) => {
+    expect(repairXmlText(input)).toBe(expected);
+  });
+
+  it('Beautify completes truncated XML before formatting', () => {
+    expect(beautifyXmlText('<root><item id="1">a & b')).toBe([
+      '<root>',
+      '  <item id="1">a &amp; b</item>',
+      '</root>',
+    ].join('\n'));
+  });
+
+  it.each([
+    ['<a>x & y</a>', "Bare '&' must be escaped as &amp;", 1, 6],
+    ['<a b="x & y"/>', "Bare '&' must be escaped as &amp;", 1, 9],
+    ['<a b="<"/>', "'<' in an attribute value must be escaped as &lt;", 1, 7],
+    ['<a>\n  &nope;\n</a>', 'Undeclared entity &nope;', 2, 3],
+  ])('findXmlSyntaxError locates %s', (xml, message, line, column) => {
+    expect(findXmlSyntaxError(xml)).toEqual({ message, line, column });
+  });
+
+  it('findXmlSyntaxError accepts valid XML', () => {
+    expect(findXmlSyntaxError('<a b="1 &amp; 2"><![CDATA[x & y]]></a>')).toBeNull();
   });
 
   it('accepts built-in and declared XML entities', () => {

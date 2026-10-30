@@ -178,6 +178,30 @@ test.describe('request body editor', () => {
     expect(await editor.value()).toBe(compact);
   });
 
+  test('Beautify completes missing commas, quotes and values', async ({ app }) => {
+    await editor.setDoc("{a: 'x' \"b\": {} \"c\":}|");
+    await app.request.getByRole('button', { name: 'Beautify' }).click();
+    await expect.poll(() => editor.value()).toBe('{\n  "a": "x",\n  "b": {},\n  "c": null\n}');
+  });
+
+  test('blocks sending an invalid JSON body and moves the cursor to the error', async ({ app, page }) => {
+    await app.url.fill('https://api.example.com/items');
+    await app.selectBodyType('json');
+    await editor.setDoc('{\n  "a": 1\n  "b": "{{token}}"\n}');
+    await app.requestTab('Headers');
+    await app.request.getByRole('button', { name: 'Send', exact: true }).click();
+
+    await expect(page.locator('.p-toast-message', { hasText: 'Invalid JSON Body' })).toContainText('Comma expected (line 3, column 3)');
+    // 跳回 Body 页签并把光标放到出错位置
+    await expect.poll(() => editor.host.evaluate((el: any) => el.env.editor.getCursorPosition())).toEqual({ row: 2, column: 2 });
+    expect(await app.run(() => window.__sent.length)).toBe(0);
+
+    await editor.setDoc('{\n  "a": 1,\n  "b": "{{token}}"\n}');
+    await app.request.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect.poll(() => app.run(() => window.__sent[0]?.body))
+      .toBe('{\n  "a": 1,\n  "b": "abc123"\n}');
+  });
+
   test('opens the ApiKit search box on Ctrl+F and highlights matches', async ({ app, page }) => {
     await editor.setDoc('{"auth": "a", "name": "abc"}|');
     await page.keyboard.press('Control+f');

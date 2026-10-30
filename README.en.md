@@ -35,7 +35,7 @@ ApiKit is a cross-platform API testing tool built for developers, with a clean, 
 
 | Feature | Description | Docs |
 |---------|-------------|------|
-| 🌐 HTTP requests | Common methods and body types (JSON bodies can contain comments, removed when sending), Bearer / Basic auth, file upload and download, generate and import cURL | [Sending Requests](https://duwei0227.github.io/apikit/en/guide/requests) |
+| 🌐 HTTP requests | Common methods and body types (JSON bodies can contain comments, removed when sending; JSON / XML bodies are validated before sending, and Beautify fixes common mistakes), Bearer / Basic auth, file upload and download, generate and import cURL | [Sending Requests](https://duwei0227.github.io/apikit/en/guide/requests) |
 | 🧪 Tests | Status and JSON field assertions (expected values can use variables), extract variables from the response JSON or headers | [Tests and Assertions](https://duwei0227.github.io/apikit/en/guide/tests) |
 | 📡 Streaming responses | SSE and newline-delimited JSON shown as they arrive, with LLM answers, thinking and token usage merged | [Responses](https://duwei0227.github.io/apikit/en/guide/responses) |
 | 🌍 Variables | Environment and global variables, and built-in dynamic variables such as `$guid`, `$randomInt` and `$sequence`, completed as you type `{{` | [Variables](https://duwei0227.github.io/apikit/en/guide/variables) |

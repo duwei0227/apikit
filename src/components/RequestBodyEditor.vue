@@ -8,6 +8,7 @@ import { getRowKey, reconcileRows } from '@/utils/stableRows';
 import { parseKeyValueBulkEdit, serializeKeyValueBulkEdit } from '@/utils/keyValueBulkEdit';
 import { beautifyJsonText } from '@/utils/beautifyJson';
 import { beautifyXmlText } from '@/utils/beautifyXml';
+import { neutralPlaceholder, validateRawBody } from '@/utils/bodyValidation';
 import { findTextMatches, type TextMatch } from '@/utils/textSearch';
 import type { FormDataItem, RequestBody } from '@/types/models';
 
@@ -53,7 +54,12 @@ const bodySection = computed(() => (isRawBody.value ? 'raw' : body.value.type));
 const { isVisited: isBodySectionVisited } = useVisitedTabs(bodySection);
 
 // Raw Body 编辑器引用：用于失焦后（焦点落在工具栏按钮上）转发撤回/恢复
-const bodyEditorRef = ref<{ undo: () => void; redo: () => void; focus: () => void } | null>(null);
+const bodyEditorRef = ref<{
+  undo: () => void;
+  redo: () => void;
+  focus: () => void;
+  revealPosition: (line: number, column: number) => void;
+} | null>(null);
 
 // 在 JSON/XML 体面板捕获 Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y。CM5 仅在其隐藏 textarea
 // 持有焦点时才处理这些快捷键，一旦点了 Beautify/搜索/复制等工具栏按钮，焦点离开
@@ -190,24 +196,47 @@ const chooseBinaryFile = async () => {
 };
 
 const beautifyRawBody = () => {
+  let formatted: string;
   try {
-    body.value.raw = body.value.type === 'xml'
+    formatted = body.value.type === 'xml'
       ? beautifyXmlText(body.value.raw || '')
       : beautifyJsonText(body.value.raw || '');
-    // 点击 Beautify 后焦点在按钮上；把焦点带回编辑器，使随后的 Ctrl+Z 能直接撤回。
-    nextTick(() => bodyEditorRef.value?.focus());
   } catch (error) {
     console.error(`Invalid ${rawBodyLabel.value}:`, error);
-    if (window.$toast) {
-      window.$toast.add({
-        severity: 'warn',
-        summary: `Invalid ${rawBodyLabel.value}`,
-        detail: `No valid ${rawBodyLabel.value} content found to beautify`,
-        life: 3000
-      });
-    }
+    const message = error instanceof Error ? error.message : '';
+    window.$toast?.add({
+      severity: 'warn',
+      summary: `Invalid ${rawBodyLabel.value}`,
+      detail: message.startsWith('Invalid') ? message : `No valid ${rawBodyLabel.value} content found to beautify`,
+      life: 4000
+    });
+    return;
+  }
+
+  body.value.raw = formatted;
+  // XML 补全后仍不合法会直接报错；JSON 的格式化不要求合法，补全不了的地方格式化后再提示并定位
+  const remaining = body.value.type === 'json' ? validateRawBody('json', formatted, neutralPlaceholder) : null;
+  // 点击 Beautify 后焦点在按钮上；把焦点带回编辑器，使随后的 Ctrl+Z 能直接撤回。
+  nextTick(() => {
+    if (remaining) bodyEditorRef.value?.revealPosition(remaining.line, remaining.column);
+    else bodyEditorRef.value?.focus();
+  });
+  if (remaining) {
+    window.$toast?.add({
+      severity: 'warn',
+      summary: 'Invalid JSON',
+      detail: `Formatted, but some JSON could not be fixed: ${remaining.message} (line ${remaining.line}, column ${remaining.column})`,
+      life: 4000
+    });
   }
 };
+
+// 供父组件在发送前校验失败时定位错误
+const revealPosition = (line: number, column: number) => {
+  bodyEditorRef.value?.revealPosition(line, column);
+};
+
+defineExpose({ revealPosition });
 
 const copyRequestBody = async () => {
   try {

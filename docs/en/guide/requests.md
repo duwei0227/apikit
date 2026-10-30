@@ -22,8 +22,8 @@ Select **Bulk Edit** on the right side of the table to edit headers as text, one
 | none | No body |
 | form-data | `multipart/form-data`; each row is Text or File, and files are streamed |
 | x-www-form-urlencoded | Form key-value pairs |
-| json | JSON editor; **Beautify** formats it; comments are allowed and removed when sending |
-| xml | XML editor that closes tags automatically |
+| json | JSON editor; **Beautify** fixes and formats it; comments are allowed and removed when sending; validated before sending |
+| xml | XML editor that closes tags automatically; **Beautify** fixes and formats it; validated before sending |
 | text | Plain text |
 | binary | A file as the body |
 
@@ -59,6 +59,34 @@ Sent as:
   "url": "http://example.com"
 }
 ```
+
+### Beautify
+
+json and xml bodies have **Beautify** on the toolbar. It first fixes common mistakes, then formats the body. Press `Ctrl+Z` to undo.
+
+For json, it:
+
+- Completes truncated content: adds missing `}`, `]` and closing quotes.
+- Fixes commas: adds missing commas between members, for example `"a": {} "b": "xx"` becomes `"a": {}, "b": "xx"`, and removes duplicate, leading and trailing commas.
+- Fixes quotes: changes single-quoted strings to double-quoted ones and quotes bare keys, for example `{'a': 'x', b: 1}` becomes `{"a": "x", "b": 1}`.
+- Fills missing values with `null`: `{"a":}`, `{"a"}` and a truncated `{"a":` all become `{"a": null}`.
+- Escapes newlines, tabs and other control characters in strings as `\n`, `\t`.
+
+For xml, it:
+
+- Closes unclosed tags in nesting order, for example `<a><b>x` becomes `<a><b>x</b></a>`; when a closing tag is out of place, the tags left open inside it are closed first.
+- Completes a truncated tag with the attribute's quote and `>`, for example `<a id="1` becomes `<a id="1"></a>`, and closes an unterminated comment or CDATA section.
+- Escapes a bare `&` in text and attribute values as `&amp;`, and a bare `<` in text as `&lt;`. Content in CDATA sections and comments is not changed.
+
+`{{variables}}` are left as they are, including an unquoted `{{id}}` in json. If the json still has errors afterwards, it is formatted and the error position is shown; if the xml still has errors, the body is not changed and the line and column of the error are shown.
+
+### Validation before sending
+
+When you click **Send** or **Send And Download**, json and xml bodies are validated first. The check uses the content that is actually sent: for json, comments are removed first, then variables are replaced. If the body is invalid, the request is not sent: **Invalid JSON Body** or **Invalid XML Body** is shown with the line and column of the error, the Body tab opens and the cursor moves to the error.
+
+- When the error comes from a variable's value (for example, in `{"id": {{id}}}` the value of `id` is not a number, or the variable is not defined), the message names the variable.
+- A bare `&` or `<` in xml is also blocked; click **Beautify** to escape it.
+- Only json and xml bodies are validated, and requests sent by Workflows and AI (MCP) are not.
 
 ## Authorization
 

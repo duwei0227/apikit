@@ -10,8 +10,20 @@
 
 ## [Unreleased]
 
+### Added
+- JSON and XML request bodies are validated before **Send** and **Send And Download**, using the content that is actually sent (comments removed, variables replaced). An invalid body is not sent: the error's line and column are shown, the Body tab opens and the cursor moves to the error. When the error comes from a variable's value, the message names the variable.
+
+### Changed
+- **Beautify** now fixes common mistakes before formatting. JSON: missing commas (such as `"a": {} "b": "xx"`), duplicate and trailing commas, single quotes, unquoted keys and missing values (filled with `null`). XML: unclosed and out-of-place closing tags, truncated tags and attribute quotes, unterminated comments and CDATA, and a bare `&` or `<`. If errors remain, their line and column are shown.
+
 ### Fixed
 - Workflows: closing a workflow's tab now clears its highlight in the sidebar, and clicking a highlighted workflow opens it again. Before, the workflow stayed highlighted and clicking it did nothing.
+
+### 新增
+- JSON 和 XML 请求体在 **Send**、**Send And Download** 前校验格式，校验的是实际发出去的内容（去掉注释、替换变量后）。不合法时不发送，提示错误所在的行和列，切换到 Body 页签并把光标移到出错位置；错误来自变量的值时会指出该变量。
+
+### 变更
+- **Beautify** 在格式化前先补全常见错误。JSON：缺少的逗号（例如 `"a": {} "b": "xx"`）、重复和多余的逗号、单引号、没有引号的键名和缺少的值（补成 `null`）。XML：没闭合和错位的闭合标签、截断的标签和属性引号、没有结尾的注释和 CDATA，以及裸露的 `&` 和 `<`。仍有错误时提示所在的行和列。
 
 ### 修复
 - Workflows：关闭 Workflow 页签后取消侧边栏的选中；点击已选中的 Workflow 也会重新打开。此前关闭后仍保持选中，再次点击没有反应。
