@@ -8,7 +8,7 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
-## [Unreleased]
+## [0.5.4] - 2026-10-30
 
 ### Added
 - JSON and XML request bodies are validated before **Send** and **Send And Download**, using the content that is actually sent (comments removed, variables replaced). An invalid body is not sent: the error's line and column are shown, the Body tab opens and the cursor moves to the error. When the error comes from a variable's value, the message names the variable.
