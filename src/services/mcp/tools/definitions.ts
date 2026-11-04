@@ -5,6 +5,7 @@ import {
   DEFAULT_LOG_BODY_PAGE_CHARS,
   DEFAULT_REQUEST_LOG_LIMIT,
   DEFAULT_SEARCH_LIMIT,
+  MAX_BATCH_REQUESTS,
   MAX_BODY_CHARS,
   MAX_REQUEST_LOG_LIMIT,
   MAX_SEARCH_LIMIT,
@@ -41,6 +42,20 @@ const viewProperty = (fallback: 'summary' | 'full') => ({
   description: `Default ${fallback}. Use summary to choose an item, full for the details.`,
 });
 const workflowNameProperty = { type: 'string', description: 'Workflow name; partial names are fine' };
+
+const collectionNameProperty = { type: 'string', description: 'Collection name; partial names are fine. Use instead of collectionId.' };
+const folderPathProperty = {
+  type: 'array',
+  description: 'Folder names from the collection down, for example ["Orders", "Refunds"]; partial names are fine. Use instead of folderId. An entry can also be { "id": "<folder id>" } or { "name": "<name>", "create": true } to create a new folder.',
+  items: {
+    anyOf: [
+      { type: 'string' },
+      { type: 'object', properties: { id: { type: 'string' } }, required: ['id'], additionalProperties: false },
+      { type: 'object', properties: { name: { type: 'string' }, create: { type: 'boolean' } }, required: ['name'], additionalProperties: false },
+    ],
+  },
+};
+const { name: _name, url: _url, ...sharedRequestFields } = requestFieldProperties;
 
 /** 按名称定位时的统一说明 */
 export const NAME_NOTE = 'A name with exactly one exact match is used directly; a single partial match is used and reported in resolved. If several match, ApiKit asks the user to choose, or returns error "ambiguous" with candidates: then ask the user and call again with the chosen id.';
@@ -249,6 +264,40 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       folderId: { type: 'string' },
       ...requestFieldProperties,
     }, ['collectionId', 'name', 'url']),
+  },
+  {
+    name: 'create_requests',
+    title: 'Create requests',
+    kind: 'write',
+    mayConfirm: true,
+    description: `Create up to ${MAX_BATCH_REQUESTS} requests in one call; prefer this over repeated create_request or import_curl calls. Target: collectionId or collection (name), plus optional folderId or folderPath; folders in folderPath that do not exist are created. Each item is either request fields (name and url required), { curl, name? } or { copyFrom: <request id or name>, name, ...fields to change }. defaults holds fields shared by the field items: baseUrl is put in front of relative urls, headers and params are merged by key, other fields apply unless the item sets them. onExists decides what happens to an item whose name already exists in the target folder: skip (default), update (replace its content), error (change nothing) or create (add another). All items are checked before anything is saved. Returns a short summary per request; use get_request for details. ${NAME_NOTE}`,
+    inputSchema: objectSchema({
+      collectionId: { type: 'string' },
+      collection: collectionNameProperty,
+      folderId: { type: 'string' },
+      folderPath: folderPathProperty,
+      defaults: {
+        type: 'object',
+        description: 'Fields shared by the items that are given as request fields',
+        properties: { baseUrl: { type: 'string', description: 'For example {{baseUrl}}/api or https://api.example.com' }, ...sharedRequestFields },
+        additionalProperties: false,
+      },
+      onExists: { type: 'string', enum: ['skip', 'error', 'update', 'create'], description: 'Default skip' },
+      requests: {
+        type: 'array',
+        minItems: 1,
+        maxItems: MAX_BATCH_REQUESTS,
+        items: {
+          type: 'object',
+          properties: {
+            ...requestFieldProperties,
+            curl: { type: 'string', description: 'A cURL command to import instead of fields' },
+            copyFrom: { type: 'string', description: 'Id or name of a saved request to copy; the given fields change the copy' },
+          },
+          additionalProperties: false,
+        },
+      },
+    }, ['requests']),
   },
   {
     name: 'import_curl',

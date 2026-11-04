@@ -2,12 +2,11 @@
 
 import { executeHttpRequest } from '@/services/http/HttpExecutionService';
 import { createVariableResolver, variableContext } from '@/services/variables/resolver';
-import { useCollectionsStore } from '@/stores/collections';
 import { useRequestsStore } from '@/stores/requests';
 import type { Request } from '@/types/models';
 import { cloneJson } from '@/utils/clone';
-import { requestFieldProperties } from '../../schemas';
-import { findFolder, containsRequest, requireCollection, savedRequestExists, requireRequest } from '../lookups';
+import { findFolder, requireCollection, requireRequest } from '../lookups';
+import { commitRequestUpdate, pickRequestFields, prepareRequestUpdate, requestFromCurlCommand, saveNewRequest } from '../requestWrites';
 import { applyRequestFields, describeRequest, outlineRequest, summarizeRequest } from '../requestFields';
 import { createResolver, resolveRequest, resolvedNotes } from '../resolve';
 import { isRecord, fail, requireString, optionalString, requireUrl, truncate, describeStreamResult, unresolvedVariablesOf, summarizeTests, confirmOrThrow, parseView } from '../shared';
@@ -28,87 +27,32 @@ export const requestHandlers: Record<string, McpToolHandler> = {
     };
   },
 
-  async create_request(args, context) {
+  async create_request(args) {
     const collection = requireCollection(requireString(args, 'collectionId'));
     const folderId = optionalString(args.folderId, 'folderId');
     if (folderId && !findFolder(collection.folders, folderId)) fail(`Folder not found: ${folderId}`);
     requireString(args, 'name');
     requireString(args, 'url');
 
-    const { collectionId, folderId: _folderId, ...fields } = args;
-    const request = applyRequestFields(fields);
-    request.collectionId = collection.id;
-    request.folderId = folderId;
-
-    await useRequestsStore().saveRequest(request, true);
-    await useCollectionsStore().addRequestReference(collection.id, request.id, request.name, request.method, request.url, folderId);
+    const request = applyRequestFields(pickRequestFields(args));
+    await saveNewRequest(request, collection.id, folderId);
     return summarizeRequest(request);
   },
 
-  async import_curl(args, context) {
+  async import_curl(args) {
     const collection = requireCollection(requireString(args, 'collectionId'));
     const folderId = optionalString(args.folderId, 'folderId');
     if (folderId && !findFolder(collection.folders, folderId)) fail(`Folder not found: ${folderId}`);
     const command = requireString(args, 'curl');
-    if (!/^\s*curl\s/i.test(command)) fail('curl must be a cURL command starting with "curl"');
-    const name = optionalString(args.name, 'name')?.trim();
-
-    const { parseCurl, requestFromCurl } = await import('@/utils/curl-parser');
-    let parsed: ReturnType<typeof parseCurl>;
-    try {
-      parsed = parseCurl(command);
-    } catch (error) {
-      fail(`Could not parse the cURL command: ${(error as Error).message}`);
-    }
-    if (!parsed.url) fail('The cURL command has no URL');
-    const request = requestFromCurl(parsed, {
-      name: name || `${parsed.method} ${parsed.url.replace(/^[a-z]+:\/\/[^/]+/i, '').split('?')[0] || '/'}`,
-      collectionId: collection.id,
-      folderId,
-    });
-
-    await useRequestsStore().saveRequest(request, true);
-    await useCollectionsStore().addRequestReference(collection.id, request.id, request.name, request.method, request.url, folderId);
-    return {
-      ...summarizeRequest(request),
-      warnings: parsed.warnings.map(warning => warning.message),
-    };
+    const { request, warnings } = await requestFromCurlCommand(command, optionalString(args.name, 'name')?.trim());
+    await saveNewRequest(request, collection.id, folderId);
+    return { ...summarizeRequest(request), warnings };
   },
 
   async update_request(args, context) {
     const requestId = requireString(args, 'requestId');
-    const requests = useRequestsStore();
-    if (!savedRequestExists(requestId)) fail(`Request not found: ${requestId}`);
-    const stage = context.stageEdits();
-    if (!stage && requests.hasRequestDraft(requestId)) {
-      fail('This request has unsaved edits in ApiKit. Ask the user to save or discard them first.');
-    }
-    const saved = await requests.loadSavedRequest(requestId);
-    if (!saved) fail(`Request not found: ${requestId}`);
-
-    const { requestId: _requestId, ...fields } = args;
-    if (!Object.keys(requestFieldProperties).some(key => fields[key] !== undefined)) fail('Pass at least one field to update');
-
-    // 暂存：在用户已有的未保存修改上修改，由用户在 ApiKit 中保存或丢弃
-    if (stage) {
-      const request = applyRequestFields(fields, requests.getRequestDraft(requestId) || saved);
-      await requests.setRequestDraft(request);
-      requests.notifyExternalUpdate(requestId);
-      return { ...summarizeRequest(request), unsavedEdits: true };
-    }
-
-    const request = applyRequestFields(fields, saved);
-    await requests.saveRequest(request, true);
-
-    const collectionId = request.collectionId
-      || useCollectionsStore().collections.find(collection => containsRequest(collection, requestId))?.id;
-    if (collectionId) {
-      await useCollectionsStore().updateRequestReference(
-        collectionId, request.id, request.name, request.method, request.url, request.folderId ?? undefined,
-      );
-    }
-    requests.notifyExternalUpdate(requestId);
-    return summarizeRequest(request);
+    const prepared = await prepareRequestUpdate(requestId, pickRequestFields(args), context.stageEdits());
+    return commitRequestUpdate(prepared);
   },
 
   async send_request(args, context) {

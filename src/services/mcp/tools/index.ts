@@ -1,6 +1,7 @@
 // MCP 工具：定义与执行。Rust 端只负责协议，所有读写都经过这里调用 Pinia store，界面实时同步。
 
 import { MCP_TOOLS } from './definitions';
+import { batchHandlers } from './handlers/batch';
 import { collectionHandlers } from './handlers/collections';
 import { environmentHandlers } from './handlers/environments';
 import { logHandlers } from './handlers/logs';
@@ -18,6 +19,7 @@ export { buildWorkflowSteps } from './workflowSteps';
 const HANDLERS: Record<string, McpToolHandler> = {
   ...collectionHandlers,
   ...requestHandlers,
+  ...batchHandlers,
   ...workflowHandlers,
   ...environmentHandlers,
   ...variableHandlers,

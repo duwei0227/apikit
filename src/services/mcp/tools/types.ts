@@ -92,6 +92,8 @@ export const MAX_LOG_ENTRIES = 200;
 export const DEFAULT_REQUEST_LOG_LIMIT = 20;
 export const MAX_REQUEST_LOG_LIMIT = 100;
 export const DEFAULT_SEARCH_LIMIT = 20;
+/** 批量工具一次最多处理的请求数 */
+export const MAX_BATCH_REQUESTS = 50;
 export const MAX_SEARCH_LIMIT = 100;
 export const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
 export const BODY_TYPES: RequestBody['type'][] = ['none', 'json', 'xml', 'text', 'binary', 'form-data', 'x-www-form-urlencoded'];
