@@ -32,7 +32,7 @@ const answer = (value: 'deny' | 'allow' | 'allowAll') => {
         <span class="text-surface-500 dark:text-surface-400">Tool</span>
         <code class="font-mono text-xs self-center">{{ confirmation.tool }}</code>
         <span class="text-surface-500 dark:text-surface-400">Target</span>
-        <span class="font-mono text-xs break-all self-center">{{ confirmation.detail }}</span>
+        <span class="font-mono text-xs break-all whitespace-pre-line self-center">{{ confirmation.detail }}</span>
       </div>
       <p class="m-0 text-xs text-surface-500 dark:text-surface-400">
         {{ confirmation.note || 'This makes real network requests with your active environment.' }}

@@ -94,6 +94,11 @@ export const MAX_REQUEST_LOG_LIMIT = 100;
 export const DEFAULT_SEARCH_LIMIT = 20;
 /** 批量工具一次最多处理的请求数 */
 export const MAX_BATCH_REQUESTS = 50;
+export const MAX_RUN_REQUESTS = 30;
+export const DEFAULT_RUN_CONCURRENCY = 4;
+export const MAX_RUN_CONCURRENCY = 8;
+export const DEFAULT_BODY_PREVIEW_CHARS = 300;
+export const MAX_BODY_PREVIEW_CHARS = 2000;
 export const MAX_SEARCH_LIMIT = 100;
 export const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'];
 export const BODY_TYPES: RequestBody['type'][] = ['none', 'json', 'xml', 'text', 'binary', 'form-data', 'x-www-form-urlencoded'];

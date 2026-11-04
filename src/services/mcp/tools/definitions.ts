@@ -2,11 +2,16 @@
 
 import { requestFieldProperties, workflowStepDefs, workflowStepsSchema } from '../schemas';
 import {
+  DEFAULT_BODY_PREVIEW_CHARS,
   DEFAULT_LOG_BODY_PAGE_CHARS,
+  DEFAULT_RUN_CONCURRENCY,
   DEFAULT_REQUEST_LOG_LIMIT,
   DEFAULT_SEARCH_LIMIT,
   MAX_BATCH_REQUESTS,
   MAX_BODY_CHARS,
+  MAX_BODY_PREVIEW_CHARS,
+  MAX_RUN_CONCURRENCY,
+  MAX_RUN_REQUESTS,
   MAX_REQUEST_LOG_LIMIT,
   MAX_SEARCH_LIMIT,
   type McpToolDefinition,
@@ -425,6 +430,22 @@ export const MCP_TOOLS: McpToolDefinition[] = [
         additionalProperties: false,
       },
     }, [], { oneOf: [{ required: ['requestId'] }, { required: ['request'] }] }),
+  },
+  {
+    name: 'run_requests',
+    title: 'Run requests',
+    kind: 'execute',
+    description: `Send up to ${MAX_RUN_REQUESTS} saved requests in parallel with one approval from the user; prefer this over repeated send_request calls. Select them with requestIds (ids or names), or collection/collectionId plus optional folderPath/folderId and query (all requests inside, including subfolders). Each request uses its current unsaved edits, if any. Returns per request: passed, status, time, failures (failed tests), a short bodyPreview, logId and error when no response came back; use get_request_log with logId for the full exchange. Variables extracted by tests are saved as global variables as each request finishes, so requests in one call should not depend on each other. ${NAME_NOTE}`,
+    inputSchema: objectSchema({
+      requestIds: requestRefsProperty,
+      collectionId: { type: 'string' },
+      collection: collectionNameProperty,
+      folderId: { type: 'string' },
+      folderPath: folderPathProperty,
+      query: { type: 'string', description: 'Only requests whose name, URL or path matches these keywords' },
+      maxConcurrency: { type: 'integer', minimum: 1, maximum: MAX_RUN_CONCURRENCY, description: `Requests sent at the same time; default ${DEFAULT_RUN_CONCURRENCY}` },
+      bodyPreviewChars: { type: 'integer', minimum: 0, maximum: MAX_BODY_PREVIEW_CHARS, description: `Characters of each response body to include; default ${DEFAULT_BODY_PREVIEW_CHARS}, 0 for none` },
+    }),
   },
   {
     name: 'run_workflow',

@@ -1,8 +1,11 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { invoke } from '@tauri-apps/api/core';
 import { callMcpTool, type McpToolContext } from '@/services/mcp/tools';
+import { useEnvironmentsStore } from '@/stores/environments';
 import { useCollectionsStore } from '@/stores/collections';
 import { useRequestsStore } from '@/stores/requests';
+import { httpbinInvocations, httpbinUrl } from '../helpers/httpbin';
 import { mockStorageService } from '../helpers/mockStorage';
 
 const makeContext = (overrides: Partial<McpToolContext> = {}): McpToolContext => ({
@@ -133,7 +136,7 @@ describe('MCP batch tools', () => {
     expect((await call('create_requests', { collectionId: collection.id, requests: [{ url: '/a' }] })).error).toBe('requests[0]: name is required (or pass curl or copyFrom)');
     expect((await call('create_requests', { collectionId: collection.id, requests: [{ name: 'A' }] })).error).toBe('requests[0]: url is required');
     expect((await call('create_requests', { collectionId: collection.id, requests: [{ curl: 'wget x' }] })).error).toBe('requests[0]: curl must be a cURL command starting with "curl"');
-    expect((await call('create_requests', { collectionId: collection.id, requests: [{ copyFrom: 'nothing' }] })).error).toBe('requests[0]: No request matches "nothing".');
+    expect((await call('create_requests', { collectionId: collection.id, requests: [{ copyFrom: 'nothing' }] })).error).toMatch(/^requests\[0\]: No request matches "nothing"\. Available: POST List · C \/ Orders/);
     expect(mockStorageService.requests.size).toBe(before);
     expect(folderNames(collection.id)).toEqual(['Orders']);
 
@@ -141,7 +144,7 @@ describe('MCP batch tools', () => {
     expect((await call('create_requests', { collectionId: collection.id, requests: Array.from({ length: 51 }, (_, i) => ({ name: `R${i}`, url: '/' })) })).error)
       .toBe('requests can have at most 50 items; split them into several calls');
     expect((await call('create_requests', { requests: [{ name: 'A', url: '/' }] })).error).toBe('Pass collectionId or collection (its name)');
-    expect((await call('create_requests', { collection: 'zzz', requests: [{ name: 'A', url: '/' }] })).error).toBe('No collection matches "zzz".');
+    expect((await call('create_requests', { collection: 'zzz', requests: [{ name: 'A', url: '/' }] })).error).toBe(`No collection matches "zzz". Available: C (${collection.id}).`);
     expect((await call('create_requests', { collectionId: collection.id, onExists: 'merge', requests: [{ name: 'A', url: '/' }] })).error).toBe('onExists must be one of skip, error, update, create');
   });
 
@@ -255,6 +258,56 @@ describe('MCP batch tools', () => {
     expect((await call('update_requests', { collectionId: collection.id, set: { name: 'x' } })).error).toContain('set.name would give every request the same name');
     expect((await call('update_requests', { collectionId: collection.id, query: 'nothing', set: { method: 'GET' } })).error).toBe('No requests in BPP match "nothing"');
     expect((await call('update_requests', { updates: [{ requestId: list, url: '/' }], set: { method: 'GET' } })).error).toContain('Pass either updates');
+  });
+
+  it('MCP-BATCH-006 runs the requests of a folder in parallel after one approval', async () => {
+    const collection = await call('create_collection', { name: 'BPP' });
+    const created = await call('create_requests', {
+      collectionId: collection.id,
+      folderPath: ['Guard'],
+      requests: [
+        { name: 'Echo', url: httpbinUrl('/get?guard=1') },
+        { name: 'Missing', url: httpbinUrl('/status/404') },
+        { name: 'Token', url: httpbinUrl('/response-headers?X-Token=abc'), tests: { globalVariables: [{ variableName: 'guardToken', valueType: 'header', headerName: 'x-token' }] } },
+      ],
+    });
+    await call('create_requests', { collectionId: collection.id, requests: [{ name: 'Outside', url: httpbinUrl('/get') }] });
+    const [echo, missing, token] = created.requests.map((r: any) => r.id);
+
+    const denied = vi.fn(async () => false);
+    expect((await call('run_requests', { collection: 'bpp', folderPath: ['guard'] }, makeContext({ confirm: denied }))).error).toBe('The user declined this action');
+    expect(httpbinInvocations).toHaveLength(0);
+
+    const confirm = vi.fn(async () => true);
+    const onConsoleLog = vi.fn();
+    const result = await call('run_requests', { collection: 'BPP', folderPath: ['Guard'], bodyPreviewChars: 20 }, makeContext({ confirm, onConsoleLog }));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({
+      tool: 'run_requests',
+      title: 'AI wants to send 3 requests',
+      detail: [`GET ${httpbinUrl('/get?guard=1')}`, `GET ${httpbinUrl('/status/404')}`, `GET ${httpbinUrl('/response-headers?X-Token=abc')}`].join('\n'),
+    }));
+    expect(httpbinInvocations).toHaveLength(3);
+    expect(onConsoleLog).toHaveBeenCalledTimes(3);
+    expect(result).toMatchObject({ total: 3, passed: 2, failed: 1 });
+    expect(result.results.map((r: any) => [r.requestId, r.passed, r.status])).toEqual([[echo, true, 200], [missing, false, 404], [token, true, 200]]);
+    expect(result.results[0].bodyPreview).toHaveLength(21);
+    expect(result.results[0].bodyPreview.endsWith('…')).toBe(true);
+    expect(result.results[1].failures[0]).toContain('expected 200, got 404');
+    expect(result.results[1]).not.toHaveProperty('bodyPreview');
+    expect(result.results[0].logId).toBeTruthy();
+    expect(useEnvironmentsStore().globalVariables.find(variable => variable.key === 'guardToken')?.value).toBe('abc');
+
+    // 没有收到响应的请求单独报告，不影响其他请求
+    vi.mocked(invoke).mockRejectedValueOnce('error sending request: dns error');
+    const partly = await call('run_requests', { requestIds: ['Echo', token], maxConcurrency: 1, bodyPreviewChars: 0 });
+    expect(partly).toMatchObject({ total: 2, passed: 1, failed: 1 });
+    expect(partly.results[0]).toEqual({ requestId: echo, name: 'Echo', method: 'GET', passed: false, error: 'error sending request: dns error' });
+    expect(partly.results[1]).not.toHaveProperty('bodyPreview');
+
+    expect((await call('run_requests', { requestIds: [echo], maxConcurrency: 9 })).error).toBe('maxConcurrency must be an integer between 1 and 8');
+    expect((await call('run_requests', { requestIds: [echo], collection: 'BPP' })).error).toBe('Pass either requestIds, or collection with optional folderPath and query');
+    expect((await call('run_requests', { collection: 'BPP', folderPath: ['Nope'] })).error).toMatch(/^No folder matches "Nope"\. Available: BPP \/ Guard \(.+\)\.$/);
   });
 });
 

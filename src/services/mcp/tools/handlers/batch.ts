@@ -1,6 +1,10 @@
 // 批量操作：一次调用新建或修改多个请求，减少与 AI 的往返
 
+import { executeHttpRequest } from '@/services/http/HttpExecutionService';
+import { createVariableResolver, variableContext } from '@/services/variables/resolver';
 import type { Collection, Folder, Request, RequestReference } from '@/types/models';
+import { cloneJson } from '@/utils/clone';
+import { mapWithConcurrency } from '@/utils/concurrency';
 import type { RequestSearchResult } from '@/utils/collectionTree';
 import { fuzzyFilter } from '@/utils/fuzzyMatch';
 import { locateRequest, requireRequest } from '../lookups';
@@ -27,8 +31,18 @@ import {
   resolveFolderTarget,
   resolveRequest,
 } from '../resolve';
-import { fail, isOneOf, isRecord, optionalString } from '../shared';
-import { MAX_BATCH_REQUESTS, McpAmbiguityError, McpToolError, type McpToolHandler } from '../types';
+import { confirmOrThrow, fail, isOneOf, isRecord, optionalPositiveInteger, optionalString, summarizeTests, unresolvedVariablesOf } from '../shared';
+import {
+  DEFAULT_BODY_PREVIEW_CHARS,
+  DEFAULT_RUN_CONCURRENCY,
+  MAX_BATCH_REQUESTS,
+  MAX_BODY_PREVIEW_CHARS,
+  MAX_RUN_CONCURRENCY,
+  MAX_RUN_REQUESTS,
+  McpAmbiguityError,
+  McpToolError,
+  type McpToolHandler,
+} from '../types';
 
 export const ON_EXISTS = ['skip', 'error', 'update', 'create'] as const;
 type OnExists = typeof ON_EXISTS[number];
@@ -241,5 +255,59 @@ export const batchHandlers: Record<string, McpToolHandler> = {
       results.push({ id: saved.id, name: saved.name, method: saved.method, ...(stage ? { unsavedEdits: true } : {}) });
     }
     return { updated: results.length, requests: results, ...resolvedNotes(resolver) };
+  },
+
+  async run_requests(args, context) {
+    const resolver = createResolver(context, 'run_requests');
+    const maxConcurrency = optionalPositiveInteger(args.maxConcurrency, 'maxConcurrency', MAX_RUN_CONCURRENCY) ?? DEFAULT_RUN_CONCURRENCY;
+    const previewChars = args.bodyPreviewChars === undefined ? DEFAULT_BODY_PREVIEW_CHARS : Number(args.bodyPreviewChars);
+    if (!Number.isInteger(previewChars) || previewChars < 0 || previewChars > MAX_BODY_PREVIEW_CHARS) {
+      fail(`bodyPreviewChars must be an integer between 0 and ${MAX_BODY_PREVIEW_CHARS}`);
+    }
+    const selected = await selectRequests(resolver, args, MAX_RUN_REQUESTS);
+    // 与 send_request 相同：使用请求当前未保存的修改
+    const requests = await Promise.all(selected.map(match => requireRequest(match.request.id)));
+
+    const preview = createVariableResolver({ consumeSequences: false });
+    const shown = requests.slice(0, 10).map(request => `${request.method} ${preview(request.url)}`);
+    const more = requests.length > shown.length ? `\n… and ${requests.length - shown.length} more` : '';
+    await confirmOrThrow(context, {
+      tool: 'run_requests',
+      title: `AI wants to send ${requests.length} request${requests.length === 1 ? '' : 's'}`,
+      detail: `${shown.join('\n')}${more}`,
+      note: `This makes real network requests with your active environment, up to ${maxConcurrency} at a time.`,
+    });
+
+    const started = Date.now();
+    const results = await mapWithConcurrency(requests, maxConcurrency, async request => {
+      const base = { requestId: request.id, name: request.name, method: request.method };
+      try {
+        const result = await executeHttpRequest(cloneJson(request), { ...variableContext(), onConsoleLog: context.onConsoleLog });
+        const { response } = result;
+        const tests = summarizeTests(result.testResults);
+        const body = response.imageDataUrl ? '(image response)' : (response.stream?.text ?? response.rawBody ?? '');
+        return {
+          ...base,
+          passed: tests.passed,
+          status: response.status,
+          time: response.time,
+          logId: String(result.consoleLog.id),
+          ...(tests.failures.length > 0 ? { failures: tests.failures } : {}),
+          ...(previewChars > 0 && body ? { bodyPreview: body.length > previewChars ? `${body.slice(0, previewChars)}…` : body } : {}),
+          ...(unresolvedVariablesOf(result.consoleLog) ? { unresolvedVariables: unresolvedVariablesOf(result.consoleLog) } : {}),
+        };
+      } catch (error) {
+        return { ...base, passed: false, error: (error as Error | null)?.message || String(error) };
+      }
+    });
+
+    return {
+      total: results.length,
+      passed: results.filter(result => result.passed).length,
+      failed: results.filter(result => !result.passed).length,
+      totalMs: Date.now() - started,
+      results,
+      ...resolvedNotes(resolver),
+    };
   },
 };

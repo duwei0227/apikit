@@ -1141,7 +1141,8 @@ describe('MCP tools', () => {
     expect(choose).toHaveBeenCalledWith({ tool: 'get_workflow', message: 'Several workflows match "smoke".', options: ['Smoke test', 'Smoke nightly'] });
     expect((await call('get_workflow', { workflow: 'smoke' }, makeContext({ choose: async () => 'cancel' }))).error)
       .toBe('The user cancelled the selection. Nothing was changed.');
-    expect((await call('get_workflow', { workflow: 'deploy' })).error).toBe('No workflow matches "deploy".');
+    expect((await call('get_workflow', { workflow: 'deploy' })).error)
+      .toMatch(new RegExp(`^No workflow matches "deploy"\\. Available: Smoke test \\(${smoke.id}\\); Smoke nightly \\(.+\\); Release \\(.+\\)\\.$`));
 
     const compact = await call('get_request', { request: 'bpp login', view: 'summary' });
     expect(compact).toEqual({

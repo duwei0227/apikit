@@ -83,7 +83,11 @@ async function choose<T>(
 
 function notFound<T>(what: string, input: string, items: T[], toTarget: (item: T) => FuzzyTarget, describe: (item: T) => string): never {
   const nearest = nearestMatches(items, input, toTarget, MAX_NEAREST);
-  const hint = nearest.length > 0 ? ` Closest: ${nearest.map(describe).join('; ')}.` : '';
+  // 没有相近的项时列出现有的几项，AI 不必再调用 list 工具
+  const listed = nearest.length > 0 ? nearest : items.slice(0, MAX_NEAREST);
+  const label = nearest.length > 0 ? 'Closest' : 'Available';
+  const more = nearest.length === 0 && items.length > listed.length ? `; ${items.length - listed.length} more` : '';
+  const hint = listed.length > 0 ? ` ${label}: ${listed.map(describe).join('; ')}${more}.` : '';
   fail(`No ${what} matches "${input}".${hint}`);
 }
 

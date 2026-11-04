@@ -33,7 +33,7 @@ describe('MCP confirmation in the AI tool', () => {
   it('MCP-CONFIRM-003 lists the tools that may ask the user', () => {
     expect(mcpConfirmToolNames().sort()).toEqual([
       'create_environment', 'create_requests', 'delete_collection', 'delete_folder', 'delete_request', 'delete_workflow',
-      'get_request', 'get_workflow', 'run_workflow', 'send_request', 'set_active_environment', 'update_requests',
+      'get_request', 'get_workflow', 'run_requests', 'run_workflow', 'send_request', 'set_active_environment', 'update_requests',
     ]);
   });
 
