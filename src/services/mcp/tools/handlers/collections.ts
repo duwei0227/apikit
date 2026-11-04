@@ -46,7 +46,7 @@ const containerMatches = (container: Collection | Folder, path: string[], query:
 );
 
 const requestMatches = (ref: RequestReference, path: string[], query: string) => (
-  fuzzyScore({ name: ref.name, path: path.join(' / '), extra: [ref.url, ref.method] }, query) !== null
+  fuzzyScore({ name: ref.name, path: path.join(' / '), extra: [ref.url] }, query) !== null
 );
 
 /** 精简的目录树：有 query 时只保留命中的节点和它们的上级；命中的集合或文件夹保留整个子树 */

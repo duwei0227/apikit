@@ -1107,6 +1107,8 @@ describe('MCP tools', () => {
       { type: 'folder', id: service.id, name: '服务优化', items: [{ type: 'folder', id: nested.id, name: 'Guard', items: [{ type: 'request', id: login.id, name: 'Login', method: 'GET', url: '/login' }] }] },
     ]);
     expect((await call('list_collections', { query: 'nothing' })).collections).toEqual([]);
+    // query 只匹配名称、URL 和路径，不匹配 HTTP 方法（与 search_requests 一致）
+    expect((await call('list_collections', { query: 'get' })).collections).toEqual([]);
     expect((await call('list_collections', { view: 'tree' })).error).toBe('view must be summary or full');
     expect((await call('list_collections', { depth: 0 })).error).toBe('depth must be a positive integer');
   });
