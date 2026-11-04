@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildElicitation, interpretElicitation } from '@/services/mcp/confirm';
+import { buildChoiceElicitation, buildElicitation, interpretChoice, interpretElicitation } from '@/services/mcp/confirm';
 import { mcpConfirmToolNames } from '@/services/mcp/tools';
 
 describe('MCP confirmation in the AI tool', () => {
@@ -41,5 +41,23 @@ describe('MCP confirmation in the AI tool', () => {
     const elicitation = buildElicitation({ tool: 'delete_request', title: 't', detail: 'GET Login', note: 'Deleted.', destructive: true });
     expect(elicitation.message).toBe('Allow ApiKit to run delete_request?\nGET Login\nDeleted.');
     expect(elicitation.requestedSchema).toEqual({ type: 'object', properties: {} });
+  });
+
+  it('MCP-CONFIRM-005 asks the user to choose one of several matches', () => {
+    const options = ['BPP / 服务优化', 'BPP / 服务优化v2'];
+    const elicitation = buildChoiceElicitation({ tool: 'create_requests', message: 'Several folders match "服务".', options });
+    expect(elicitation.message).toBe('Several folders match "服务".\nChoose one for ApiKit create_requests.');
+    expect(elicitation.requestedSchema).toEqual({
+      type: 'object',
+      properties: { choice: { type: 'string', title: 'Choose one', enum: options } },
+      required: ['choice'],
+    });
+
+    expect(interpretChoice({ result: { action: 'accept', content: { choice: 'BPP / 服务优化v2' } } }, options)).toBe(1);
+    expect(interpretChoice({ result: { action: 'decline' } }, options)).toBe('cancel');
+    expect(interpretChoice({ result: { action: 'cancel' } }, options)).toBe('cancel');
+    // 客户端出错或选了不存在的项时由 AI 去问用户
+    expect(interpretChoice({ result: { action: 'accept', content: { choice: 'other' } } }, options)).toBeNull();
+    expect(interpretChoice({ error: { code: -32601 } }, options)).toBeNull();
   });
 });

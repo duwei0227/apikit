@@ -2,8 +2,8 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import type { McpConfirmRequest } from '@/services/mcp/tools';
-import { buildElicitation, interpretElicitation, type McpConfirmLocation } from '@/services/mcp/confirm';
+import type { McpChoiceAnswer, McpChoiceRequest, McpConfirmRequest } from '@/services/mcp/tools';
+import { buildChoiceElicitation, buildElicitation, interpretChoice, interpretElicitation, type McpConfirmLocation } from '@/services/mcp/confirm';
 import type { ConsoleLog } from '@/types/models';
 
 /** Rust 端转发的一次 MCP 工具调用；arguments 是 AI 传来的 JSON，由各工具逐项校验 */
@@ -156,6 +156,21 @@ export const useMcpStore = defineStore('mcp', () => {
     return confirm(request);
   }
 
+  /** 名称匹配到多项时在 AI 工具里请用户选择；客户端不支持时返回 null，工具改为返回候选列表 */
+  async function chooseInClient(callId: string, canElicit: boolean, request: McpChoiceRequest): Promise<McpChoiceAnswer> {
+    if (!canElicit) return null;
+    setWaitingInClient(callId, true);
+    try {
+      const { message, requestedSchema } = buildChoiceElicitation(request);
+      return interpretChoice(await invoke('mcp_elicit', { callId, message, requestedSchema }), request.options);
+    } catch (error) {
+      console.error('Failed to ask in the AI tool:', error);
+      return null;
+    } finally {
+      setWaitingInClient(callId, false);
+    }
+  }
+
   function setWaitingInClient(callId: string, waitingInClient: boolean) {
     recentCalls.value = recentCalls.value.map(item => (item.id === callId ? { ...item, waitingInClient } : item));
   }
@@ -193,6 +208,7 @@ export const useMcpStore = defineStore('mcp', () => {
     const result = await callMcpTool(event.name, event.arguments, {
       onConsoleLog: log => bridge?.onConsoleLog(log),
       confirm: request => confirmCall(event.id, event.canElicit === true, request),
+      choose: request => chooseInClient(event.id, event.canElicit === true, request),
       revealSecrets: () => settings.value.revealSecrets,
       stageEdits: () => settings.value.stageEdits,
     });
