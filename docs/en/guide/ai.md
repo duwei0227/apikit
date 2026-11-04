@@ -47,18 +47,30 @@ The MCP server is off by default, accepts only connections from this computer an
 
 | Action | Confirmation |
 |--------|--------------|
-| Sending requests, running workflows, switching the active environment (including creating an environment and making it active) | Every time; you can choose **Allow All This Session** to stop asking until ApiKit restarts |
+| Sending requests (several requests sent by `run_requests` are confirmed once), running workflows, switching the active environment (including creating an environment and making it active), downloading a document with `import_spec` | Every time; you can choose **Allow All This Session** to stop asking until ApiKit restarts |
 | Deleting requests, folders, collections and workflows | **Every time**, even after Allow All This Session; the confirmation shows what will be deleted, how many requests it contains and which workflows use them |
 
 ## Tools
 
 | Group | Tools |
 |-------|-------|
-| Read | `list_collections`, `search_requests` (use `query` to find a name or URL fragment), `get_request`, `list_workflows` (with the containing folders as `folderPath`), `get_workflow`, `list_environments`, `list_builtin_variables`, `get_workflow_logs`, `list_request_logs`, `get_request_log` |
+| Read | `list_collections`, `search_requests`, `get_request`, `list_workflows` (with the containing folders as `folderPath`), `get_workflow`, `list_environments`, `list_builtin_variables`, `get_workflow_logs`, `list_request_logs`, `get_request_log` |
 | Open and close tabs | `open_request`, `close_request`, `open_workflow`, `close_workflow` |
 | Create and edit | `create_collection`, `update_collection`, `create_folder`, `update_folder`, `create_request`, `import_curl` (create from a cURL command), `update_request`, `move_request`, `create_workflow`, `update_workflow`, `create_environment`, `update_environment`, `set_global_variables` |
+| Batch | `create_requests` (create several requests, creating folders as needed), `update_requests` (change several requests), `run_requests` (send several requests in parallel, asks you first), `import_spec` (import an OpenAPI / Swagger document, a Postman collection or an ApiKit export) |
 | Run (asks you first) | `send_request`, `run_workflow`, `set_active_environment` |
 | Delete (asks you every time) | `delete_request`, `delete_folder`, `delete_collection`, `delete_workflow` |
+
+### Fewer calls and smaller results
+
+Each tool call makes the AI read its context again and write new arguments, so most of the time goes into the number of calls and the size of their results. These tools keep both down:
+
+- **Keyword search**: `list_collections`, `search_requests` and `list_workflows` take `query`. It is split into keywords at spaces; all of them must appear in the name, URL or path, ignoring case, and partial words are fine. For example, `bpp opt` finds "BPP / Optimization". The best matches come first.
+- **Compact views**: these three tools return `view: "summary"` by default. `list_collections` returns only the folder tree with each folder's request count (`depth` limits the levels), and `search_requests` returns only the name, method and path. Pass `view: "full"` for everything. `get_request` and `get_workflow` return everything by default; `view: "summary"` returns only a request's header and parameter names, or a workflow's step outline.
+- **Names instead of ids**: the batch tools, `get_request`, `get_workflow` and `run_workflow` accept `collection`, `folderPath`, `request` and `workflow` as names, and partial names are fine. A single match is used, and partial matches are listed in the result's `resolved`. When several items match, the AI tool asks you to choose if it supports MCP elicitation; otherwise ApiKit returns `ambiguous` with the candidates, and the AI asks you and calls again. When a level of `folderPath` has no folder with that exact name but a similar one, you choose between the existing folder and a new one.
+- **Batch writes**: `create_requests` creates up to 50 requests in one call and creates the folders in `folderPath` that don't exist yet. Each item can be request fields, `curl` or `copyFrom` (copy a saved request and change some fields). `defaults` holds shared fields: `baseUrl` is put in front of relative URLs, and headers and params are merged by name. `onExists` decides whether a request with an existing name is skipped (the default), replaced, reported as an error or created again. `update_requests` changes several requests one by one, or gives the selected requests the same `set` fields, `mergeHeaders` or `removeHeaders`. Nothing is saved if any item is invalid, and write tools return only a summary.
+- **Batch runs**: `run_requests` selects up to 30 requests by id, name or folder and sends them in parallel after one confirmation (`maxConcurrency` defaults to 4). It returns whether each request passed, its status, time, failed assertions and a short preview of the response.
+- **Importing documents**: with `url`, `import_spec` lets ApiKit download the document, so the AI doesn't have to write the whole document into its arguments. It can create a new collection or add to a folder of an existing one.
 
 Pass tool arguments directly according to each tool's schema; do not wrap them in a `params` object. The `params` field in a request definition is the HTTP URL query-parameter list. `send_request` requires exactly one of `requestId` or `request`; a workflow request step likewise requires exactly one of `requestId` or `inlineRequest`.
 

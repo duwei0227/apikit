@@ -8,6 +8,30 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
+## [Unreleased]
+
+### Added
+- MCP: `create_requests` creates up to 50 requests in one call and creates missing folders on the way. Items can be request fields, a cURL command or a copy of a saved request; `defaults` holds shared fields such as a base URL and headers, and `onExists` decides what happens to requests whose name already exists.
+- MCP: `update_requests` changes several requests in one call, either one by one or with the same change for the requests in a folder.
+- MCP: `run_requests` sends up to 30 saved requests in parallel after a single confirmation and returns a short result for each.
+- MCP: `import_spec` imports an OpenAPI / Swagger document, a Postman collection or an ApiKit export into a new collection or into a folder of an existing one. With a URL, ApiKit downloads the document after you confirm.
+- MCP: collections, folders, requests and workflows can be given by name, and partial names are fine. When several match, ApiKit asks you to choose in the AI tool, or the AI asks you with the list of candidates.
+
+### Changed
+- MCP: `list_collections`, `search_requests` and `list_workflows` match keywords against names, URLs and paths, and return compact results by default; pass `view: "full"` for everything. `get_request` and `get_workflow` can return a short outline. Tools that create or change a request return a summary instead of the whole request.
+- MCP: tool descriptions are shorter.
+
+### 新增
+- MCP：`create_requests` 一次新建最多 50 个请求，并自动创建缺少的目录。每项可以是请求字段、cURL 命令或已有请求的副本；`defaults` 填写公共地址、header 等公共字段，`onExists` 决定同名请求如何处理。
+- MCP：`update_requests` 一次修改多个请求，可分别修改，也可对一个目录中的请求统一修改。
+- MCP：`run_requests` 确认一次后并行发送最多 30 个已保存的请求，每个请求返回简短结果。
+- MCP：`import_spec` 把 OpenAPI / Swagger 文档、Postman Collection 或 ApiKit 导出文件导入为新集合，或放进已有集合的目录；提供网址时由 ApiKit 在你确认后下载。
+- MCP：集合、目录、请求和 Workflow 可以用名称指定，可只写一部分；匹配到多个时在 AI 工具中请你选择，或由 AI 列出候选问你。
+
+### 变更
+- MCP：`list_collections`、`search_requests`、`list_workflows` 按关键词匹配名称、URL 和路径，默认返回精简结果，传 `view: "full"` 返回完整内容；`get_request`、`get_workflow` 可只返回大纲；新建和修改请求的工具只返回摘要，不再返回完整请求。
+- MCP：工具说明更简短。
+
 ## [0.5.4] - 2026-10-30
 
 ### Added
