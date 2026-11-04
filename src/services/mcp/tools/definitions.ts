@@ -34,32 +34,54 @@ const environmentVariablesSchema = {
   },
 };
 
+const queryProperty = { type: 'string', description: 'Keywords separated by spaces; all must appear in the name or path (case-insensitive)' };
+const viewProperty = (fallback: 'summary' | 'full') => ({
+  type: 'string',
+  enum: ['summary', 'full'],
+  description: `Default ${fallback}. Use summary to choose an item, full for the details.`,
+});
+const workflowNameProperty = { type: 'string', description: 'Workflow name; partial names are fine' };
+
+/** 按名称定位时的统一说明 */
+export const NAME_NOTE = 'A name with exactly one exact match is used directly; a single partial match is used and reported in resolved. If several match, ApiKit asks the user to choose, or returns error "ambiguous" with candidates: then ask the user and call again with the chosen id.';
+
 export const MCP_TOOLS: McpToolDefinition[] = [
   {
     name: 'list_collections',
     title: 'List collections',
     kind: 'read',
-    description: 'List all collections with their folders and saved requests (id, name, method, url), in display order.',
-    inputSchema: objectSchema({}),
+    description: 'List collections in display order. By default (view summary) returns the folder tree with id, name and requestCount, without requests. query keeps only collections, folders and requests whose name or path matches all its keywords (case-insensitive, partial words are fine), plus their parents; matching requests are listed. view full lists every folder and request (id, name, method, url).',
+    inputSchema: objectSchema({
+      query: queryProperty,
+      collectionId: { type: 'string', description: 'Only this collection' },
+      depth: { type: 'integer', minimum: 1, description: 'Folder levels to list without query; deeper levels show folderCount' },
+      view: viewProperty('summary'),
+    }),
   },
   {
     name: 'search_requests',
     title: 'Search requests',
     kind: 'read',
-    description: 'Search saved requests in display order. Pass query as a direct tool argument to match part of a request name or URL (for a URL fragment, use query, not keyword). Optional direct arguments: method, collectionId and limit. Do not wrap arguments in a params object. Returns each request with its collection and folder path. total is the number of matches before limit.',
+    description: 'Search saved requests. query matches all its keywords against the request name, URL and collection/folder path (for a URL fragment, use query, not keyword); best matches come first. Optional direct arguments: method, collectionId, limit and view. Do not wrap arguments in a params object. view summary (default) returns requestId, name, method and path; full adds url, collectionId and folderId. total is the number of matches before limit.',
     inputSchema: objectSchema({
-      query: { type: 'string', description: 'Text to find in the request name or URL, including a URL fragment. This is the correct argument for text search; there is no keyword argument.' },
+      query: { type: 'string', description: 'Keywords to find in the request name, URL or path, for example "bpp login" or a URL fragment. This is the correct argument for text search; there is no keyword argument.' },
       method: { type: 'string', description: 'Only requests with this HTTP method' },
       collectionId: { type: 'string', description: 'Only requests in this collection' },
       limit: { type: 'integer', description: `Default ${DEFAULT_SEARCH_LIMIT}; must be between 1 and ${MAX_SEARCH_LIMIT}` },
+      view: viewProperty('summary'),
     }),
   },
   {
     name: 'get_request',
     title: 'Get request',
     kind: 'read',
-    description: 'Get the full definition of a saved request. hasUnsavedEdits is true when the user has edits in ApiKit that are not saved yet; the returned definition includes them.',
-    inputSchema: objectSchema({ requestId: { type: 'string' } }, ['requestId']),
+    mayConfirm: true,
+    description: `Get a saved request by requestId, or by request (its name; partial names are fine). view full (default) returns the whole definition; summary returns method, url, header and parameter names, body and auth type. hasUnsavedEdits is true when the user has edits in ApiKit that are not saved yet; the result includes them. ${NAME_NOTE}`,
+    inputSchema: objectSchema({
+      requestId: { type: 'string' },
+      request: { type: 'string', description: 'Request name, optionally with words of its collection or folder' },
+      view: viewProperty('full'),
+    }),
   },
   {
     name: 'open_request',
@@ -85,8 +107,8 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     name: 'list_workflows',
     title: 'List workflows',
     kind: 'read',
-    description: 'List all workflows in sidebar order with id, name, step count and folderPath (names of the sidebar folders that contain it, empty at the top level).',
-    inputSchema: objectSchema({}),
+    description: 'List workflows in sidebar order with id, name and folderPath (names of the sidebar folders that contain it). query keeps workflows whose name or folder matches all its keywords, best matches first. view full adds stepCount, updatedAt and hasUnsavedEdits.',
+    inputSchema: objectSchema({ query: queryProperty, view: viewProperty('summary') }),
   },
   {
     name: 'open_workflow',
@@ -112,8 +134,9 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     name: 'get_workflow',
     title: 'Get workflow',
     kind: 'read',
-    description: 'Get the full step tree of a workflow. hasUnsavedEdits is true when the workflow has edits in ApiKit that are not saved yet; the returned steps include them.',
-    inputSchema: objectSchema({ workflowId: { type: 'string' } }, ['workflowId']),
+    mayConfirm: true,
+    description: `Get a workflow by workflowId, or by workflow (its name; partial names are fine). view full (default) returns the whole step tree; summary returns only step types, names and nesting. hasUnsavedEdits is true when the workflow has unsaved edits in ApiKit; the steps include them. ${NAME_NOTE}`,
+    inputSchema: objectSchema({ workflowId: { type: 'string' }, workflow: workflowNameProperty, view: viewProperty('full') }),
   },
   {
     name: 'list_environments',
@@ -330,8 +353,8 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     name: 'run_workflow',
     title: 'Run workflow',
     kind: 'execute',
-    description: 'Run a workflow by id with the active environment and return a summary with the step log. Uses its current unsaved edits in ApiKit, if any. The user must approve this. Only one workflow can run at a time.',
-    inputSchema: objectSchema({ workflowId: { type: 'string' } }, ['workflowId']),
+    description: `Run a workflow by workflowId or workflow (its name) with the active environment and return a summary with the step log. Uses its current unsaved edits in ApiKit, if any. The user must approve this. Only one workflow can run at a time. ${NAME_NOTE}`,
+    inputSchema: objectSchema({ workflowId: { type: 'string' }, workflow: workflowNameProperty }),
   },
   {
     name: 'get_workflow_logs',

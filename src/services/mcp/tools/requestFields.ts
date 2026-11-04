@@ -180,3 +180,35 @@ export function describeRequest(request: Request, reveal: boolean) {
     folderId: clean.folderId,
   };
 }
+
+/** 写操作返回的摘要：AI 刚传入的字段不再原样返回 */
+export function summarizeRequest(request: Request) {
+  return {
+    id: request.id,
+    name: request.name,
+    method: request.method,
+    url: request.url,
+    collectionId: request.collectionId,
+    folderId: request.folderId,
+  };
+}
+
+/** 请求概要：header、参数只列名称，用于了解请求的形状 */
+export function outlineRequest(request: Request) {
+  const clean = prepareRequestForPersistence(request);
+  const tests = normalizeTestConfig(clean.testsConfig ?? clean.tests);
+  return {
+    id: clean.id,
+    name: clean.name,
+    method: clean.method,
+    url: clean.url,
+    params: clean.params.filter(item => item.enabled !== false).map(item => item.key),
+    headers: clean.headers.filter(item => item.enabled !== false).map(item => item.key),
+    bodyType: clean.body?.type || 'none',
+    authType: clean.auth?.type || 'none',
+    testCount: tests.statusCodeTests.length + tests.jsonFieldTests.length,
+    extractedVariables: tests.globalVariables.map(item => item.variableName).filter(Boolean),
+    collectionId: clean.collectionId,
+    folderId: clean.folderId,
+  };
+}

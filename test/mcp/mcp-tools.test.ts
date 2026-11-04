@@ -123,18 +123,20 @@ describe('MCP tools', () => {
     });
     await call('create_request', { collectionId: collection.id, name: 'Health', url: '{{baseUrl}}/health' });
 
-    expect(request.method).toBe('POST');
-    expect(request.headers).toEqual([{ key: 'X-Trace', value: 'mcp', enabled: true }]);
-    expect(JSON.parse(request.body.raw)).toEqual({ sku: 'A1', qty: 2 });
-    expect(request.tests.statusCodeTests[0]).toMatchObject({ enabled: true, operator: 'equals', expectedValue: '201' });
-    expect(request.tests.jsonFieldTests[0]).toMatchObject({ enabled: true, jsonPath: 'id', operator: 'exists' });
+    // 写操作只返回摘要
+    expect(request).toEqual({ id: request.id, name: 'Create order', method: 'POST', url: '{{baseUrl}}/orders', collectionId: collection.id, folderId: folder.id });
+    const detail = await call('get_request', { requestId: request.id });
+    expect(detail.headers).toEqual([{ key: 'X-Trace', value: 'mcp', enabled: true }]);
+    expect(JSON.parse(detail.body.raw)).toEqual({ sku: 'A1', qty: 2 });
+    expect(detail.tests.statusCodeTests[0]).toMatchObject({ enabled: true, operator: 'equals', expectedValue: '201' });
+    expect(detail.tests.jsonFieldTests[0]).toMatchObject({ enabled: true, jsonPath: 'id', operator: 'exists' });
 
     const stored = mockStorageService.requests.get(request.id)!;
     expect(stored.collectionId).toBe(collection.id);
     expect(stored.folderId).toBe(folder.id);
     expect(stored.testsConfig).toEqual(stored.tests);
 
-    const { collections } = await call('list_collections');
+    const { collections } = await call('list_collections', { view: 'full' });
     expect(collections).toHaveLength(1);
     expect(collections[0].items).toEqual([
       {
@@ -169,9 +171,10 @@ describe('MCP tools', () => {
       auth: { type: 'bearer', token: 'secret-token' },
       headers: [{ key: 'X-API-Key', value: 'abc123' }, { key: 'Accept', value: 'application/json' }],
     });
-    expect(created.auth.token).toBe(MCP_HIDDEN_VALUE);
-    expect(created.headers[0].value).toBe(MCP_HIDDEN_VALUE);
-    expect(created.headers[1].value).toBe('application/json');
+    const createdDetail = await call('get_request', { requestId: created.id });
+    expect(createdDetail.auth.token).toBe(MCP_HIDDEN_VALUE);
+    expect(createdDetail.headers[0].value).toBe(MCP_HIDDEN_VALUE);
+    expect(createdDetail.headers[1].value).toBe('application/json');
 
     // AI 把读到的占位符原样传回时保留原值
     const updated = await call('update_request', {
@@ -268,7 +271,9 @@ describe('MCP tools', () => {
     expect(mockStorageService.workflows.has(created.id)).toBe(true);
 
     const listed = await call('list_workflows');
-    expect(listed.workflows[0]).toMatchObject({ id: created.id, folderPath: [], stepCount: 5, hasUnsavedEdits: false });
+    expect(listed.workflows[0]).toEqual({ id: created.id, name: 'Order flow', folderPath: [] });
+    const listedFull = await call('list_workflows', { view: 'full' });
+    expect(listedFull.workflows[0]).toMatchObject({ id: created.id, folderPath: [], stepCount: 5, hasUnsavedEdits: false });
 
     // 侧边栏文件夹中的 Workflow 返回文件夹的名称路径
     const workflowsStore = useWorkflowsStore();
@@ -493,7 +498,7 @@ describe('MCP tools', () => {
       url: httpbinUrl('/post'),
       body: { type: 'form-data', formData: [{ key: 'file', type: 'file', filePath: '/tmp/data/report.csv' }] },
     });
-    expect(request.body.formData[0]).toMatchObject({ value: 'report.csv', filePath: '/tmp/data/report.csv' });
+    expect((await call('get_request', { requestId: request.id })).body.formData[0]).toMatchObject({ value: 'report.csv', filePath: '/tmp/data/report.csv' });
 
     await call('send_request', { requestId: request.id });
     expect(httpbinInvocations[0].multipart.fields[0]).toMatchObject({ filename: 'report.csv', filePath: '/tmp/data/report.csv' });
@@ -879,19 +884,26 @@ describe('MCP tools', () => {
     const admin = await call('create_collection', { name: 'Admin' });
     const report = await call('create_request', { collectionId: admin.id, name: 'Order report', url: '{{baseUrl}}/reports' });
 
+    // 名称开头匹配 > 名称包含 > 只在 URL 或路径中命中
     const byText = await call('search_requests', { query: 'ORDER' });
     expect(byText.total).toBe(3);
     expect(byText.requests).toEqual([
-      { requestId: create.id, name: 'Create order', method: 'POST', url: '{{baseUrl}}/orders', collectionId: shop.id, folderId: folder.id, path: 'Shop API / Orders' },
-      expect.objectContaining({ requestId: list.id, method: 'GET' }),
-      { requestId: report.id, name: 'Order report', method: 'GET', url: '{{baseUrl}}/reports', collectionId: admin.id, path: 'Admin' },
+      { requestId: report.id, name: 'Order report', method: 'GET', path: 'Admin' },
+      { requestId: create.id, name: 'Create order', method: 'POST', path: 'Shop API / Orders' },
+      { requestId: list.id, name: 'List', method: 'GET', path: 'Shop API / Orders' },
     ]);
+    const fullView = await call('search_requests', { query: 'create order', view: 'full' });
+    expect(fullView.requests).toEqual([
+      { requestId: create.id, name: 'Create order', method: 'POST', url: '{{baseUrl}}/orders', collectionId: shop.id, folderId: folder.id, path: 'Shop API / Orders' },
+    ]);
+    // 多个关键词可以分别命中路径和名称
+    expect((await call('search_requests', { query: 'shop list' })).requests.map((r: any) => r.requestId)).toEqual([list.id]);
 
     expect((await call('search_requests', { query: 'orders', method: 'post' })).requests.map((r: any) => r.requestId)).toEqual([create.id]);
     expect((await call('search_requests', { collectionId: admin.id })).requests.map((r: any) => r.requestId)).toEqual([report.id]);
     expect((await call('search_requests', { query: '/orders' })).requests.map((r: any) => r.requestId)).toEqual([create.id, list.id]);
     const limited = await call('search_requests', { query: 'order', limit: 1 });
-    expect(limited).toMatchObject({ total: 3, requests: [{ requestId: create.id }] });
+    expect(limited).toMatchObject({ total: 3, requests: [{ requestId: report.id }] });
 
     expect((await call('search_requests', {})).error).toBe('Pass query, method and/or collectionId');
     expect((await call('search_requests', { method: 'FETCH' })).error).toContain('method must be one of');
@@ -923,7 +935,7 @@ describe('MCP tools', () => {
 
     const request = await call('create_request', { collectionId: collection.id, name: 'Session', url: httpbinUrl('/response-headers?X-Session=sess-9'),
       tests: { globalVariables: [{ variableName: 'session', valueType: 'header', headerName: 'x-session' }] } });
-    expect(request.tests.globalVariables[0]).toMatchObject({ valueType: 'header', headerName: 'x-session' });
+    expect((await call('get_request', { requestId: request.id })).tests.globalVariables[0]).toMatchObject({ valueType: 'header', headerName: 'x-session' });
     const sent = await call('send_request', { requestId: request.id });
     expect(sent.tests.extractedVariables[0]).toMatchObject({ variableName: 'session', status: 'set' });
     expect(useEnvironmentsStore().globalVariables.find(variable => variable.key === 'session')?.value).toBe('sess-9');
@@ -1019,16 +1031,22 @@ describe('MCP tools', () => {
     const curl = `curl -X POST 'https://api.example.com/orders?page=2' -H 'Content-Type: application/json' -H 'Authorization: Bearer abc' -d '{"qty":1}' -k --unknown-flag`;
 
     const imported = await call('import_curl', { curl, collectionId: shop.id, folderId: orders.id }, makeContext({ revealSecrets: () => true }));
-    expect(imported).toMatchObject({
+    expect(imported).toEqual({
+      id: imported.id,
       name: 'POST /orders',
       method: 'POST',
       url: 'https://api.example.com/orders?page=2',
+      collectionId: shop.id,
+      folderId: orders.id,
+      warnings: ['Unsupported cURL option --unknown-flag was ignored.'],
+    });
+    const importedDetail = await call('get_request', { requestId: imported.id }, makeContext({ revealSecrets: () => true }));
+    expect(importedDetail).toMatchObject({
       params: [{ key: 'page', value: '2', enabled: true }],
       auth: { type: 'bearer', token: 'abc' },
       body: { type: 'json' },
-      warnings: ['Unsupported cURL option --unknown-flag was ignored.'],
     });
-    expect(JSON.parse(imported.body.raw)).toEqual({ qty: 1 });
+    expect(JSON.parse(importedDetail.body.raw)).toEqual({ qty: 1 });
     expect(mockStorageService.requests.get(imported.id)).toMatchObject({ collectionId: shop.id, folderId: orders.id, settings: { verifySsl: false } });
     expect((await call('search_requests', { query: 'orders' })).requests[0]).toMatchObject({ requestId: imported.id, path: 'Shop / Orders' });
 
@@ -1038,4 +1056,103 @@ describe('MCP tools', () => {
     expect((await call('import_curl', { curl: 'hello world', collectionId: shop.id })).error).toBe('curl must be a cURL command starting with "curl"');
     expect((await call('import_curl', { curl: 'curl https://a.example.com', collectionId: shop.id, folderId: 'missing' })).error).toBe('Folder not found: missing');
   });
+
+  it('MCP-032 lists a compact folder tree, filters it by keywords and limits its depth', async () => {
+    const bpp = await call('create_collection', { name: 'BPP' });
+    const service = await call('create_folder', { collectionId: bpp.id, name: '服务优化' });
+    const nested = await call('create_folder', { collectionId: bpp.id, name: 'Guard', parentFolderId: service.id });
+    const login = await call('create_request', { collectionId: bpp.id, folderId: nested.id, name: 'Login', url: '/login' });
+    await call('create_request', { collectionId: bpp.id, name: 'Health', url: '/health' });
+    const shop = await call('create_collection', { name: 'Shop' });
+    await call('create_folder', { collectionId: shop.id, name: 'Orders' });
+
+    const summary = await call('list_collections');
+    expect(summary.collections).toEqual([
+      {
+        id: bpp.id,
+        name: 'BPP',
+        requestCount: 2,
+        folders: [{ id: service.id, name: '服务优化', requestCount: 1, folders: [{ id: nested.id, name: 'Guard', requestCount: 1 }] }],
+      },
+      { id: shop.id, name: 'Shop', requestCount: 0, folders: [{ id: expect.any(String), name: 'Orders', requestCount: 0 }] },
+    ]);
+    expect(JSON.stringify(summary)).not.toContain('/login');
+
+    const shallow = await call('list_collections', { depth: 1, collectionId: bpp.id });
+    expect(shallow.collections).toEqual([
+      { id: bpp.id, name: 'BPP', requestCount: 2, folders: [{ id: service.id, name: '服务优化', requestCount: 1, folderCount: 1 }] },
+    ]);
+
+    // 关键词分别命中集合和文件夹名称
+    const filtered = await call('list_collections', { query: 'bpp 优化' });
+    expect(filtered.collections).toEqual([
+      { id: bpp.id, name: 'BPP', requestCount: 2, folders: [{ id: service.id, name: '服务优化', requestCount: 1, folders: [{ id: nested.id, name: 'Guard', requestCount: 1 }] }] },
+    ]);
+    const byRequest = await call('list_collections', { query: 'login' });
+    expect(byRequest.collections).toEqual([
+      {
+        id: bpp.id,
+        name: 'BPP',
+        requestCount: 2,
+        folders: [{
+          id: service.id,
+          name: '服务优化',
+          requestCount: 1,
+          folders: [{ id: nested.id, name: 'Guard', requestCount: 1, requests: [{ id: login.id, name: 'Login', method: 'GET' }] }],
+        }],
+      },
+    ]);
+    const fullFiltered = await call('list_collections', { query: 'login', view: 'full' });
+    expect(fullFiltered.collections[0].items).toEqual([
+      { type: 'folder', id: service.id, name: '服务优化', items: [{ type: 'folder', id: nested.id, name: 'Guard', items: [{ type: 'request', id: login.id, name: 'Login', method: 'GET', url: '/login' }] }] },
+    ]);
+    expect((await call('list_collections', { query: 'nothing' })).collections).toEqual([]);
+    expect((await call('list_collections', { view: 'tree' })).error).toBe('view must be summary or full');
+    expect((await call('list_collections', { depth: 0 })).error).toBe('depth must be a positive integer');
+  });
+
+  it('MCP-033 finds workflows and requests by partial names and returns compact views', async () => {
+    const collection = await call('create_collection', { name: 'BPP' });
+    const login = await call('create_request', {
+      collectionId: collection.id, name: 'Login', method: 'POST', url: '/login',
+      headers: [{ key: 'Authorization', value: 'Bearer x' }], params: [{ key: 'debug', value: '1' }], body: { type: 'json', raw: { a: 1 } },
+    });
+    await call('create_request', { collectionId: collection.id, name: 'Logout', url: '/logout' });
+    const smoke = await call('create_workflow', { name: 'Smoke test', steps: [{ type: 'request', requestId: login.id }, { type: 'for', iterations: 2, childSteps: [{ type: 'request', requestId: login.id }] }] });
+    await call('create_workflow', { name: 'Smoke nightly', steps: [{ type: 'request', requestId: login.id }] });
+    await call('create_workflow', { name: 'Release', steps: [{ type: 'request', requestId: login.id }] });
+
+    expect((await call('list_workflows', { query: 'smoke' })).workflows.map((w: any) => w.name)).toEqual(['Smoke test', 'Smoke nightly']);
+
+    const outline = await call('get_workflow', { workflow: 'smoke test', view: 'summary' });
+    expect(outline).toMatchObject({ id: smoke.id, stepCount: 3, steps: [{ type: 'request', requestId: login.id }, { type: 'for', childSteps: [{ type: 'request' }] }] });
+    expect(outline.steps[1]).not.toHaveProperty('iterations');
+    expect(outline).not.toHaveProperty('resolved');
+    // 只有一个部分匹配时直接使用，并告诉 AI 实际用的是哪一个
+    expect(await call('get_workflow', { workflow: 'rele' })).toMatchObject({ name: 'Release', resolved: [{ field: 'workflow', input: 'rele', matched: 'Release' }] });
+
+    // 匹配到多个且没法询问时返回候选
+    const ambiguous = JSON.parse((await call('get_workflow', { workflow: 'smoke' })).error);
+    expect(ambiguous).toMatchObject({ error: 'ambiguous', field: 'workflow', input: 'smoke', candidates: [{ name: 'Smoke test' }, { name: 'Smoke nightly' }] });
+    expect(ambiguous.hint).toContain('Ask the user');
+    // 能询问时请用户选择
+    const choose = vi.fn(async () => 1);
+    expect((await call('get_workflow', { workflow: 'smoke' }, makeContext({ choose }))).name).toBe('Smoke nightly');
+    expect(choose).toHaveBeenCalledWith({ tool: 'get_workflow', message: 'Several workflows match "smoke".', options: ['Smoke test', 'Smoke nightly'] });
+    expect((await call('get_workflow', { workflow: 'smoke' }, makeContext({ choose: async () => 'cancel' }))).error)
+      .toBe('The user cancelled the selection. Nothing was changed.');
+    expect((await call('get_workflow', { workflow: 'deploy' })).error).toBe('No workflow matches "deploy".');
+
+    const compact = await call('get_request', { request: 'bpp login', view: 'summary' });
+    expect(compact).toEqual({
+      id: login.id, name: 'Login', method: 'POST', url: '/login', params: ['debug'], headers: ['Authorization'],
+      bodyType: 'json', authType: 'none', testCount: 1, extractedVariables: [], collectionId: collection.id,
+      hasUnsavedEdits: false, resolved: [{ field: 'request', input: 'bpp login', matched: 'POST Login · BPP' }],
+    });
+    expect(JSON.parse((await call('get_request', { request: 'log' })).error).candidates).toEqual([
+      { id: login.id, name: 'POST Login · BPP' },
+      { id: expect.any(String), name: 'GET Logout · BPP' },
+    ]);
+  });
 });
+

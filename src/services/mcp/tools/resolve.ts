@@ -5,6 +5,7 @@ import { useCollectionsStore } from '@/stores/collections';
 import { useWorkflowsStore } from '@/stores/workflows';
 import type { Collection, Folder, WorkflowDefinition } from '@/types/models';
 import { searchRequestReferences, type RequestSearchResult } from '@/utils/collectionTree';
+import { listWorkflowPlacements } from '@/utils/workflowTree';
 import { type FuzzyTarget, nearestMatches, resolveByName } from '@/utils/fuzzyMatch';
 import { findFolder, locateRequest, requireCollection, requireWorkflow } from './lookups';
 import { fail, isRecord, optionalString } from './shared';
@@ -278,8 +279,12 @@ export async function resolveWorkflow(resolver: Resolver, args: Record<string, u
   if (workflowId) return requireWorkflow(workflowId);
   const name = optionalString(args.workflow, 'workflow')?.trim();
   if (!name) fail('Pass workflowId or workflow (its name)');
+  // 与侧边栏的顺序一致
+  const store = useWorkflowsStore();
+  const byId = new Map(store.workflows.map(workflow => [workflow.id, workflow]));
+  const ordered = listWorkflowPlacements(store.layout).flatMap(({ id }) => byId.get(id) ?? []);
   return resolveNamed(
-    resolver, 'workflow', name, useWorkflowsStore().workflows,
+    resolver, 'workflow', name, ordered,
     workflow => ({ name: workflow.name }),
     workflow => ({ item: workflow, id: workflow.id, label: workflow.name }),
     'workflow',

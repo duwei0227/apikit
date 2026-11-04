@@ -8,17 +8,23 @@ import type { Request } from '@/types/models';
 import { cloneJson } from '@/utils/clone';
 import { requestFieldProperties } from '../../schemas';
 import { findFolder, containsRequest, requireCollection, savedRequestExists, requireRequest } from '../lookups';
-import { applyRequestFields, describeRequest } from '../requestFields';
-import { isRecord, fail, requireString, optionalString, requireUrl, truncate, describeStreamResult, unresolvedVariablesOf, summarizeTests, confirmOrThrow } from '../shared';
+import { applyRequestFields, describeRequest, outlineRequest, summarizeRequest } from '../requestFields';
+import { createResolver, resolveRequest, resolvedNotes } from '../resolve';
+import { isRecord, fail, requireString, optionalString, requireUrl, truncate, describeStreamResult, unresolvedVariablesOf, summarizeTests, confirmOrThrow, parseView } from '../shared';
 import type { McpToolHandler } from '../types';
 
 export const requestHandlers: Record<string, McpToolHandler> = {
   async get_request(args, context) {
-    const requestId = requireString(args, 'requestId');
+    const view = parseView(args.view, 'full');
+    const resolver = createResolver(context, 'get_request');
+    const requestId = args.requestId !== undefined
+      ? requireString(args, 'requestId')
+      : (await resolveRequest(resolver, 'request', args.request ?? fail('Pass requestId or request (its name)'))).request.id;
     const request = await requireRequest(requestId);
     return {
-      ...describeRequest(request, context.revealSecrets()),
+      ...(view === 'summary' ? outlineRequest(request) : describeRequest(request, context.revealSecrets())),
       hasUnsavedEdits: useRequestsStore().hasRequestDraft(requestId),
+      ...resolvedNotes(resolver),
     };
   },
 
@@ -36,7 +42,7 @@ export const requestHandlers: Record<string, McpToolHandler> = {
 
     await useRequestsStore().saveRequest(request, true);
     await useCollectionsStore().addRequestReference(collection.id, request.id, request.name, request.method, request.url, folderId);
-    return describeRequest(request, context.revealSecrets());
+    return summarizeRequest(request);
   },
 
   async import_curl(args, context) {
@@ -64,7 +70,7 @@ export const requestHandlers: Record<string, McpToolHandler> = {
     await useRequestsStore().saveRequest(request, true);
     await useCollectionsStore().addRequestReference(collection.id, request.id, request.name, request.method, request.url, folderId);
     return {
-      ...describeRequest(request, context.revealSecrets()),
+      ...summarizeRequest(request),
       warnings: parsed.warnings.map(warning => warning.message),
     };
   },
@@ -88,7 +94,7 @@ export const requestHandlers: Record<string, McpToolHandler> = {
       const request = applyRequestFields(fields, requests.getRequestDraft(requestId) || saved);
       await requests.setRequestDraft(request);
       requests.notifyExternalUpdate(requestId);
-      return { ...describeRequest(request, context.revealSecrets()), unsavedEdits: true };
+      return { ...summarizeRequest(request), unsavedEdits: true };
     }
 
     const request = applyRequestFields(fields, saved);
@@ -102,7 +108,7 @@ export const requestHandlers: Record<string, McpToolHandler> = {
       );
     }
     requests.notifyExternalUpdate(requestId);
-    return describeRequest(request, context.revealSecrets());
+    return summarizeRequest(request);
   },
 
   async send_request(args, context) {

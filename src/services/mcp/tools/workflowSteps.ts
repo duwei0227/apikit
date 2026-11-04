@@ -321,3 +321,17 @@ export function countSteps(steps: WorkflowStep[] = []): number {
   return steps.reduce((total, step) => total + 1
     + countSteps(step.thenSteps) + countSteps(step.elseSteps) + countSteps(step.childSteps), 0);
 }
+
+/** 步骤大纲：只有类型、名称和层级，用于快速了解 Workflow 的结构 */
+export function outlineStep(step: WorkflowStep): Record<string, unknown> {
+  const outline: Record<string, unknown> = { id: step.id, type: step.type, name: step.name };
+  if (!step.enabled) outline.enabled = false;
+  if (step.type === 'request' && step.requestSource === 'reference') outline.requestId = step.requestId;
+  if (step.type === 'if') {
+    if (step.thenSteps?.length) outline.thenSteps = step.thenSteps.map(outlineStep);
+    if (step.elseSteps?.length) outline.elseSteps = step.elseSteps.map(outlineStep);
+  } else if (step.childSteps?.length) {
+    outline.childSteps = step.childSteps.map(outlineStep);
+  }
+  return outline;
+}

@@ -1,12 +1,13 @@
 // 集合和文件夹
 
 import { useCollectionsStore } from '@/stores/collections';
-import type { Collection, Folder } from '@/types/models';
+import type { Collection, Folder, RequestReference } from '@/types/models';
 import { useRequestsStore } from '@/stores/requests';
 import { notifyItemDeleted } from '@/composables/useDeletedItems';
 import { collectAllRequestIds, findFolderPath } from '@/utils/collectionTree';
 import { findFolder, findWorkflowsReferencing, locateRequest, requireCollection } from '../lookups';
-import { confirmOrThrow, fail, requireString, optionalString } from '../shared';
+import { confirmOrThrow, fail, optionalPositiveInteger, optionalString, parseView, requireString } from '../shared';
+import { fuzzyFilter, fuzzyScore } from '@/utils/fuzzyMatch';
 import { DEFAULT_SEARCH_LIMIT, HTTP_METHODS, MAX_SEARCH_LIMIT, type McpToolHandler } from '../types';
 import { searchRequestReferences } from '@/utils/collectionTree';
 
@@ -14,6 +15,74 @@ import { searchRequestReferences } from '@/utils/collectionTree';
 type ContainerItem =
   | { type: 'folder'; id: string; name: string; items: ContainerItem[] }
   | { type: 'request'; id: string; name: string; method: string; url: string };
+
+interface SummaryNode {
+  id: string;
+  name: string;
+  /** 包含子文件夹中的请求 */
+  requestCount: number;
+  folders?: SummaryNode[];
+  /** 超出 depth 未列出的子文件夹数 */
+  folderCount?: number;
+  /** 有 query 时列出名称、URL 或路径命中的请求 */
+  requests?: Array<{ id: string; name: string; method: string }>;
+}
+
+interface TreeFilter {
+  query: string;
+  depth?: number;
+}
+
+const countRequests = (container: Collection | Folder): number => container.requests.length
+  + (container.folders || []).reduce((total, folder) => total + countRequests(folder), 0);
+
+const orderedFolders = (container: Collection | Folder) => (container.folders || [])
+  .map((folder, index) => ({ folder, sortKey: folder.order ?? index }))
+  .sort((a, b) => a.sortKey - b.sortKey)
+  .map(entry => entry.folder);
+
+const containerMatches = (container: Collection | Folder, path: string[], query: string) => (
+  !query || fuzzyScore({ name: container.name, path: path.join(' / ') }, query) !== null
+);
+
+const requestMatches = (ref: RequestReference, path: string[], query: string) => (
+  fuzzyScore({ name: ref.name, path: path.join(' / '), extra: [ref.url, ref.method] }, query) !== null
+);
+
+/** 精简的目录树：有 query 时只保留命中的节点和它们的上级；命中的集合或文件夹保留整个子树 */
+function summarizeContainer(container: Collection | Folder, path: string[], level: number, filter: TreeFilter, includeAll: boolean): SummaryNode | null {
+  const matched = includeAll || containerMatches(container, path, filter.query);
+  const folders = orderedFolders(container)
+    .map(folder => summarizeContainer(folder, [...path, folder.name], level + 1, filter, matched))
+    .filter((node): node is SummaryNode => node !== null);
+  const requests = filter.query && !matched ? container.requests.filter(ref => requestMatches(ref, path, filter.query)) : [];
+  if (!matched && folders.length === 0 && requests.length === 0) return null;
+
+  const node: SummaryNode = { id: container.id, name: container.name, requestCount: countRequests(container) };
+  // 有 query 时命中项总是列出，depth 只在浏览整棵树时限制层级
+  const withinDepth = Boolean(filter.query) || filter.depth === undefined || level < filter.depth;
+  if (withinDepth && folders.length > 0) node.folders = folders;
+  if (!withinDepth && folders.length > 0) node.folderCount = folders.length;
+  if (requests.length > 0) node.requests = requests.map(ref => ({ id: ref.id, name: ref.name, method: ref.method }));
+  return node;
+}
+
+/** 完整内容：文件夹与请求按显示顺序；有 query 时过滤方式与精简树相同 */
+function describeContainer(container: Collection | Folder, path: string[], filter: TreeFilter, includeAll: boolean): ContainerItem[] {
+  const entries: Array<{ sortKey: number; item: ContainerItem }> = [];
+  (container.folders || []).forEach((folder, index) => {
+    const folderPath = [...path, folder.name];
+    const matched = includeAll || (Boolean(filter.query) && containerMatches(folder, folderPath, filter.query));
+    const items = describeContainer(folder, folderPath, filter, matched);
+    if (filter.query && !matched && items.length === 0) return;
+    entries.push({ sortKey: folder.order ?? (-1e9 + index), item: { type: 'folder', id: folder.id, name: folder.name, items } });
+  });
+  container.requests.forEach((ref, index) => {
+    if (filter.query && !includeAll && !requestMatches(ref, path, filter.query)) return;
+    entries.push({ sortKey: ref.order ?? (1e9 + index), item: { type: 'request', id: ref.id, name: ref.name, method: ref.method, url: ref.url } });
+  });
+  return entries.sort((a, b) => a.sortKey - b.sortKey).map(entry => entry.item);
+}
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
@@ -30,20 +99,6 @@ function closeDeletedRequests(requestIds: string[]) {
   requestIds.forEach(requestId => notifyItemDeleted('request', requestId));
 }
 
-function describeContainer(container: Collection | Folder): ContainerItem[] {
-  const entries: Array<{ sortKey: number; item: ContainerItem }> = [
-    ...(container.folders || []).map((folder, index) => ({
-      sortKey: folder.order ?? (-1e9 + index),
-      item: { type: 'folder' as const, id: folder.id, name: folder.name, items: describeContainer(folder) },
-    })),
-    ...container.requests.map((ref, index) => ({
-      sortKey: ref.order ?? (1e9 + index),
-      item: { type: 'request' as const, id: ref.id, name: ref.name, method: ref.method, url: ref.url },
-    })),
-  ];
-  return entries.sort((a, b) => a.sortKey - b.sortKey).map(entry => entry.item);
-}
-
 function describeLocation(located: ReturnType<typeof locateRequest>) {
   return {
     requestId: located.request.id,
@@ -55,14 +110,28 @@ function describeLocation(located: ReturnType<typeof locateRequest>) {
 }
 
 export const collectionHandlers: Record<string, McpToolHandler> = {
-  async list_collections() {
+  async list_collections(args) {
+    const view = parseView(args.view, 'summary');
+    const filter: TreeFilter = {
+      query: optionalString(args.query, 'query')?.trim() ?? '',
+      depth: optionalPositiveInteger(args.depth, 'depth'),
+    };
+    const collectionId = optionalString(args.collectionId, 'collectionId');
+    const collections = collectionId ? [requireCollection(collectionId)] : useCollectionsStore().collections;
+    if (view === 'summary') {
+      return {
+        collections: collections
+          .map(collection => summarizeContainer(collection, [collection.name], 0, filter, false))
+          .filter((node): node is SummaryNode => node !== null),
+      };
+    }
     return {
-      collections: useCollectionsStore().collections.map(collection => ({
-        id: collection.id,
-        name: collection.name,
-        description: collection.description || undefined,
-        items: describeContainer(collection),
-      })),
+      collections: collections.flatMap(collection => {
+        const matched = !filter.query || containerMatches(collection, [collection.name], filter.query);
+        const items = describeContainer(collection, [collection.name], filter, matched && Boolean(filter.query));
+        if (filter.query && !matched && items.length === 0) return [];
+        return [{ id: collection.id, name: collection.name, description: collection.description || undefined, items }];
+      }),
     };
   },
 
@@ -70,6 +139,7 @@ export const collectionHandlers: Record<string, McpToolHandler> = {
     const query = optionalString(args.query, 'query')?.trim() ?? '';
     const method = optionalString(args.method, 'method')?.trim().toUpperCase();
     const collectionId = optionalString(args.collectionId, 'collectionId');
+    const view = parseView(args.view, 'summary');
     if (!query && !method && !collectionId) fail('Pass query, method and/or collectionId');
     if (method && !HTTP_METHODS.includes(method as typeof HTTP_METHODS[number])) {
       fail(`method must be one of ${HTTP_METHODS.join(', ')}`);
@@ -78,19 +148,24 @@ export const collectionHandlers: Record<string, McpToolHandler> = {
     if (!Number.isInteger(limit) || limit < 1 || limit > MAX_SEARCH_LIMIT) fail(`limit must be an integer between 1 and ${MAX_SEARCH_LIMIT}`);
 
     const collections = collectionId ? [requireCollection(collectionId)] : useCollectionsStore().collections;
-    const matches = searchRequestReferences(collections, query)
+    const all = searchRequestReferences(collections, '')
       .filter(match => !method || match.request.method.toUpperCase() === method);
+    const matches = query
+      ? fuzzyFilter(all, query, match => ({ name: match.request.name, path: match.path.join(' / '), extra: [match.request.url] })).map(entry => entry.item)
+      : all;
     return {
       total: matches.length,
-      requests: matches.slice(0, limit).map(match => ({
-        requestId: match.request.id,
-        name: match.request.name,
-        method: match.request.method,
-        url: match.request.url,
-        collectionId: match.collectionId,
-        folderId: match.folderId,
-        path: match.path.join(' / '),
-      })),
+      requests: matches.slice(0, limit).map(match => (view === 'summary'
+        ? { requestId: match.request.id, name: match.request.name, method: match.request.method, path: match.path.join(' / ') }
+        : {
+          requestId: match.request.id,
+          name: match.request.name,
+          method: match.request.method,
+          url: match.request.url,
+          collectionId: match.collectionId,
+          folderId: match.folderId,
+          path: match.path.join(' / '),
+        })),
     };
   },
 

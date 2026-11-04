@@ -7,41 +7,55 @@ import { generateId } from '@/utils/id-generator';
 import { listWorkflowPlacements } from '@/utils/workflowTree';
 import { notifyItemDeleted } from '@/composables/useDeletedItems';
 import { requireWorkflow } from '../lookups';
-import { fail, requireString, describeLog, confirmOrThrow } from '../shared';
+import { fail, requireString, describeLog, confirmOrThrow, optionalString, parseView } from '../shared';
 import { MAX_LOG_ENTRIES, type McpToolHandler } from '../types';
-import { buildWorkflowSteps, describeStep, countSteps } from '../workflowSteps';
+import { buildWorkflowSteps, describeStep, countSteps, outlineStep } from '../workflowSteps';
+import { createResolver, resolvedNotes, resolveWorkflow } from '../resolve';
+import { fuzzyFilter } from '@/utils/fuzzyMatch';
 
 export const workflowHandlers: Record<string, McpToolHandler> = {
-  async list_workflows() {
+  async list_workflows(args) {
     const store = useWorkflowsStore();
+    const view = parseView(args.view, 'summary');
+    const query = optionalString(args.query, 'query')?.trim() ?? '';
     const workflowsById = new Map(store.workflows.map(workflow => [workflow.id, workflow]));
+    // 与侧边栏的顺序一致；有 query 时按匹配程度排序
+    const placements = listWorkflowPlacements(store.layout).flatMap(({ id, folderPath }) => {
+      const workflow = workflowsById.get(id);
+      return workflow ? [{ workflow, folderPath }] : [];
+    });
+    const matched = query
+      ? fuzzyFilter(placements, query, ({ workflow, folderPath }) => ({ name: workflow.name, path: folderPath.join(' / ') })).map(entry => entry.item)
+      : placements;
     return {
-      // 与侧边栏的顺序一致
-      workflows: listWorkflowPlacements(store.layout).flatMap(({ id, folderPath }) => {
-        const workflow = workflowsById.get(id);
-        if (!workflow) return [];
-        return [{
+      workflows: matched.map(({ workflow, folderPath }) => {
+        if (view === 'summary') return { id: workflow.id, name: workflow.name, folderPath };
+        return {
           id: workflow.id,
           name: workflow.name,
           folderPath,
           stepCount: countSteps(workflow.steps),
           updatedAt: workflow.updatedAt,
           hasUnsavedEdits: Boolean(store.getWorkflowDraft(workflow.id)),
-        }];
+        };
       }),
     };
   },
 
   async get_workflow(args, context) {
     const store = useWorkflowsStore();
-    const saved = requireWorkflow(requireString(args, 'workflowId'));
+    const view = parseView(args.view, 'full');
+    const resolver = createResolver(context, 'get_workflow');
+    const saved = await resolveWorkflow(resolver, args);
     const draft = store.getWorkflowDraft(saved.id);
     const workflow = draft || saved;
     return {
       id: workflow.id,
       name: workflow.name,
       hasUnsavedEdits: Boolean(draft),
-      steps: workflow.steps.map(step => describeStep(step, context.revealSecrets())),
+      stepCount: countSteps(workflow.steps),
+      steps: workflow.steps.map(step => (view === 'summary' ? outlineStep(step) : describeStep(step, context.revealSecrets()))),
+      ...resolvedNotes(resolver),
     };
   },
 
@@ -108,7 +122,8 @@ export const workflowHandlers: Record<string, McpToolHandler> = {
 
   async run_workflow(args, context) {
     const store = useWorkflowsStore();
-    const saved = requireWorkflow(requireString(args, 'workflowId'));
+    const resolver = createResolver(context, 'run_workflow');
+    const saved = await resolveWorkflow(resolver, args);
     if (store.isRunning) fail('Another workflow is running in ApiKit. Try again when it finishes.');
     // 与界面一致：有未保存的修改时运行修改后的版本
     const workflow = store.getWorkflowDraft(saved.id) || saved;
@@ -132,6 +147,7 @@ export const workflowHandlers: Record<string, McpToolHandler> = {
       usedUnsavedEdits: workflow !== saved,
       logs: logs.slice(0, MAX_LOG_ENTRIES).map(describeLog),
       truncatedLogs: Math.max(0, logs.length - MAX_LOG_ENTRIES),
+      ...resolvedNotes(resolver),
     };
   },
 };

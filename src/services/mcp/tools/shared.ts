@@ -125,3 +125,22 @@ export async function confirmOrThrow(context: McpToolContext, request: McpConfir
   const allowed = await context.confirm(request);
   if (!allowed) fail('The user declined this action');
 }
+
+export type McpView = 'summary' | 'full';
+
+/** view 参数：summary 只返回用于选择的字段，full 返回完整内容 */
+export function parseView(value: unknown, fallback: McpView): McpView {
+  if (value === undefined || value === null) return fallback;
+  if (value !== 'summary' && value !== 'full') fail('view must be summary or full');
+  return value;
+}
+
+/** 正整数参数；缺省时返回 undefined */
+export function optionalPositiveInteger(value: unknown, label: string, max?: number): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 1 || (max !== undefined && number > max)) {
+    fail(max === undefined ? `${label} must be a positive integer` : `${label} must be an integer between 1 and ${max}`);
+  }
+  return number;
+}
