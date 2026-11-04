@@ -59,8 +59,13 @@ export interface PreparedUpdate {
   stage: boolean;
 }
 
-/** 准备修改已保存的请求：按设置在未保存的修改上修改，或直接保存（有未保存的修改时报错） */
-export async function prepareRequestUpdate(requestId: string, fields: Record<string, unknown>, stage: boolean): Promise<PreparedUpdate> {
+/** 准备修改已保存的请求：按设置在未保存的修改上修改，或直接保存（有未保存的修改时报错）。
+ * fields 也可以是函数，根据当前内容计算要修改的字段，例如在现有 header 上增删 */
+export async function prepareRequestUpdate(
+  requestId: string,
+  fields: Record<string, unknown> | ((current: Request) => Record<string, unknown>),
+  stage: boolean,
+): Promise<PreparedUpdate> {
   const requests = useRequestsStore();
   if (!savedRequestExists(requestId)) fail(`Request not found: ${requestId}`);
   if (!stage && requests.hasRequestDraft(requestId)) {
@@ -68,9 +73,10 @@ export async function prepareRequestUpdate(requestId: string, fields: Record<str
   }
   const saved = await requests.loadSavedRequest(requestId);
   if (!saved) fail(`Request not found: ${requestId}`);
-  if (!REQUEST_FIELD_KEYS.some(key => fields[key] !== undefined)) fail('Pass at least one field to update');
   const base = stage ? (requests.getRequestDraft(requestId) || saved) : saved;
-  return { request: applyRequestFields(fields, base), stage };
+  const changes = typeof fields === 'function' ? fields(base) : fields;
+  if (!REQUEST_FIELD_KEYS.some(key => changes[key] !== undefined)) fail('Pass at least one field to update');
+  return { request: applyRequestFields(changes, base), stage };
 }
 
 export async function commitRequestUpdate({ request, stage }: PreparedUpdate) {

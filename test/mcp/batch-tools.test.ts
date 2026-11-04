@@ -207,4 +207,54 @@ describe('MCP batch tools', () => {
     expect(mockStorageService.requests.get(id)!.url).toBe('/orders');
     expect(useRequestsStore().getRequestDraft(id)?.url).toBe('/orders/v2');
   });
+
+  it('MCP-BATCH-005 updates several requests with different or shared changes', async () => {
+    const collection = await call('create_collection', { name: 'BPP' });
+    const created = await call('create_requests', {
+      collectionId: collection.id,
+      folderPath: ['Guard'],
+      defaults: { headers: [{ key: 'Authorization', value: 'Bearer old' }, { key: 'X-Debug', value: '1' }] },
+      requests: [{ name: 'Guard list', url: '/guards' }, { name: 'Guard get', url: '/guards/1' }, { name: 'Health', url: '/health' }],
+    });
+    const [list, get, health] = created.requests.map((r: any) => r.id);
+    const other = (await call('create_requests', { collectionId: collection.id, requests: [{ name: 'Root', url: '/' }] })).requests[0].id;
+
+    const perItem = await call('update_requests', { updates: [{ requestId: list, url: '/v2/guards' }, { request: 'get', method: 'DELETE' }] });
+    expect(perItem).toMatchObject({ updated: 2, requests: [{ id: list }, { id: get, method: 'DELETE' }], resolved: [{ field: 'updates[1].request', matched: 'GET Guard get · BPP / Guard' }] });
+    expect(mockStorageService.requests.get(list)!.url).toBe('/v2/guards');
+
+    // 同一个改动作用于文件夹中按关键词选出的请求
+    const shared = await call('update_requests', {
+      collection: 'BPP', folderPath: ['Guard'], query: 'guards',
+      mergeHeaders: [{ key: 'authorization', value: 'Bearer {{token}}' }, { key: 'X-Trace', value: 'on' }],
+      removeHeaders: ['x-debug'],
+      set: { settings: { verifySsl: false } },
+    });
+    expect(shared.requests.map((r: any) => r.id)).toEqual([list, get]);
+    for (const id of [list, get]) {
+      const stored = mockStorageService.requests.get(id)!;
+      expect(stored.headers.map((h: any) => [h.key, h.value])).toEqual([['authorization', 'Bearer {{token}}'], ['X-Trace', 'on']]);
+      expect(stored.settings).toMatchObject({ verifySsl: false });
+    }
+    expect(mockStorageService.requests.get(health)!.headers.map((h: any) => h.key)).toEqual(['Authorization', 'X-Debug']);
+    expect(mockStorageService.requests.get(other)!.headers).toEqual([]);
+
+    const byIds = await call('update_requests', { requestIds: [health, 'Root'], set: { method: 'HEAD' } });
+    expect(byIds.requests.map((r: any) => [r.id, r.method])).toEqual([[health, 'HEAD'], [other, 'HEAD']]);
+
+    // 任何一项有误都不写入
+    await useRequestsStore().setRequestDraft({ ...mockStorageService.requests.get(get)!, name: 'Draft' });
+    expect((await call('update_requests', { updates: [{ requestId: list, url: '/v3' }, { requestId: get, url: '/v3' }] })).error)
+      .toBe('updates[1]: This request has unsaved edits in ApiKit. Ask the user to save or discard them first.');
+    expect(mockStorageService.requests.get(list)!.url).toBe('/v2/guards');
+    expect((await call('update_requests', { updates: [{ requestId: list, method: 'FETCH' }] })).error).toMatch(/^updates\[0\]: method must be one of/);
+    expect((await call('update_requests', { updates: [{ requestId: 'missing', url: '/' }] })).error).toBe('updates[0]: Request not found: missing');
+    expect((await call('update_requests', { updates: [{ requestId: list }] })).error).toBe('updates[0]: Pass at least one field to update');
+    expect((await call('update_requests', { updates: [{ requestId: list, url: '/a' }, { requestId: list, url: '/b' }] })).error).toBe('The same request appears more than once in updates');
+    expect((await call('update_requests', { collectionId: collection.id })).error).toBe('Pass set, mergeHeaders and/or removeHeaders');
+    expect((await call('update_requests', { collectionId: collection.id, set: { name: 'x' } })).error).toContain('set.name would give every request the same name');
+    expect((await call('update_requests', { collectionId: collection.id, query: 'nothing', set: { method: 'GET' } })).error).toBe('No requests in BPP match "nothing"');
+    expect((await call('update_requests', { updates: [{ requestId: list, url: '/' }], set: { method: 'GET' } })).error).toContain('Pass either updates');
+  });
 });
+

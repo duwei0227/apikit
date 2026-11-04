@@ -56,6 +56,7 @@ const folderPathProperty = {
   },
 };
 const { name: _name, url: _url, ...sharedRequestFields } = requestFieldProperties;
+const requestRefsProperty = { type: 'array', items: { type: 'string' }, description: 'Request ids or names' };
 
 /** 按名称定位时的统一说明 */
 export const NAME_NOTE = 'A name with exactly one exact match is used directly; a single partial match is used and reported in resolved. If several match, ApiKit asks the user to choose, or returns error "ambiguous" with candidates: then ask the user and call again with the chosen id.';
@@ -317,6 +318,33 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     kind: 'write',
     description: 'Change fields of a saved request. Omitted fields stay unchanged; supplied list fields such as headers and params replace the whole list, while settings merge with the existing settings. For auth credentials and sensitive header values, "<hidden>" keeps the existing secret. Depending on the ApiKit settings, the change is either kept as unsaved edits that the user reviews and saves in ApiKit (the result then has unsavedEdits: true; tell the user), or saved directly, which fails if the user has unsaved edits to the request. Unsaved edits are changed on top of the existing ones.',
     inputSchema: objectSchema({ requestId: { type: 'string' }, ...requestFieldProperties }, ['requestId']),
+  },
+  {
+    name: 'update_requests',
+    title: 'Update requests',
+    kind: 'write',
+    mayConfirm: true,
+    description: `Change up to ${MAX_BATCH_REQUESTS} saved requests in one call; prefer this over repeated update_request calls. Either pass updates, a list of { requestId or request (name), ...fields } with different changes per request, or select requests with requestIds (ids or names) or collection/collectionId plus optional folderPath/folderId and query, and give the same change to all of them: set (request fields; lists such as headers replace the whole list), mergeHeaders (add or replace headers by key) and removeHeaders (header names). Field rules and unsaved edits work as in update_request. All requests are checked before anything is saved. ${NAME_NOTE}`,
+    inputSchema: objectSchema({
+      updates: {
+        type: 'array',
+        maxItems: MAX_BATCH_REQUESTS,
+        items: {
+          type: 'object',
+          properties: { requestId: { type: 'string' }, request: { type: 'string', description: 'Request name, optionally with words of its folder' }, ...requestFieldProperties },
+          additionalProperties: false,
+        },
+      },
+      requestIds: requestRefsProperty,
+      collectionId: { type: 'string' },
+      collection: collectionNameProperty,
+      folderId: { type: 'string' },
+      folderPath: folderPathProperty,
+      query: { type: 'string', description: 'Only requests in the selected collection or folder whose name, URL or path matches these keywords' },
+      set: { type: 'object', description: 'Request fields to set on every selected request (not name)', properties: sharedRequestFields, additionalProperties: false },
+      mergeHeaders: { type: 'array', description: 'Headers to add, or replace when a header with the same key exists', items: { type: 'object', properties: { key: { type: 'string' }, value: { type: 'string' }, enabled: { type: 'boolean' } }, required: ['key'] } },
+      removeHeaders: { type: 'array', items: { type: 'string' }, description: 'Header names to remove (case-insensitive)' },
+    }),
   },
   {
     name: 'create_workflow',

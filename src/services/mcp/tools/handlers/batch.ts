@@ -1,19 +1,32 @@
 // 批量操作：一次调用新建或修改多个请求，减少与 AI 的往返
 
 import type { Collection, Folder, Request, RequestReference } from '@/types/models';
-import { requireRequest } from '../lookups';
+import type { RequestSearchResult } from '@/utils/collectionTree';
+import { fuzzyFilter } from '@/utils/fuzzyMatch';
+import { locateRequest, requireRequest } from '../lookups';
 import { applyRequestFields } from '../requestFields';
 import {
   commitRequestUpdate,
   copyRequest,
+  mergeKeyValues,
   mergeWithDefaults,
   pickRequestFields,
   type PreparedUpdate,
   prepareRequestReplace,
+  prepareRequestUpdate,
   requestFromCurlCommand,
   saveNewRequest,
 } from '../requestWrites';
-import { createMissingFolders, createResolver, resolveCollection, resolvedNotes, resolveFolderTarget, resolveRequest } from '../resolve';
+import {
+  createMissingFolders,
+  createResolver,
+  requestLabel,
+  requestsInside,
+  resolveCollection,
+  resolvedNotes,
+  resolveFolderTarget,
+  resolveRequest,
+} from '../resolve';
 import { fail, isOneOf, isRecord, optionalString } from '../shared';
 import { MAX_BATCH_REQUESTS, McpAmbiguityError, McpToolError, type McpToolHandler } from '../types';
 
@@ -46,7 +59,7 @@ async function buildRequest(
   item: Record<string, unknown>,
   label: string,
   defaults: Record<string, unknown>,
-  resolver: ReturnType<typeof createResolver>,
+  resolver: Resolver,
 ): Promise<{ request: Request; warnings: string[] }> {
   const fields = pickRequestFields(item);
   const name = optionalString(item.name, 'name')?.trim();
@@ -71,6 +84,59 @@ async function buildRequest(
   if (!name) fail('name is required (or pass curl or copyFrom)');
   if (typeof merged.url !== 'string' || !merged.url.trim()) fail('url is required');
   return { request: applyRequestFields(merged), warnings: [] };
+}
+
+type Resolver = ReturnType<typeof createResolver>;
+
+const SELECTION_KEYS = ['requestIds', 'collectionId', 'collection', 'folderId', 'folderPath', 'query'];
+
+/** 批量操作的请求范围：requestIds（id 或名称），或集合加可选的文件夹和关键词 */
+export async function selectRequests(resolver: Resolver, args: Record<string, unknown>, max: number): Promise<RequestSearchResult[]> {
+  let selected: RequestSearchResult[];
+  if (args.requestIds !== undefined) {
+    if (['collectionId', 'collection', 'folderId', 'folderPath', 'query'].some(key => args[key] !== undefined)) {
+      fail('Pass either requestIds, or collection with optional folderPath and query');
+    }
+    const refs = requireStringList(args.requestIds, 'requestIds', max);
+    selected = [];
+    for (const [index, ref] of refs.entries()) selected.push(await resolveRequest(resolver, `requestIds[${index}]`, ref));
+  } else {
+    const collection = await resolveCollection(resolver, args);
+    const target = await resolveFolderTarget(resolver, collection, args, false);
+    const inside = requestsInside(collection, target.folder?.id);
+    const query = optionalString(args.query, 'query')?.trim();
+    selected = query
+      ? fuzzyFilter(inside, query, match => ({ name: match.request.name, path: match.path.join(' / '), extra: [match.request.url] })).map(entry => entry.item)
+      : inside;
+    if (selected.length === 0) fail(`No requests in ${target.path.join(' / ')}${query ? ` match "${query}"` : ''}`);
+  }
+  const unique = [...new Map(selected.map(match => [match.request.id, match])).values()];
+  if (unique.length > max) fail(`${unique.length} requests match; at most ${max} can be handled in one call. Narrow the folder or query.`);
+  return unique;
+}
+
+function requireStringList(value: unknown, label: string, max: number): string[] {
+  if (!Array.isArray(value) || value.length === 0) fail(`${label} must be a non-empty array`);
+  if (value.length > max) fail(`${label} can have at most ${max} items; split them into several calls`);
+  return value.map((item, index) => (typeof item === 'string' && item.trim() ? item.trim() : fail(`${label}[${index}] must be a request id or name`)));
+}
+
+/** 批量修改的内容：set 中的字段，加上在现有 header 上合并或删除 */
+function bulkChange(args: Record<string, unknown>): (current: Request) => Record<string, unknown> {
+  const set = args.set === undefined ? {} : (isRecord(args.set) ? pickRequestFields(args.set) : fail('set must be an object of request fields'));
+  if (set.name !== undefined) fail('set.name would give every request the same name; use updates to rename requests');
+  const mergeHeaders = args.mergeHeaders;
+  if (mergeHeaders !== undefined && !Array.isArray(mergeHeaders)) fail('mergeHeaders must be an array of { key, value }');
+  const removeHeaders = args.removeHeaders === undefined ? [] : requireStringList(args.removeHeaders, 'removeHeaders', 100).map(key => key.toLowerCase());
+  if (Object.keys(set).length === 0 && mergeHeaders === undefined && removeHeaders.length === 0) {
+    fail('Pass set, mergeHeaders and/or removeHeaders');
+  }
+  return current => {
+    if (mergeHeaders === undefined && removeHeaders.length === 0) return set;
+    const base = set.headers ?? current.headers.filter(header => header.key);
+    const merged = mergeKeyValues(base, mergeHeaders ?? [], true) as Array<{ key?: unknown }>;
+    return { ...set, headers: merged.filter(header => !removeHeaders.includes(String(header.key).toLowerCase())) };
+  };
 }
 
 export const batchHandlers: Record<string, McpToolHandler> = {
@@ -136,5 +202,44 @@ export const batchHandlers: Record<string, McpToolHandler> = {
       ...(warnings.length > 0 ? { warnings } : {}),
       ...resolvedNotes(resolver),
     };
+  },
+
+  async update_requests(args, context) {
+    const resolver = createResolver(context, 'update_requests');
+    const stage = context.stageEdits();
+    const bulkKeys = ['set', 'mergeHeaders', 'removeHeaders'];
+    const jobs: Array<{ label: string; requestId: string; fields: Record<string, unknown> | ((current: Request) => Record<string, unknown>) }> = [];
+
+    if (args.updates !== undefined) {
+      if ([...SELECTION_KEYS, ...bulkKeys].some(key => args[key] !== undefined)) {
+        fail('Pass either updates, or a selection (requestIds or collection) with set, mergeHeaders or removeHeaders');
+      }
+      const items = requireItems(args.updates, 'updates', MAX_BATCH_REQUESTS);
+      for (const [index, item] of items.entries()) {
+        const label = `updates[${index}]`;
+        const requestId = await withItemLabel(label, async () => {
+          if (typeof item.requestId === 'string' && item.requestId) return locateRequest(item.requestId).request.id;
+          if (item.request === undefined) fail('pass requestId or request (its name)');
+          return (await resolveRequest(resolver, `${label}.request`, item.request)).request.id;
+        });
+        jobs.push({ label, requestId, fields: pickRequestFields(item) });
+      }
+    } else {
+      const change = bulkChange(args);
+      const selected = await selectRequests(resolver, args, MAX_BATCH_REQUESTS);
+      selected.forEach(match => jobs.push({ label: requestLabel(match), requestId: match.request.id, fields: change }));
+    }
+    const ids = jobs.map(job => job.requestId);
+    if (new Set(ids).size !== ids.length) fail('The same request appears more than once in updates');
+
+    // 先全部校验，任何一项有误都不写入
+    const prepared: PreparedUpdate[] = [];
+    for (const job of jobs) prepared.push(await withItemLabel(job.label, () => prepareRequestUpdate(job.requestId, job.fields, stage)));
+    const results = [];
+    for (const item of prepared) {
+      const saved = await commitRequestUpdate(item);
+      results.push({ id: saved.id, name: saved.name, method: saved.method, ...(stage ? { unsavedEdits: true } : {}) });
+    }
+    return { updated: results.length, requests: results, ...resolvedNotes(resolver) };
   },
 };

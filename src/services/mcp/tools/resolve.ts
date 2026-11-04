@@ -242,7 +242,7 @@ export function folderNamePath(collection: Collection, folderId: string): string
 const requestTarget = (match: RequestSearchResult): FuzzyTarget => ({
   name: match.request.name,
   path: match.path.join(' / '),
-  extra: [match.request.url, match.request.method],
+  extra: [match.request.url],
 });
 
 export const requestLabel = (match: RequestSearchResult) => `${match.request.method} ${match.request.name} · ${match.path.join(' / ')}`;
