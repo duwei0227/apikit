@@ -7,7 +7,7 @@
 3. 明确需求确认：需要我确认或选择时，使用问题卡片/AskUserQuestion 提问，不在正文中罗列待确认项。
 4. 方案先确认再实施：新功能、UI 改动、较大范围重构必须先给出方案，并附上界面稿/交互说明；得到确认后再改代码，不要“先写后问”。
 5. 代码与发布必须保持一致：任何可感知的功能改动、修复、文档更新，都应同步反映到对应代码、README、文档和版本日志中。
-6. 不要在仓库里留下 AI 相关署名：不得在提交信息、tag、文件内容、注释、文档里写入 AI 名称、会话信息���Co-authored-by、自动生成说明等内容；所有自动化提交/打 tag 必须使用我的凭据而不是默认 GitHub Actions 用户。
+6. 不要在仓库里留下 AI 相关署名：不得在提交信息、tag、文件内容、注释、文档里写入 AI 名称、会话信息���Co-authored-by、自动生成说明等内容；所有自动化提交必须使用我的凭据而不是默认 GitHub Actions 用户；唯一例外是发布时由 Release 工作流用 `GITHUB_TOKEN` 创建 tag 和 Release（见“发布新版本”）。
 
 ## 项目概览
 
@@ -117,8 +117,8 @@
    - 触发后确认运行的 `head_sha` 是发布提交，并跟踪到运行成功。
    - 不要再执行 `git push origin vX.Y.Z`，也不要混用多种发布方式，否则可能重复发布。
 7. 保护身份与凭据：
-   - 自动化提交/打 tag 必须使用我的 PAT 等个人凭据，而不是默认 `GITHUB_TOKEN`。
-   - 所有提交、tag 和发布动作都必须通过我的 Git 配置和授权链完成，不能以默认 Actions 用户或其他账号身份执行。
+   - 发布时的 tag 和 Release 由手动触发的 Release 工作流使用默认 `GITHUB_TOKEN` 创建，这是认可的方式；触发者必须是我的账号。
+   - 除此之外，所有提交都必须通过我的 Git 配置和授权链完成，Author 和 Committer 为我的身份，不能以默认 Actions 用户或其他账号身份提交。
 
 ## 安全与身份强制要求
 
@@ -140,7 +140,7 @@
   git tag -s vX.Y.Z -m "chore: 发布 vX.Y.Z"
   ```
   这样可以增强可验证性，并让 GitHub 能识别签名已验证状态。
-- 自动化脚本不得使用默认 GitHub Actions 用户；必须用我的 PAT 作为远程 push 的凭据，并在脚本中设置：
+- 自动化脚本向仓库提交代码时不得使用默认 GitHub Actions 用户，必须用我的 PAT 作为远程 push 的凭据（Release 工作流用 `GITHUB_TOKEN` 创建 tag 和 Release 除外），并在脚本中设置：
   ```bash
   git config user.name "duwei0227"
   git config user.email "duwei0227@gmail.com"
