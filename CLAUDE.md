@@ -112,12 +112,10 @@
 3. 校验配置：若本版本修改了 `tauri.conf.json`，先按“Tauri 配置校验”执行校验。
 4. 本地检查：按“提交前检查”全部通过后再提交；发布流程的 `verify` 任务也会再次执行类型检查和单元测试。
 5. 提交并推送：提交说明为 `chore: 发布 vX.Y.Z`，推送到 `main`。
-6. 创建 tag 并发布：
-   - 推荐在本地终端直接执行：
-     ```bash
-     git tag vX.Y.Z && git push origin vX.Y.Z
-     ```
-   - 不要混用多种发布方式，否则可能重复发布。
+6. 创建 tag 并发布：统一手动触发 `Release Desktop App` 工作流（`release.yml` 的 `workflow_dispatch`，ref 选 `main`），不再手动推送 tag。
+   - 触发前确认 `origin/main` 的最新提交就是 `chore: 发布 vX.Y.Z`：工作流从 `package.json` 读取版本号，并在触发时的提交上创建 `vX.Y.Z` tag 和 Release。
+   - 触发后确认运行的 `head_sha` 是发布提交，并跟踪到运行成功。
+   - 不要再执行 `git push origin vX.Y.Z`，也不要混用多种发布方式，否则可能重复发布。
 7. 保护身份与凭据：
    - 自动化提交/打 tag 必须使用我的 PAT 等个人凭据，而不是默认 `GITHUB_TOKEN`。
    - 所有提交、tag 和发布动作都必须通过我的 Git 配置和授权链完成，不能以默认 Actions 用户或其他账号身份执行。
