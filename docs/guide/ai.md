@@ -67,7 +67,7 @@ AI 每调用一次工具，都要重新读一遍上下文再生成参数，耗�
 
 - **按关键词查找**：`list_collections`、`search_requests`、`list_workflows` 接受 `query`，按空格分成多个关键词，全部出现在名称、URL 或所在路径中才算匹配，不区分大小写，可以只写一部分，例如 `bpp 优化` 能找到 “BPP / 服务优化”。结果按匹配程度排序。
 - **精简视图**：这三个工具默认返回 `view: "summary"`：`list_collections` 只返回目录树和每个目录的请求数（可用 `depth` 限制层级），`search_requests` 只返回名称、方法和路径。需要完整内容时传 `view: "full"`。`get_request`、`get_workflow` 默认返回完整内容，传 `view: "summary"` 只返回请求的 header 名、参数名，或 Workflow 的步骤大纲。
-- **用名称代替 id**：批量工具、`get_request`、`get_workflow`、`run_workflow` 可以用 `collection`、`folderPath`、`request`、`workflow` 按名称定位（可只写一部分）。只有一项匹配时直接使用，按部分名称匹配到的会列在结果的 `resolved` 中；匹配到多项时，AI 工具支持 MCP elicitation 就在其中请你选择，否则返回 `ambiguous` 和候选列表，由 AI 问你后再调用。`folderPath` 中某一级没有同名目录但有相近的目录时，也会请你在使用已有目录和新建之间选择。
+- **用名称代替 id**：批量工具、`get_request`、`get_workflow`、`run_workflow` 可以用 `collection`、`folderPath`、`request`、`requestIds`、`workflow` 按名称定位（可只写一部分），其他工具仍需传 id。有完全同名（不区分大小写）的项时直接使用它；否则只有一项匹配时直接使用，按部分名称匹配到的会列在结果的 `resolved` 中；匹配到多项时，AI 工具支持 MCP elicitation 就在其中请你选择，否则返回 `ambiguous` 和候选列表，由 AI 问你后再调用。`folderPath` 中某一级没有同名目录但有相近的目录时，也会请你在使用已有目录和新建之间选择。
 - **批量写入**：`create_requests` 一次最多新建 50 个请求，`folderPath` 中不存在的目录自动创建；每项可以是请求字段、`curl` 或 `copyFrom`（复制已有请求并修改部分字段），`defaults` 填写公共字段（`baseUrl` 拼在相对地址前，headers 和 params 按名称合并）；`onExists` 决定同名请求跳过（默认）、替换、报错还是重复新建。`update_requests` 可分别修改多个请求，也可对选中的请求统一 `set` 字段、`mergeHeaders` 或 `removeHeaders`。任何一项有误都不会写入；写操作只返回摘要。
 - **批量运行**：`run_requests` 按 id、名称或目录选出最多 30 个请求，确认一次后并行发送（`maxConcurrency` 默认 4），每个请求返回是否通过、状态码、耗时、失败的断言和响应摘要。
 - **导入文档**：`import_spec` 传 `filePath`（本机 `.json`、`.yaml`、`.yml` 文件的绝对路径）时由 ApiKit 读取文件，传 `url` 时由 ApiKit 下载文档，AI 都不必把整份文档写进参数；可导入为新集合，也可放进已有集合的目录。

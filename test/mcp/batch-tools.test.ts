@@ -393,5 +393,44 @@ describe('MCP batch tools', () => {
     vi.mocked(invoke).mockRejectedValueOnce('filePath must be a .json, .yaml or .yml file');
     expect((await call('import_spec', { filePath: '/etc/passwd' })).error).toBe('filePath must be a .json, .yaml or .yml file');
   });
+
+  it('MCP-BATCH-010 follows the item rules described in create_requests', async () => {
+    const collection = await call('create_collection', { name: 'C' });
+    const source = (await call('create_requests', { collectionId: collection.id, requests: [{ name: 'Source', method: 'PUT', url: '/s', tests: { statusCodeTests: [{ expectedValue: '204' }] } }] })).requests[0].id;
+
+    const result = await call('create_requests', {
+      collectionId: collection.id,
+      defaults: { baseUrl: 'https://api.example.com', method: 'POST' },
+      requests: [
+        { name: 'Templated', url: '{{host}}/x' },
+        { name: 'Relative', url: 'y', method: 'GET' },
+        { curl: 'curl https://c.example.com/z', name: 'From curl', method: 'PATCH' },
+        { copyFrom: source },
+      ],
+    });
+    const [templated, relative, curl, copy] = result.requests.map((r: any) => mockStorageService.requests.get(r.id)!);
+    // 以 {{ 开头或带协议的地址不拼接 baseUrl；单项字段优先于 defaults
+    expect([templated.url, templated.method]).toEqual(['{{host}}/x', 'POST']);
+    expect([relative.url, relative.method]).toEqual(['https://api.example.com/y', 'GET']);
+    // defaults 不作用于 curl 和 copyFrom 项；curl 项的其他字段覆盖命令中的值
+    expect([curl.name, curl.method, curl.url]).toEqual(['From curl', 'PATCH', 'https://c.example.com/z']);
+    expect([copy.name, copy.method, copy.url]).toEqual(['Source copy', 'PUT', '/s']);
+
+    // update 用单项内容整体替换，省略的字段恢复默认值
+    await call('create_requests', { collectionId: collection.id, onExists: 'update', requests: [{ name: 'Source', url: '/s2' }] });
+    const replaced = mockStorageService.requests.get(source)!;
+    expect([replaced.method, replaced.url, replaced.tests.statusCodeTests[0].expectedValue]).toEqual(['GET', '/s2', '200']);
+
+    // 同一次调用中名称不能重复，除非 onExists 为 create
+    expect((await call('create_requests', { collectionId: collection.id, requests: [{ name: 'Twin', url: '/a' }, { name: 'Twin', url: '/b' }] })).error)
+      .toBe('requests[1]: "Twin" appears more than once in requests');
+    expect((await call('create_requests', { collectionId: collection.id, onExists: 'create', requests: [{ name: 'Twin', url: '/a' }, { name: 'Twin', url: '/b' }] })).created).toBe(2);
+
+    // list_collections 的 query 命中文件夹时列出它的子文件夹，不列出其中的请求
+    const folder = await call('create_requests', { collectionId: collection.id, folderPath: ['Guard', 'Inner'], requests: [{ name: 'Ping', url: '/p' }] });
+    expect((await call('list_collections', { query: 'guard' })).collections[0].folders).toEqual([
+      { id: expect.any(String), name: 'Guard', requestCount: 1, folders: [{ id: folder.folderId, name: 'Inner', requestCount: 1 }] },
+    ]);
+  });
 });
 
