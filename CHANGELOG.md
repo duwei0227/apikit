@@ -8,7 +8,7 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
-## [Unreleased]
+## [0.5.5] - 2026-11-04
 
 ### Added
 - MCP: `create_requests` creates up to 50 requests in one call and creates missing folders on the way. Items can be request fields, a cURL command or a copy of a saved request; `defaults` holds shared fields such as a base URL and headers, and `onExists` decides what happens to requests whose name already exists.
@@ -19,7 +19,7 @@
 
 ### Changed
 - MCP: `list_collections`, `search_requests` and `list_workflows` match keywords against names, URLs and paths, and return compact results by default; pass `view: "full"` for everything. `get_request` and `get_workflow` can return a short outline. Tools that create or change a request return a summary instead of the whole request.
-- MCP: tool descriptions are shorter.
+- MCP: tool descriptions state more precisely which tool to use, how to pass each argument and what the result contains. The confirmation dialog shows each request on its own line when several are sent at once.
 
 ### 新增
 - MCP：`create_requests` 一次新建最多 50 个请求，并自动创建缺少的目录。每项可以是请求字段、cURL 命令或已有请求的副本；`defaults` 填写公共地址、header 等公共字段，`onExists` 决定同名请求如何处理。
@@ -30,7 +30,7 @@
 
 ### 变更
 - MCP：`list_collections`、`search_requests`、`list_workflows` 按关键词匹配名称、URL 和路径，默认返回精简结果，传 `view: "full"` 返回完整内容；`get_request`、`get_workflow` 可只返回大纲；新建和修改请求的工具只返回摘要，不再返回完整请求。
-- MCP：工具说明更简短。
+- MCP：工具说明更准确地写明该用哪个工具、各参数如何传以及返回哪些内容；一次发送多个请求时，确认框中每个请求单独一行显示。
 
 ## [0.5.4] - 2026-10-30
 
