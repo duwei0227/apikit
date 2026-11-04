@@ -60,11 +60,18 @@ const folderPathProperty = {
     ],
   },
 };
-const { name: _name, url: _url, ...sharedRequestFields } = requestFieldProperties;
+// 批量工具中请求字段出现两次（单项和公共字段），较大的子结构放进 $defs 只写一次
+const REFERENCED_FIELDS = ['params', 'headers', 'body', 'auth', 'tests', 'settings'] as const;
+const requestFieldDefs = Object.fromEntries(REFERENCED_FIELDS.map(key => [key, requestFieldProperties[key]]));
+const requestFieldRefs: Record<string, unknown> = Object.fromEntries(Object.entries(requestFieldProperties).map(([key, schema]) => [
+  key,
+  (REFERENCED_FIELDS as readonly string[]).includes(key) ? { $ref: `#/$defs/${key}` } : schema,
+]));
+const { name: _name, url: _url, ...sharedRequestFieldRefs } = requestFieldRefs;
 const requestRefsProperty = { type: 'array', items: { type: 'string' }, description: 'Request ids or names' };
 
 /** 按名称定位时的统一说明 */
-export const NAME_NOTE = 'A name with exactly one exact match is used directly; a single partial match is used and reported in resolved. If several match, ApiKit asks the user to choose, or returns error "ambiguous" with candidates: then ask the user and call again with the chosen id.';
+export const NAME_NOTE = 'Names may be partial: a single match is used (partial ones are listed in resolved); if several match, ApiKit asks the user, or returns error "ambiguous" with candidates, then ask the user and call again with the chosen id.';
 
 export const MCP_TOOLS: McpToolDefinition[] = [
   {
@@ -264,7 +271,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     name: 'create_request',
     title: 'Create request',
     kind: 'write',
-    description: 'Create a new request. Pass collectionId, optional folderId, and request fields directly as tool arguments (not inside a params wrapper). Defaults: method GET, no body, no auth, and a status code test expecting 200.',
+    description: 'Create one request; for several, use create_requests. Pass collectionId, optional folderId, and request fields directly as tool arguments (not inside a params wrapper). Defaults: method GET, no body, no auth, and a status code test expecting 200. Returns a summary; use get_request for details.',
     inputSchema: objectSchema({
       collectionId: { type: 'string' },
       folderId: { type: 'string' },
@@ -276,7 +283,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: 'Create requests',
     kind: 'write',
     mayConfirm: true,
-    description: `Create up to ${MAX_BATCH_REQUESTS} requests in one call; prefer this over repeated create_request or import_curl calls. Target: collectionId or collection (name), plus optional folderId or folderPath; folders in folderPath that do not exist are created. Each item is either request fields (name and url required), { curl, name? } or { copyFrom: <request id or name>, name, ...fields to change }. defaults holds fields shared by the field items: baseUrl is put in front of relative urls, headers and params are merged by key, other fields apply unless the item sets them. onExists decides what happens to an item whose name already exists in the target folder: skip (default), update (replace its content), error (change nothing) or create (add another). All items are checked before anything is saved. Returns a short summary per request; use get_request for details. ${NAME_NOTE}`,
+    description: `Create up to ${MAX_BATCH_REQUESTS} requests in one call (prefer over repeated create_request). Target: collectionId or collection, plus folderId or folderPath (missing folders are created). Each item: request fields (name and url required), { curl, name? }, or { copyFrom: <id or name>, name, ...changes }. defaults apply to field items: baseUrl prefixes relative urls, headers and params merge by key. onExists for a name already in the folder: skip (default), update, error or create. Nothing is saved if any item is invalid. Returns a summary per request. ${NAME_NOTE}`,
     inputSchema: objectSchema({
       collectionId: { type: 'string' },
       collection: collectionNameProperty,
@@ -285,7 +292,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       defaults: {
         type: 'object',
         description: 'Fields shared by the items that are given as request fields',
-        properties: { baseUrl: { type: 'string', description: 'For example {{baseUrl}}/api or https://api.example.com' }, ...sharedRequestFields },
+        properties: { baseUrl: { type: 'string', description: 'For example {{baseUrl}}/api or https://api.example.com' }, ...sharedRequestFieldRefs },
         additionalProperties: false,
       },
       onExists: { type: 'string', enum: ['skip', 'error', 'update', 'create'], description: 'Default skip' },
@@ -296,20 +303,20 @@ export const MCP_TOOLS: McpToolDefinition[] = [
         items: {
           type: 'object',
           properties: {
-            ...requestFieldProperties,
+            ...requestFieldRefs,
             curl: { type: 'string', description: 'A cURL command to import instead of fields' },
             copyFrom: { type: 'string', description: 'Id or name of a saved request to copy; the given fields change the copy' },
           },
           additionalProperties: false,
         },
       },
-    }, ['requests']),
+    }, ['requests'], { $defs: requestFieldDefs }),
   },
   {
     name: 'import_curl',
     title: 'Import cURL',
     kind: 'write',
-    description: 'Save a cURL command as a new request in a collection or folder, the same way as importing cURL in ApiKit: method, URL with query parameters, headers, body, basic or bearer auth and settings such as -k and -L. The name defaults to the method and path. warnings lists cURL options that were ignored.',
+    description: 'Save one cURL command as a new request (for several, use create_requests with curl items) in a collection or folder, the same way as importing cURL in ApiKit: method, URL with query parameters, headers, body, basic or bearer auth and settings such as -k and -L. The name defaults to the method and path. warnings lists cURL options that were ignored.',
     inputSchema: objectSchema({
       curl: { type: 'string', description: 'The full cURL command, for example curl -X POST https://api.example.com/orders -H "Content-Type: application/json" -d \'{"qty":1}\'' },
       collectionId: { type: 'string' },
@@ -322,7 +329,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: 'Import API document',
     kind: 'write',
     mayConfirm: true,
-    description: `Import an OpenAPI 3 / Swagger 2 document, a Postman collection or an ApiKit export (JSON or YAML) in one call. Pass url to let ApiKit download it (the user approves the download), or content with the document text. Without collection/collectionId it becomes a new collection (name overrides its name); with them, its folders and requests are added to that collection or to folderPath/folderId, and missing folders are created. createEnvironment: true also creates the environment an OpenAPI document defines (for example baseUrl); otherwise the result lists it as availableEnvironments. Workflows in ApiKit exports are not imported. ${NAME_NOTE}`,
+    description: `Import an OpenAPI 3 / Swagger 2 document, a Postman collection or an ApiKit export (JSON or YAML). Pass url to let ApiKit download it after the user approves (best for large documents), or content. Without collection it becomes a new collection (named name); with collection and optional folderPath its folders and requests are added there. createEnvironment: true also creates the environment an OpenAPI document defines; otherwise it is listed in availableEnvironments. Workflows are not imported. ${NAME_NOTE}`,
     inputSchema: objectSchema({
       url: { type: 'string', description: 'Address of the document; preferred for large documents' },
       content: { type: 'string', description: 'The document text, JSON or YAML' },
@@ -338,7 +345,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     name: 'update_request',
     title: 'Update request',
     kind: 'write',
-    description: 'Change fields of a saved request. Omitted fields stay unchanged; supplied list fields such as headers and params replace the whole list, while settings merge with the existing settings. For auth credentials and sensitive header values, "<hidden>" keeps the existing secret. Depending on the ApiKit settings, the change is either kept as unsaved edits that the user reviews and saves in ApiKit (the result then has unsavedEdits: true; tell the user), or saved directly, which fails if the user has unsaved edits to the request. Unsaved edits are changed on top of the existing ones.',
+    description: 'Change fields of one saved request; for several, use update_requests. Omitted fields stay unchanged; supplied list fields such as headers and params replace the whole list, while settings merge with the existing settings. For auth credentials and sensitive header values, "<hidden>" keeps the existing secret. Depending on the ApiKit settings, the change is either kept as unsaved edits that the user reviews and saves in ApiKit (the result then has unsavedEdits: true; tell the user), or saved directly, which fails if the user has unsaved edits to the request. Unsaved edits are changed on top of the existing ones.',
     inputSchema: objectSchema({ requestId: { type: 'string' }, ...requestFieldProperties }, ['requestId']),
   },
   {
@@ -346,14 +353,14 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: 'Update requests',
     kind: 'write',
     mayConfirm: true,
-    description: `Change up to ${MAX_BATCH_REQUESTS} saved requests in one call; prefer this over repeated update_request calls. Either pass updates, a list of { requestId or request (name), ...fields } with different changes per request, or select requests with requestIds (ids or names) or collection/collectionId plus optional folderPath/folderId and query, and give the same change to all of them: set (request fields; lists such as headers replace the whole list), mergeHeaders (add or replace headers by key) and removeHeaders (header names). Field rules and unsaved edits work as in update_request. All requests are checked before anything is saved. ${NAME_NOTE}`,
+    description: `Change up to ${MAX_BATCH_REQUESTS} saved requests in one call (prefer over repeated update_request). Either updates: [{ requestId or request, ...fields }], or select with requestIds (ids or names) or collection plus optional folderPath and query, and apply set (fields; lists replace), mergeHeaders (by key) and removeHeaders (names). Unsaved-edit rules as in update_request. Nothing is saved if any request fails. ${NAME_NOTE}`,
     inputSchema: objectSchema({
       updates: {
         type: 'array',
         maxItems: MAX_BATCH_REQUESTS,
         items: {
           type: 'object',
-          properties: { requestId: { type: 'string' }, request: { type: 'string', description: 'Request name, optionally with words of its folder' }, ...requestFieldProperties },
+          properties: { requestId: { type: 'string' }, request: { type: 'string', description: 'Request name, optionally with words of its folder' }, ...requestFieldRefs },
           additionalProperties: false,
         },
       },
@@ -363,10 +370,10 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       folderId: { type: 'string' },
       folderPath: folderPathProperty,
       query: { type: 'string', description: 'Only requests in the selected collection or folder whose name, URL or path matches these keywords' },
-      set: { type: 'object', description: 'Request fields to set on every selected request (not name)', properties: sharedRequestFields, additionalProperties: false },
+      set: { type: 'object', description: 'Request fields to set on every selected request (not name)', properties: sharedRequestFieldRefs, additionalProperties: false },
       mergeHeaders: { type: 'array', description: 'Headers to add, or replace when a header with the same key exists', items: { type: 'object', properties: { key: { type: 'string' }, value: { type: 'string' }, enabled: { type: 'boolean' } }, required: ['key'] } },
       removeHeaders: { type: 'array', items: { type: 'string' }, description: 'Header names to remove (case-insensitive)' },
-    }),
+    }, [], { $defs: requestFieldDefs }),
   },
   {
     name: 'create_workflow',
@@ -386,8 +393,9 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     inputSchema: objectSchema({
       workflowId: { type: 'string' },
       name: { type: 'string' },
-      steps: workflowStepsSchema,
-    }, ['workflowId'], { $defs: workflowStepDefs }),
+      // 步骤结构与 create_workflow 相同；不重复整份 schema，减少每次 tools/list 的内容，由 ApiKit 校验
+      steps: { type: 'array', description: 'Steps in the same format as create_workflow steps', items: { type: 'object' } },
+    }, ['workflowId']),
   },
   {
     name: 'move_request',
@@ -436,7 +444,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     name: 'send_request',
     title: 'Send request',
     kind: 'execute',
-    description: 'Send a saved request by passing requestId, or send an unsaved request definition by passing request; pass exactly one as a direct tool argument. A saved request uses its current unsaved edits in ApiKit, if any. The request object contains request fields such as url and HTTP query params; do not wrap tool arguments in a params object. The user must approve this. The result includes logId; use get_request_log with that id to retrieve a large request or response body in pages. Variables extracted by the request tests are saved as global variables. A {{variable}} that is not defined is sent as written; the result then lists its name in unresolvedVariables. For a streaming response (SSE or NDJSON, such as an LLM completion) the call returns when the stream ends: body is the raw stream and stream holds the merged answer text, finish reason, token usage and event count. In a custom format, the text of events such as token is thinking when other events with content (such as result) follow it, and those events are listed in stream.results; without such events the text is the answer. JSON field tests and extracted variables then read a merged object { text, thinking, finishReason, usage, eventCount, events, results }, where results maps each result event name to its last event.',
+    description: 'Send one request (for several saved requests, use run_requests): a saved request by passing requestId, or send an unsaved request definition by passing request; pass exactly one as a direct tool argument. A saved request uses its current unsaved edits in ApiKit, if any. The request object contains request fields such as url and HTTP query params; do not wrap tool arguments in a params object. The user must approve this. The result includes logId; use get_request_log with that id to retrieve a large request or response body in pages. Variables extracted by the request tests are saved as global variables. A {{variable}} that is not defined is sent as written; the result then lists its name in unresolvedVariables. For a streaming response (SSE or NDJSON, such as an LLM completion) the call returns when the stream ends: body is the raw stream and stream holds the merged answer text, finish reason, token usage and event count. In a custom format, the text of events such as token is thinking when other events with content (such as result) follow it, and those events are listed in stream.results; without such events the text is the answer. JSON field tests and extracted variables then read a merged object { text, thinking, finishReason, usage, eventCount, events, results }, where results maps each result event name to its last event.',
     inputSchema: objectSchema({
       requestId: { type: 'string', description: 'Id of a saved request; uses its current unsaved edits if it is open with a draft.' },
       request: {
@@ -452,7 +460,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     name: 'run_requests',
     title: 'Run requests',
     kind: 'execute',
-    description: `Send up to ${MAX_RUN_REQUESTS} saved requests in parallel with one approval from the user; prefer this over repeated send_request calls. Select them with requestIds (ids or names), or collection/collectionId plus optional folderPath/folderId and query (all requests inside, including subfolders). Each request uses its current unsaved edits, if any. Returns per request: passed, status, time, failures (failed tests), a short bodyPreview, logId and error when no response came back; use get_request_log with logId for the full exchange. Variables extracted by tests are saved as global variables as each request finishes, so requests in one call should not depend on each other. ${NAME_NOTE}`,
+    description: `Send up to ${MAX_RUN_REQUESTS} saved requests in parallel after one approval (prefer over repeated send_request). Select with requestIds (ids or names), or collection plus optional folderPath and query (subfolders included). Uses unsaved edits. Returns per request: passed, status, time, failures, bodyPreview, logId, or error when no response came; get_request_log gives the full exchange. Extracted variables are saved as each request finishes, so requests in one call should not depend on each other. ${NAME_NOTE}`,
     inputSchema: objectSchema({
       requestIds: requestRefsProperty,
       collectionId: { type: 'string' },

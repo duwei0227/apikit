@@ -39,10 +39,13 @@ const MAX_SESSIONS: usize = 256;
 const SESSION_HEADER: &str = "mcp-session-id";
 
 const SERVER_INSTRUCTIONS: &str = "ApiKit is a desktop API client. Collections hold folders and saved HTTP requests; \
-workflows chain requests with if/for/while/doWhile/until steps. Pass each tool's arguments as direct fields from its input schema; do not wrap them in a params object. The params field inside a request definition is an array of HTTP URL query parameters, not a tool-argument wrapper. Call list_collections, list_workflows and \
-list_environments first to find ids; search_requests accepts query, method, collectionId and limit as direct arguments; use query to search a name or URL fragment, and do not use keyword. Requests use {{name}} placeholders that resolve from the active environment \
+workflows chain requests with if/for/while/doWhile/until steps. Pass each tool's arguments as direct fields from its input schema; do not wrap them in a params object. The params field inside a request definition is an array of HTTP URL query parameters, not a tool-argument wrapper. \
+Keep calls few and results small: list_collections, search_requests and list_workflows take query (keywords, partial names) and return compact summaries by default; ask for view full or call get_request only when you need details. \
+Many tools also accept names instead of ids (collection, folderPath, request, workflow); when a name matches several items ApiKit asks the user, or returns error ambiguous with candidates for you to ask about. \
+For several requests use create_requests (also creates missing folders), update_requests and run_requests instead of repeated single calls; import_spec imports an OpenAPI or Postman document. \
+Requests use {{name}} placeholders that resolve from the active environment \
 and global variables; create_environment, update_environment and set_global_variables manage them. \
-list_builtin_variables lists built-in dynamic variables such as {{$timestamp}} and {{$guid}}. get_request_log and get_workflow_logs return bodies in pages; follow hasMore and nextOffset to retrieve the full body. send_request returns logId for retrieving its full response with get_request_log. send_request and \
+list_builtin_variables lists built-in dynamic variables such as {{$timestamp}} and {{$guid}}. get_request_log and get_workflow_logs return bodies in pages; follow hasMore and nextOffset to retrieve the full body. send_request and run_requests return logId for retrieving the full response with get_request_log. send_request, run_requests and \
 run_workflow make real network calls and, like set_active_environment and the delete_* tools, wait for the user to approve them. Request and workflow updates follow ApiKit's configured edit mode: they may stage changes on top of an existing draft, or save directly (which fails when a draft exists). Follow each tool's result and description.";
 
 type PendingCalls = Arc<Mutex<HashMap<String, oneshot::Sender<Value>>>>;
