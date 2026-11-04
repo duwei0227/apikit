@@ -318,6 +318,23 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     }, ['curl', 'collectionId']),
   },
   {
+    name: 'import_spec',
+    title: 'Import API document',
+    kind: 'write',
+    mayConfirm: true,
+    description: `Import an OpenAPI 3 / Swagger 2 document, a Postman collection or an ApiKit export (JSON or YAML) in one call. Pass url to let ApiKit download it (the user approves the download), or content with the document text. Without collection/collectionId it becomes a new collection (name overrides its name); with them, its folders and requests are added to that collection or to folderPath/folderId, and missing folders are created. createEnvironment: true also creates the environment an OpenAPI document defines (for example baseUrl); otherwise the result lists it as availableEnvironments. Workflows in ApiKit exports are not imported. ${NAME_NOTE}`,
+    inputSchema: objectSchema({
+      url: { type: 'string', description: 'Address of the document; preferred for large documents' },
+      content: { type: 'string', description: 'The document text, JSON or YAML' },
+      collectionId: { type: 'string' },
+      collection: collectionNameProperty,
+      folderId: { type: 'string' },
+      folderPath: folderPathProperty,
+      name: { type: 'string', description: 'Name of the new collection' },
+      createEnvironment: { type: 'boolean', description: 'Default false' },
+    }),
+  },
+  {
     name: 'update_request',
     title: 'Update request',
     kind: 'write',

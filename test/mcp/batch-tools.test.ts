@@ -309,5 +309,75 @@ describe('MCP batch tools', () => {
     expect((await call('run_requests', { requestIds: [echo], collection: 'BPP' })).error).toBe('Pass either requestIds, or collection with optional folderPath and query');
     expect((await call('run_requests', { collection: 'BPP', folderPath: ['Nope'] })).error).toMatch(/^No folder matches "Nope"\. Available: BPP \/ Guard \(.+\)\.$/);
   });
+
+  it('MCP-BATCH-007 imports an OpenAPI document as a new collection or into a folder', async () => {
+    const yaml = [
+      'openapi: 3.0.3',
+      'info:',
+      '  title: Guard API',
+      'servers:',
+      '  - url: https://guard.example.com/v1',
+      'paths:',
+      '  /guards:',
+      '    get:',
+      '      tags: [guard]',
+      '      summary: List guards',
+      '      responses: { "200": { description: ok } }',
+      '    post:',
+      '      tags: [guard]',
+      '      summary: Create guard',
+      '      responses: { "201": { description: created } }',
+      '  /health:',
+      '    get:',
+      '      summary: Health',
+      '      responses: { "200": { description: ok } }',
+    ].join('\n');
+
+    const created = await call('import_spec', { content: yaml, name: 'Guard' });
+    expect(created).toMatchObject({
+      source: 'openapi',
+      createdCollections: [{ name: 'Guard' }],
+      importedRequests: 3,
+      createdFolders: 1,
+      availableEnvironments: [{ variables: expect.arrayContaining(['baseUrl']) }],
+    });
+    const guard = useCollectionsStore().collections.find(collection => collection.name === 'Guard')!;
+    expect(guard.folders.map(folder => folder.name)).toEqual(['guard']);
+    expect(guard.folders[0].requests.map(ref => ref.name)).toEqual(['List guards', 'Create guard']);
+    expect(mockStorageService.requests.get(guard.requests[0].id)).toMatchObject({ name: 'Health', collectionId: guard.id });
+
+    // 放进已有集合中新建的文件夹，并创建文档定义的环境
+    const bpp = await call('create_collection', { name: 'BPP' });
+    const into = await call('import_spec', { content: yaml, collection: 'bpp', folderPath: ['Imported'], createEnvironment: true });
+    expect(into).toMatchObject({ collectionId: bpp.id, path: 'BPP / Imported', importedRequests: 3, createdFolders: 2, createdEnvironments: [{ variables: expect.arrayContaining(['baseUrl']) }] });
+    expect(into).not.toHaveProperty('availableEnvironments');
+    expect(folderNames(bpp.id)).toEqual(['Imported', 'Imported / guard']);
+    const imported = useCollectionsStore().collections.find(collection => collection.id === bpp.id)!.folders[0];
+    expect(imported.requests.map(ref => ref.name)).toEqual(['Health']);
+    expect(mockStorageService.requests.get(imported.folders[0].requests[0].id)).toMatchObject({ collectionId: bpp.id, folderId: imported.folders[0].id });
+
+    expect((await call('import_spec', { content: '{"hello": 1}' })).error).toBe('The document is not an OpenAPI or Swagger document, a Postman collection or an ApiKit export');
+    expect((await call('import_spec', { content: 'a: [' })).error).toBe('The document is not valid JSON or YAML');
+    expect((await call('import_spec', {})).error).toBe('Pass exactly one of content or url');
+    expect((await call('import_spec', { content: yaml, folderPath: ['x'] })).error).toBe('folderPath and folderId need collection or collectionId');
+  });
+
+  it('MCP-BATCH-008 downloads the document after the user approves', async () => {
+    const spec = JSON.stringify({ swagger: '2.0', info: { title: 'Remote' }, host: 'remote.example.com', paths: { '/ping': { get: { summary: 'Ping', responses: { 200: { description: 'ok' } } } } } });
+    const denied = vi.fn(async () => false);
+    expect((await call('import_spec', { url: 'https://docs.example.com/swagger.json' }, makeContext({ confirm: denied }))).error).toBe('The user declined this action');
+    expect(denied).toHaveBeenCalledWith(expect.objectContaining({ tool: 'import_spec', detail: 'GET https://docs.example.com/swagger.json' }));
+
+    const bytes = new TextEncoder().encode(spec);
+    vi.mocked(invoke).mockResolvedValueOnce({
+      status: 200, statusText: 'OK', headers: [['content-type', 'application/json']],
+      body: btoa(String.fromCharCode(...bytes)), bodyBytes: bytes.length, durationMs: 0, requestContentType: null,
+    });
+    const result = await call('import_spec', { url: 'https://docs.example.com/swagger.json' });
+    expect(result).toMatchObject({ source: 'openapi', createdCollections: [{ name: 'Remote' }], importedRequests: 1 });
+
+    vi.mocked(invoke).mockResolvedValueOnce({ status: 404, statusText: 'Not Found', headers: [], body: '', bodyBytes: 0, durationMs: 0, requestContentType: null });
+    expect((await call('import_spec', { url: 'https://docs.example.com/missing.json' })).error).toBe('Downloading the document failed with status 404');
+  });
 });
 

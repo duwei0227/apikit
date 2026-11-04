@@ -4,6 +4,7 @@ import { MCP_TOOLS } from './definitions';
 import { batchHandlers } from './handlers/batch';
 import { collectionHandlers } from './handlers/collections';
 import { environmentHandlers } from './handlers/environments';
+import { importSpecHandlers } from './handlers/importSpec';
 import { logHandlers } from './handlers/logs';
 import { requestHandlers } from './handlers/requests';
 import { variableHandlers } from './handlers/variables';
@@ -20,6 +21,7 @@ const HANDLERS: Record<string, McpToolHandler> = {
   ...collectionHandlers,
   ...requestHandlers,
   ...batchHandlers,
+  ...importSpecHandlers,
   ...workflowHandlers,
   ...environmentHandlers,
   ...variableHandlers,
