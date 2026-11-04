@@ -1,5 +1,6 @@
 // 导入 OpenAPI / Swagger、Postman Collection 或 ApiKit 导出文件，可放到已有集合的文件夹中
 
+import { invoke } from '@tauri-apps/api/core';
 import { parse as parseYaml } from 'yaml';
 import { executeHttpRequest } from '@/services/http/HttpExecutionService';
 import { importExportService } from '@/services/import-export';
@@ -47,6 +48,15 @@ async function downloadSpec(url: string, context: Parameters<McpToolHandler>[1])
   return response.rawBody ?? '';
 }
 
+/** 由 Rust 端读取本机文件：只读 .json / .yaml / .yml，前端的文件读取权限不变 */
+async function readDocument(filePath: string): Promise<string> {
+  try {
+    return await invoke<string>('mcp_read_document', { path: filePath });
+  } catch (error) {
+    fail(typeof error === 'string' ? error : ((error as Error | null)?.message || 'Cannot read the file'));
+  }
+}
+
 interface ImportCounts {
   requests: number;
   folders: number;
@@ -90,7 +100,8 @@ export const importSpecHandlers: Record<string, McpToolHandler> = {
   async import_spec(args, context) {
     const content = optionalString(args.content, 'content');
     const url = optionalString(args.url, 'url')?.trim();
-    if ((content === undefined) === (url === undefined)) fail('Pass exactly one of content or url');
+    const filePath = optionalString(args.filePath, 'filePath')?.trim();
+    if ([content, url, filePath].filter(value => value !== undefined).length !== 1) fail('Pass exactly one of filePath, url or content');
     const name = optionalString(args.name, 'name')?.trim();
     const intoExisting = args.collectionId !== undefined || args.collection !== undefined;
     if (!intoExisting && (args.folderId !== undefined || args.folderPath !== undefined)) fail('folderPath and folderId need collection or collectionId');
@@ -100,7 +111,7 @@ export const importSpecHandlers: Record<string, McpToolHandler> = {
     const collection = intoExisting ? await resolveCollection(resolver, args) : undefined;
     const target = collection ? await resolveFolderTarget(resolver, collection, args, true) : undefined;
 
-    const text = content ?? await downloadSpec(url!, context);
+    const text = content ?? (filePath !== undefined ? await readDocument(filePath) : await downloadSpec(url!, context));
     let bundle: ImportBundle;
     try {
       bundle = importExportService.parseImportData(parseSpecText(text));

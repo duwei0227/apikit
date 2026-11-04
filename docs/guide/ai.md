@@ -70,7 +70,7 @@ AI 每调用一次工具，都要重新读一遍上下文再生成参数，耗�
 - **用名称代替 id**：批量工具、`get_request`、`get_workflow`、`run_workflow` 可以用 `collection`、`folderPath`、`request`、`workflow` 按名称定位（可只写一部分）。只有一项匹配时直接使用，按部分名称匹配到的会列在结果的 `resolved` 中；匹配到多项时，AI 工具支持 MCP elicitation 就在其中请你选择，否则返回 `ambiguous` 和候选列表，由 AI 问你后再调用。`folderPath` 中某一级没有同名目录但有相近的目录时，也会请你在使用已有目录和新建之间选择。
 - **批量写入**：`create_requests` 一次最多新建 50 个请求，`folderPath` 中不存在的目录自动创建；每项可以是请求字段、`curl` 或 `copyFrom`（复制已有请求并修改部分字段），`defaults` 填写公共字段（`baseUrl` 拼在相对地址前，headers 和 params 按名称合并）；`onExists` 决定同名请求跳过（默认）、替换、报错还是重复新建。`update_requests` 可分别修改多个请求，也可对选中的请求统一 `set` 字段、`mergeHeaders` 或 `removeHeaders`。任何一项有误都不会写入；写操作只返回摘要。
 - **批量运行**：`run_requests` 按 id、名称或目录选出最多 30 个请求，确认一次后并行发送（`maxConcurrency` 默认 4），每个请求返回是否通过、状态码、耗时、失败的断言和响应摘要。
-- **导入文档**：`import_spec` 传 `url` 时由 ApiKit 下载文档，AI 不必把整份文档写进参数；可导入为新集合，也可放进已有集合的目录。
+- **导入文档**：`import_spec` 传 `filePath`（本机 `.json`、`.yaml`、`.yml` 文件的绝对路径）时由 ApiKit 读取文件，传 `url` 时由 ApiKit 下载文档，AI 都不必把整份文档写进参数；可导入为新集合，也可放进已有集合的目录。
 
 调用工具时，按各工具 schema 将参数直接传入，不要再套一层 `params` 对象。请求定义中的 `params` 是 HTTP URL 查询参数列表；`send_request` 必须且只能传入 `requestId` 或 `request` 其中一个。工作流的 request 步骤也必须且只能传入 `requestId` 或 `inlineRequest` 其中一个。
 

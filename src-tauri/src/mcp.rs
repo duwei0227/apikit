@@ -236,6 +236,47 @@ pub async fn mcp_elicit(
     }
 }
 
+/// MCP 导入文档时可读取的文件大小上限
+const MAX_DOCUMENT_BYTES: u64 = 20 * 1024 * 1024;
+const DOCUMENT_EXTENSIONS: [&str; 3] = ["json", "yaml", "yml"];
+
+/// 检查导入文档的路径：必须是绝对路径，扩展名为 .json / .yaml / .yml
+fn check_document_path(path: &str) -> Result<std::path::PathBuf, String> {
+    let path = std::path::PathBuf::from(path.trim());
+    if !path.is_absolute() {
+        return Err("filePath must be an absolute path".to_string());
+    }
+    let extension = path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(|extension| extension.to_ascii_lowercase())
+        .unwrap_or_default();
+    if !DOCUMENT_EXTENSIONS.contains(&extension.as_str()) {
+        return Err("filePath must be a .json, .yaml or .yml file".to_string());
+    }
+    Ok(path)
+}
+
+/// 读取 MCP 要导入的 API 文档（OpenAPI、Postman 等）。
+/// 只读 JSON / YAML 文件并限制大小，前端的文件读取权限仍只限于应用数据目录。
+#[tauri::command]
+pub async fn mcp_read_document(path: String) -> Result<String, String> {
+    let path = check_document_path(&path)?;
+    let metadata = tokio::fs::metadata(&path)
+        .await
+        .map_err(|error| format!("Cannot read {}: {}", path.display(), error))?;
+    if !metadata.is_file() {
+        return Err(format!("{} is not a file", path.display()));
+    }
+    if metadata.len() > MAX_DOCUMENT_BYTES {
+        return Err(format!("{} is larger than {} MB", path.display(), MAX_DOCUMENT_BYTES / 1024 / 1024));
+    }
+    let bytes = tokio::fs::read(&path)
+        .await
+        .map_err(|error| format!("Cannot read {}: {}", path.display(), error))?;
+    String::from_utf8(bytes).map_err(|_| format!("{} is not a UTF-8 text file", path.display()))
+}
+
 async fn method_not_allowed() -> Response {
     (StatusCode::METHOD_NOT_ALLOWED, [(header::ALLOW, "POST")]).into_response()
 }
@@ -554,6 +595,22 @@ fn is_allowed_origin(headers: &HeaderMap) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn accepts_only_absolute_json_and_yaml_document_paths() {
+        let absolute = if cfg!(windows) { "C:\\specs\\api.YAML" } else { "/specs/api.YAML" };
+        assert!(check_document_path(absolute).is_ok());
+        assert!(check_document_path(&absolute.replace("api.YAML", "api.json")).is_ok());
+        assert_eq!(check_document_path("specs/api.json").unwrap_err(), "filePath must be an absolute path");
+        assert_eq!(
+            check_document_path(&absolute.replace("api.YAML", "id_rsa")).unwrap_err(),
+            "filePath must be a .json, .yaml or .yml file"
+        );
+        assert_eq!(
+            check_document_path(&absolute.replace("api.YAML", "notes.txt")).unwrap_err(),
+            "filePath must be a .json, .yaml or .yml file"
+        );
+    }
 
     fn headers(pairs: &[(header::HeaderName, &str)]) -> HeaderMap {
         let mut map = HeaderMap::new();

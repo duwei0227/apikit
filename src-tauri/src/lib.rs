@@ -50,6 +50,7 @@ pub fn run() {
             mcp::mcp_status,
             mcp::mcp_respond,
             mcp::mcp_elicit,
+            mcp::mcp_read_document,
             mock::mock_start,
             mock::mock_stop,
             mock::mock_status,

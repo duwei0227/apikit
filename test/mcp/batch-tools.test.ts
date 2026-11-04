@@ -358,7 +358,8 @@ describe('MCP batch tools', () => {
 
     expect((await call('import_spec', { content: '{"hello": 1}' })).error).toBe('The document is not an OpenAPI or Swagger document, a Postman collection or an ApiKit export');
     expect((await call('import_spec', { content: 'a: [' })).error).toBe('The document is not valid JSON or YAML');
-    expect((await call('import_spec', {})).error).toBe('Pass exactly one of content or url');
+    expect((await call('import_spec', {})).error).toBe('Pass exactly one of filePath, url or content');
+    expect((await call('import_spec', { content: yaml, url: 'https://a.example.com/x.json' })).error).toBe('Pass exactly one of filePath, url or content');
     expect((await call('import_spec', { content: yaml, folderPath: ['x'] })).error).toBe('folderPath and folderId need collection or collectionId');
   });
 
@@ -378,6 +379,19 @@ describe('MCP batch tools', () => {
 
     vi.mocked(invoke).mockResolvedValueOnce({ status: 404, statusText: 'Not Found', headers: [], body: '', bodyBytes: 0, durationMs: 0, requestContentType: null });
     expect((await call('import_spec', { url: 'https://docs.example.com/missing.json' })).error).toBe('Downloading the document failed with status 404');
+  });
+
+  it('MCP-BATCH-009 reads a local document through ApiKit', async () => {
+    const spec = JSON.stringify({ openapi: '3.0.3', info: { title: 'Local' }, paths: { '/ping': { get: { summary: 'Ping', responses: { 200: { description: 'ok' } } } } } });
+    vi.mocked(invoke).mockResolvedValueOnce(spec);
+    const confirm = vi.fn(async () => true);
+    const result = await call('import_spec', { filePath: '/specs/local.json' }, makeContext({ confirm }));
+    expect(vi.mocked(invoke)).toHaveBeenCalledWith('mcp_read_document', { path: '/specs/local.json' });
+    expect(confirm).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ source: 'openapi', createdCollections: [{ name: 'Local' }], importedRequests: 1 });
+
+    vi.mocked(invoke).mockRejectedValueOnce('filePath must be a .json, .yaml or .yml file');
+    expect((await call('import_spec', { filePath: '/etc/passwd' })).error).toBe('filePath must be a .json, .yaml or .yml file');
   });
 });
 

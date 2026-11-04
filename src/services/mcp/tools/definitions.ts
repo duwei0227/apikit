@@ -329,9 +329,10 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: 'Import API document',
     kind: 'write',
     mayConfirm: true,
-    description: `Import an OpenAPI 3 / Swagger 2 document, a Postman collection or an ApiKit export (JSON or YAML). Pass url to let ApiKit download it after the user approves (best for large documents), or content. Without collection it becomes a new collection (named name); with collection and optional folderPath its folders and requests are added there. createEnvironment: true also creates the environment an OpenAPI document defines; otherwise it is listed in availableEnvironments. Workflows are not imported. ${NAME_NOTE}`,
+    description: `Import an OpenAPI 3 / Swagger 2 document, a Postman collection or an ApiKit export (JSON or YAML). Pass filePath (an absolute path to a local .json, .yaml or .yml file) or url (ApiKit downloads it after the user approves) so you need not copy the document, or content. Without collection it becomes a new collection (named name); with collection and optional folderPath its folders and requests are added there. createEnvironment: true also creates the environment an OpenAPI document defines; otherwise it is listed in availableEnvironments. Workflows are not imported. ${NAME_NOTE}`,
     inputSchema: objectSchema({
-      url: { type: 'string', description: 'Address of the document; preferred for large documents' },
+      filePath: { type: 'string', description: 'Absolute path of a local .json, .yaml or .yml document' },
+      url: { type: 'string', description: 'Address of the document' },
       content: { type: 'string', description: 'The document text, JSON or YAML' },
       collectionId: { type: 'string' },
       collection: collectionNameProperty,
