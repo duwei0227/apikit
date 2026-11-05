@@ -66,13 +66,24 @@ Uninstalling always deletes `%LOCALAPPDATA%\cn.probiecoder.apikit`, which holds 
 
 - **Also delete my collections, workflows, environments, mocks and history (cannot be undone)**: deletes the data folder above.
 
-When you install a new version and choose "Uninstall before installing", this option is not shown and the cache, settings and data folder are all kept.
+When a new version uninstalls the old one before installing, this option is not shown and the cache, settings and data folder are all kept.
 
 The uninstaller that runs is the one of the installed version, so this applies only when uninstalling or upgrading from versions after 0.5.1. Uninstallers from 0.4.2 to 0.5.1 also have a "Delete the app cache and interface settings" option; earlier uninstallers have a single "Delete the application data" option, which deletes the data folder when checked.
 
 ## Updates
 
 Click **Help → Check For Update** to check for a new version. When there is one, the title bar shows it; you can read what's new, download and install it with one click, and ApiKit restarts.
+
+On Windows:
+
+- ApiKit installed with the `.exe` installer closes after the download and shows only the installation progress. It uninstalls the old version, installs the new one in the same folder with the same shortcuts and data, and opens again.
+- ApiKit installed with the `.msi` and the portable version open the setup wizard after the download. The install folder defaults to the current program folder and can be changed.
+
+When you run the `.exe` installer yourself and ApiKit is already installed:
+
+- An older version: the installer says it must be uninstalled first. Click "OK" and it is uninstalled during installation (your data is kept); you can still change the install folder.
+- The same version: the installer says it is already installed and lets you reinstall it to repair the installation.
+- A newer version: the installer says there is no need to install, then exits.
 
 ## FAQ
 

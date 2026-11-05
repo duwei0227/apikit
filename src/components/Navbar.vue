@@ -204,17 +204,20 @@ const handleInstallUpdate = async () => {
 
     // 下载与安装分两步：下载完成、进度显示到 100% 之后再开始安装
     if (IS_WINDOWS) {
-      // Windows 统一下载 NSIS 安装包并运行安装向导，安装目录默认为当前程序所在目录，可在向导中修改
+      // Windows 统一下载 NSIS 安装包。NSIS 安装版静默升级并自动重启；
+      // MSI 安装版和便携版运行安装向导，安装目录默认为当前程序所在目录，可在向导中修改
       const channel = new Channel<DownloadEvent>();
       channel.onmessage = onDownloadEvent;
-      await invoke('download_windows_installer', { onEvent: channel });
+      const installer = await invoke<{ silent: boolean }>('download_windows_installer', { onEvent: channel });
       downloadProgress.value = 100;
 
       if (window.$toast) {
         window.$toast.add({
           severity: 'success',
           summary: 'Download Complete',
-          detail: 'ApiKit will close and the installer will start',
+          detail: installer.silent
+            ? 'ApiKit will close, install the update and reopen automatically'
+            : 'ApiKit will close and the installer will start',
           life: 2000
         });
       }
