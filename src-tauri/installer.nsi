@@ -77,6 +77,11 @@ Var WixMode
 ; 由安装程序的“安装前卸载”调用：保留用户数据，不显示删除用户数据的勾选框
 Var KeepDataMode
 Var OldMainBinaryName
+; 已安装版本的信息，由 CheckPreviousInstall 填写
+Var PrevVersion          ; 已安装的版本号，未知时为空
+Var PrevVersionCompare   ; 本安装包与已安装版本比较：1 升级，0 相同，-1 降级
+Var PrevWixKey           ; 已安装的是 MSI 版本时，它在 Uninstall 注册表下的键
+Var UninstallPrevious    ; 1 = 开始安装时先卸载已安装的版本
 
 Name "${PRODUCTNAME}"
 BrandingText "${COPYRIGHT}"
@@ -186,209 +191,8 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
   !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !endif
 
-; 4. Custom page to ask user if he wants to reinstall/uninstall
-;    only if a previous installation was detected
-Var ReinstallPageCheck
-Page custom PageReinstall PageLeaveReinstall
-Function PageReinstall
-  ; Uninstall previous WiX installation if exists.
-  ;
-  ; A WiX installer stores the installation info in registry
-  ; using a UUID and so we have to loop through all keys under
-  ; `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall`
-  ; and check if `DisplayName` and `Publisher` keys match ${PRODUCTNAME} and ${MANUFACTURER}
-  ;
-  ; This has a potential issue that there maybe another installation that matches
-  ; our ${PRODUCTNAME} and ${MANUFACTURER} but wasn't installed by our WiX installer,
-  ; however, this should be fine since the user will have to confirm the uninstallation
-  ; and they can chose to abort it if doesn't make sense.
-  StrCpy $0 0
-  wix_loop:
-    EnumRegKey $1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" $0
-    StrCmp $1 "" wix_loop_done ; Exit loop if there is no more keys to loop on
-    IntOp $0 $0 + 1
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "DisplayName"
-    ReadRegStr $R1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "Publisher"
-    StrCmp "$R0$R1" "${PRODUCTNAME}${MANUFACTURER}" 0 wix_loop
-    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "UninstallString"
-    ${StrCase} $R1 $R0 "L"
-    ${StrLoc} $R0 $R1 "msiexec" ">"
-    StrCmp $R0 0 0 wix_loop_done
-    StrCpy $WixMode 1
-    StrCpy $R6 "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1"
-    Goto compare_version
-  wix_loop_done:
-
-  ; Check if there is an existing installation, if not, abort the reinstall page
-  ReadRegStr $R0 SHCTX "${UNINSTKEY}" ""
-  ReadRegStr $R1 SHCTX "${UNINSTKEY}" "UninstallString"
-  ${IfThen} "$R0$R1" == "" ${|} Abort ${|}
-
-  ; Compare this installar version with the existing installation
-  ; and modify the messages presented to the user accordingly
-  compare_version:
-  StrCpy $R4 "$(older)"
-  ${If} $WixMode = 1
-    ReadRegStr $R0 HKLM "$R6" "DisplayVersion"
-  ${Else}
-    ReadRegStr $R0 SHCTX "${UNINSTKEY}" "DisplayVersion"
-  ${EndIf}
-  ${IfThen} $R0 == "" ${|} StrCpy $R4 "$(unknown)" ${|}
-
-  nsis_tauri_utils::SemverCompare "${VERSION}" $R0
-  Pop $R0
-  ; Reinstalling the same version
-  ${If} $R0 = 0
-    StrCpy $R1 "$(alreadyInstalledLong)"
-    StrCpy $R2 "$(addOrReinstall)"
-    StrCpy $R3 "$(uninstallApp)"
-    !insertmacro MUI_HEADER_TEXT "$(alreadyInstalled)" "$(chooseMaintenanceOption)"
-  ; Upgrading
-  ${ElseIf} $R0 = 1
-    StrCpy $R1 "$(olderOrUnknownVersionInstalled)"
-    StrCpy $R2 "$(uninstallBeforeInstalling)"
-    StrCpy $R3 "$(dontUninstall)"
-    !insertmacro MUI_HEADER_TEXT "$(alreadyInstalled)" "$(choowHowToInstall)"
-  ; Downgrading
-  ${ElseIf} $R0 = -1
-    StrCpy $R1 "$(newerVersionInstalled)"
-    StrCpy $R2 "$(uninstallBeforeInstalling)"
-    !if "${ALLOWDOWNGRADES}" == "true"
-      StrCpy $R3 "$(dontUninstall)"
-    !else
-      StrCpy $R3 "$(dontUninstallDowngrade)"
-    !endif
-    !insertmacro MUI_HEADER_TEXT "$(alreadyInstalled)" "$(choowHowToInstall)"
-  ${Else}
-    Abort
-  ${EndIf}
-
-  ; Skip showing the page if passive
-  ;
-  ; Note that we don't call this earlier at the begining
-  ; of this function because we need to populate some variables
-  ; related to current installed version if detected and whether
-  ; we are downgrading or not.
-  ${If} $PassiveMode = 1
-    Call PageLeaveReinstall
-  ${Else}
-    nsDialogs::Create 1018
-    Pop $R4
-    ${IfThen} $(^RTL) = 1 ${|} nsDialogs::SetRTL $(^RTL) ${|}
-
-    ${NSD_CreateLabel} 0 0 100% 24u $R1
-    Pop $R1
-
-    ${NSD_CreateRadioButton} 30u 50u -30u 8u $R2
-    Pop $R2
-    ${NSD_OnClick} $R2 PageReinstallUpdateSelection
-
-    ${NSD_CreateRadioButton} 30u 70u -30u 8u $R3
-    Pop $R3
-    ; Disable this radio button if downgrading and downgrades are disabled
-    !if "${ALLOWDOWNGRADES}" == "false"
-      ${IfThen} $R0 = -1 ${|} EnableWindow $R3 0 ${|}
-    !endif
-    ${NSD_OnClick} $R3 PageReinstallUpdateSelection
-
-    ; Check the first radio button if this the first time
-    ; we enter this page or if the second button wasn't
-    ; selected the last time we were on this page
-    ${If} $ReinstallPageCheck <> 2
-      SendMessage $R2 ${BM_SETCHECK} ${BST_CHECKED} 0
-    ${Else}
-      SendMessage $R3 ${BM_SETCHECK} ${BST_CHECKED} 0
-    ${EndIf}
-
-    ${NSD_SetFocus} $R2
-    nsDialogs::Show
-  ${EndIf}
-FunctionEnd
-Function PageReinstallUpdateSelection
-  ${NSD_GetState} $R2 $R1
-  ${If} $R1 == ${BST_CHECKED}
-    StrCpy $ReinstallPageCheck 1
-  ${Else}
-    StrCpy $ReinstallPageCheck 2
-  ${EndIf}
-FunctionEnd
-Function PageLeaveReinstall
-  ${NSD_GetState} $R2 $R1
-
-  ; If migrating from Wix, always uninstall
-  ${If} $WixMode = 1
-    Goto reinst_uninstall
-  ${EndIf}
-
-  ; In update mode, always proceeds without uninstalling
-  ${If} $UpdateMode = 1
-    Goto reinst_done
-  ${EndIf}
-
-  ; $R0 holds whether same(0)/upgrading(1)/downgrading(-1) version
-  ; $R1 holds the radio buttons state:
-  ;   1 => first choice was selected
-  ;   0 => second choice was selected
-  ${If} $R0 = 0 ; Same version, proceed
-    ${If} $R1 = 1              ; User chose to add/reinstall
-      Goto reinst_done
-    ${Else}                    ; User chose to uninstall
-      Goto reinst_uninstall
-    ${EndIf}
-  ${ElseIf} $R0 = 1 ; Upgrading
-    ${If} $R1 = 1              ; User chose to uninstall
-      Goto reinst_uninstall
-    ${Else}
-      Goto reinst_done         ; User chose NOT to uninstall
-    ${EndIf}
-  ${ElseIf} $R0 = -1 ; Downgrading
-    ${If} $R1 = 1              ; User chose to uninstall
-      Goto reinst_uninstall
-    ${Else}
-      Goto reinst_done         ; User chose NOT to uninstall
-    ${EndIf}
-  ${EndIf}
-
-  reinst_uninstall:
-    HideWindow
-    ClearErrors
-
-    ${If} $WixMode = 1
-      ReadRegStr $R1 HKLM "$R6" "UninstallString"
-      ExecWait '$R1' $0
-    ${Else}
-      ReadRegStr $4 SHCTX "${MANUPRODUCTKEY}" ""
-      ReadRegStr $R1 SHCTX "${UNINSTKEY}" "UninstallString"
-      ${IfThen} $UpdateMode = 1 ${|} StrCpy $R1 "$R1 /UPDATE" ${|} ; append /UPDATE
-      ${IfThen} $PassiveMode = 1 ${|} StrCpy $R1 "$R1 /P" ${|} ; append /P
-      StrCpy $R1 "$R1 /KEEPDATA" ; 安装前卸载保留用户数据（旧版本的卸载程序会忽略这个参数）
-      StrCpy $R1 "$R1 _?=$4" ; append uninstall directory
-      ExecWait '$R1' $0
-    ${EndIf}
-
-    BringToFront
-
-    ${IfThen} ${Errors} ${|} StrCpy $0 2 ${|} ; ExecWait failed, set fake exit code
-
-    ${If} $0 <> 0
-    ${OrIf} ${FileExists} "$INSTDIR\${MAINBINARYNAME}.exe"
-      ; User cancelled wix uninstaller? return to select un/reinstall page
-      ${If} $WixMode = 1
-      ${AndIf} $0 = 1602
-        Abort
-      ${EndIf}
-
-      ; User cancelled NSIS uninstaller? return to select un/reinstall page
-      ${If} $0 = 1
-        Abort
-      ${EndIf}
-
-      ; Other erros? show generic error message and return to select un/reinstall page
-      MessageBox MB_ICONEXCLAMATION "$(unableToUninstall)"
-      Abort
-    ${EndIf}
-  reinst_done:
-FunctionEnd
+; 4. ApiKit: 不再显示“已安装”选择页。已安装版本在 .onInit 中检测并用弹窗确认（见 CheckPreviousInstall），
+;    旧版本在开始安装时卸载（见 UninstallPrevious 区段）
 
 ; 5. Choose install directory page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
@@ -517,6 +321,18 @@ LangString appDataNote ${LANG_SIMPCHINESE} "卸载时会删除应用缓存和界
 LangString deleteUserData ${LANG_ENGLISH} "Also delete my collections, workflows, environments, mocks and history (cannot be undone)"
 LangString deleteUserData ${LANG_SIMPCHINESE} "同时删除我的集合、工作流、环境、Mock 和历史记录（无法恢复）"
 
+; 检测到已安装版本时的提示
+LangString prevOlderInstalled ${LANG_ENGLISH} "${PRODUCTNAME} $PrevVersion is installed. It must be uninstalled before ${PRODUCTNAME} ${VERSION} can be installed. Your collections, workflows and other data will be kept.$\n$\nClick OK to uninstall the old version and continue."
+LangString prevOlderInstalled ${LANG_SIMPCHINESE} "检测到已安装 ${PRODUCTNAME} $PrevVersion，需要先卸载旧版本才能安装 ${PRODUCTNAME} ${VERSION}。卸载会保留你的集合、工作流等数据。$\n$\n点击“确定”卸载旧版本并继续安装。"
+LangString prevSameInstalled ${LANG_ENGLISH} "${PRODUCTNAME} ${VERSION} is already installed.$\n$\nDo you want to reinstall it to repair the installation? Your data will be kept."
+LangString prevSameInstalled ${LANG_SIMPCHINESE} "${PRODUCTNAME} ${VERSION} 已安装。$\n$\n是否重新安装以修复？你的数据会保留。"
+LangString prevNewerInstalled ${LANG_ENGLISH} "A newer version of ${PRODUCTNAME} ($PrevVersion) is already installed. There is no need to install ${VERSION}."
+LangString prevNewerInstalled ${LANG_SIMPCHINESE} "已安装更高版本的 ${PRODUCTNAME}（$PrevVersion），无需安装 ${VERSION}。"
+LangString uninstallingPrevious ${LANG_ENGLISH} "Uninstalling the installed version of ${PRODUCTNAME}..."
+LangString uninstallingPrevious ${LANG_SIMPCHINESE} "正在卸载已安装的 ${PRODUCTNAME}……"
+LangString prevUninstallFailed ${LANG_ENGLISH} "The installed version of ${PRODUCTNAME} could not be uninstalled. Uninstall it in Settings > Apps, then run this installer again."
+LangString prevUninstallFailed ${LANG_SIMPCHINESE} "无法卸载已安装的 ${PRODUCTNAME}。请在“设置 > 应用”中卸载后，重新运行安装程序。"
+
 Function .onInit
   ${GetOptions} $CMDLINE "/P" $PassiveMode
   ${IfNot} ${Errors}
@@ -564,6 +380,73 @@ Function .onInit
   !if "${INSTALLMODE}" == "both"
     !insertmacro MULTIUSER_INIT
   !endif
+
+  Call CheckPreviousInstall
+FunctionEnd
+
+; 检测已安装的版本（MSI 或 NSIS），并决定是否在安装前卸载它：
+; - 应用内更新（/UPDATE）：直接卸载旧版本，沿用快捷方式和数据，不弹窗
+; - 手动运行安装程序：旧版本弹窗确认后卸载；相同版本询问是否重装修复；已装更高版本时提示并退出
+; - 静默安装（/S）或无 /UPDATE 的 passive 安装：保持原样，覆盖安装
+Function CheckPreviousInstall
+  StrCpy $PrevVersion ""
+  StrCpy $PrevVersionCompare 1
+  StrCpy $PrevWixKey ""
+  StrCpy $UninstallPrevious 0
+
+  ; MSI（WiX）安装把信息记在 Uninstall 下以 GUID 命名的键里，按 DisplayName 和 Publisher 查找
+  StrCpy $0 0
+  wix_loop:
+    EnumRegKey $1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" $0
+    StrCmp $1 "" wix_loop_done
+    IntOp $0 $0 + 1
+    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "DisplayName"
+    ReadRegStr $R1 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "Publisher"
+    StrCmp "$R0$R1" "${PRODUCTNAME}${MANUFACTURER}" 0 wix_loop
+    ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1" "UninstallString"
+    ${StrCase} $R1 $R0 "L"
+    ${StrLoc} $R0 $R1 "msiexec" ">"
+    StrCmp $R0 0 0 wix_loop_done
+    StrCpy $WixMode 1
+    StrCpy $PrevWixKey "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$1"
+    ReadRegStr $PrevVersion HKLM "$PrevWixKey" "DisplayVersion"
+    Goto compare_version
+  wix_loop_done:
+
+  ReadRegStr $R0 SHCTX "${UNINSTKEY}" ""
+  ReadRegStr $R1 SHCTX "${UNINSTKEY}" "UninstallString"
+  ${IfThen} "$R0$R1" == "" ${|} Return ${|}
+  ReadRegStr $PrevVersion SHCTX "${UNINSTKEY}" "DisplayVersion"
+
+  compare_version:
+  ; 版本未知时按旧版本处理
+  ${If} $PrevVersion != ""
+    nsis_tauri_utils::SemverCompare "${VERSION}" $PrevVersion
+    Pop $PrevVersionCompare
+  ${EndIf}
+
+  ${If} $UpdateMode = 1
+    StrCpy $UninstallPrevious 1
+    Return
+  ${EndIf}
+
+  ${If} $PassiveMode = 1
+  ${OrIf} ${Silent}
+    Return
+  ${EndIf}
+
+  ${If} $PrevVersionCompare = -1
+    MessageBox MB_ICONINFORMATION|MB_OK "$(prevNewerInstalled)"
+    Quit
+  ${ElseIf} $PrevVersionCompare = 0
+    MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON1 "$(prevSameInstalled)" IDYES prev_confirmed
+    Quit
+  ${Else}
+    MessageBox MB_ICONQUESTION|MB_OKCANCEL|MB_DEFBUTTON1 "$(prevOlderInstalled)" IDOK prev_confirmed
+    Quit
+  ${EndIf}
+  prev_confirmed:
+  StrCpy $UninstallPrevious 1
 FunctionEnd
 
 
@@ -572,7 +455,7 @@ Section EarlyChecks
   !if "${ALLOWDOWNGRADES}" == "false"
   ${If} ${Silent}
     ; If downgrading
-    ${If} $R0 = -1
+    ${If} $PrevVersionCompare = -1
       System::Call 'kernel32::AttachConsole(i -1)i.r0'
       ${If} $0 <> 0
         System::Call 'kernel32::GetStdHandle(i -11)i.r0'
@@ -584,6 +467,43 @@ Section EarlyChecks
   ${EndIf}
   !endif
 
+SectionEnd
+
+; 卸载已安装的版本。放在开始安装时执行，用户在向导中途取消不会丢失已安装的版本。
+; 卸载保留用户数据和应用缓存（/KEEPDATA）；应用内更新时再加 /UPDATE /P，同时保留快捷方式、不显示卸载界面。
+; 手动安装时不加 /UPDATE，旧快捷方式随旧版本删除，由本次安装按新的安装目录重新创建。
+Section UninstallPrevious
+  ${If} $UninstallPrevious <> 1
+    Return
+  ${EndIf}
+
+  DetailPrint "$(uninstallingPrevious)"
+  ClearErrors
+  ${If} $WixMode = 1
+    ReadRegStr $R1 HKLM "$PrevWixKey" "UninstallString"
+    ExecWait '$R1' $0
+  ${Else}
+    ReadRegStr $4 SHCTX "${MANUPRODUCTKEY}" ""
+    ReadRegStr $R1 SHCTX "${UNINSTKEY}" "UninstallString"
+    ${If} $UpdateMode = 1
+      StrCpy $R1 "$R1 /UPDATE /P"
+    ${Else}
+      StrCpy $R1 "$R1 /P"
+    ${EndIf}
+    StrCpy $R1 "$R1 /KEEPDATA" ; 旧版本的卸载程序会忽略这个参数，/P 下也不会显示删除数据的勾选框
+    StrCpy $R1 "$R1 _?=$4" ; 在原安装目录运行卸载程序，以便等待它结束
+    ExecWait '$R1' $0
+  ${EndIf}
+  ${IfThen} ${Errors} ${|} StrCpy $0 2 ${|}
+
+  ${If} $0 <> 0
+    ; 应用内更新时卸载失败也继续，直接覆盖安装到原目录
+    ${If} $UpdateMode = 1
+      Return
+    ${EndIf}
+    MessageBox MB_ICONEXCLAMATION|MB_OK "$(prevUninstallFailed)"
+    Abort
+  ${EndIf}
 SectionEnd
 
 Section WebView2

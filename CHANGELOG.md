@@ -8,6 +8,16 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
+## [Unreleased]
+
+### Changed
+- Windows: updating ApiKit installed with the `.exe` installer no longer opens the setup wizard. ApiKit closes, uninstalls the old version and installs the new one with only a progress window, keeps the install folder, shortcuts and data, and opens again. ApiKit installed with the `.msi` and the portable version still open the setup wizard.
+- Windows: when you run the `.exe` installer and ApiKit is already installed, an older version is uninstalled after you confirm (your data is kept); for the same version you can reinstall it to repair the installation; when a newer version is installed, the installer says so and exits.
+
+### 变更
+- Windows：用 `.exe` 安装包安装的 ApiKit 更新时不再打开安装向导，关闭后只显示安装进度，先卸载旧版本再安装新版本，沿用安装目录、快捷方式和数据，装完自动打开。用 `.msi` 安装的 ApiKit 和便携版仍打开安装向导。
+- Windows：运行 `.exe` 安装包时如已安装 ApiKit：旧版本在确认后先卸载（保留数据）；相同版本可选择重新安装以修复；已安装更高版本时提示后退出。
+
 ## [0.5.5] - 2026-11-04
 
 ### Added
