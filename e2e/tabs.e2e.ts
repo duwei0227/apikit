@@ -83,3 +83,37 @@ test('resizes, collapses and expands the sidebar', async ({ page }) => {
   await page.locator('button[title="Expand Sidebar"]').click();
   await expect(sidebar).toHaveAttribute('style', /width: 320px/);
 });
+
+test('clears the workflow selection when bulk closing closes its tab', async ({ app, page }) => {
+  const activeWorkflowId = () => app.run(() => window.__store('workflows').activeWorkflowId);
+  const confirm = page.locator('.p-confirmdialog');
+  const runMenu = async (label: string) => {
+    await page.locator('button[title="More Options"]').click();
+    await page.locator('.p-contextmenu:visible').getByText(label, { exact: true }).click();
+  };
+  await expect.poll(activeWorkflowId).not.toBeNull();
+
+  // 只关闭已保存的页签：Workflow 关掉，未保存的请求留下
+  await runMenu('Close All Saved Tabs');
+  await expect.poll(() => tabs(page)).toEqual(['Untitled Request', 'Untitled Request', '*Untitled Request']);
+  await expect.poll(activeWorkflowId).toBeNull();
+
+  // 重新打开后关闭全部
+  await page.locator('button[title="New Workflow"]').click();
+  await expect.poll(activeWorkflowId).not.toBeNull();
+  await runMenu('Close All Tabs');
+  await confirm.getByRole('button', { name: /Discard/ }).click();
+  await expect.poll(() => tabs(page)).toEqual([]);
+  await expect.poll(activeWorkflowId).toBeNull();
+
+  // 关闭其它页签，只留下请求
+  await page.locator('button[title="New Workflow"]').click();
+  await page.locator('button[title="New Request"]').click();
+  await expect.poll(() => tabs(page)).toEqual([expect.stringMatching(/^Workflow \d+$/), '*Untitled Request']);
+  await tab(page, 0).click();
+  await expect.poll(activeWorkflowId).not.toBeNull();
+  await tab(page, 1).click({ button: 'right' });
+  await page.locator('.p-contextmenu:visible').getByText('Close Other Tabs').click();
+  await expect.poll(() => tabs(page)).toEqual(['*Untitled Request']);
+  await expect.poll(activeWorkflowId).toBeNull();
+});

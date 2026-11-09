@@ -330,6 +330,12 @@ export function useWorkspaceTabs({ collectionsPanelRef, scrollTabIntoView }: Wor
     }
   };
 
+  // 批量关闭后，侧边栏选中的 Workflow 若已不在打开的页签中，取消选中
+  const clearClosedWorkflowSelection = () => {
+    const activeId = workflowsStore.activeWorkflowId;
+    if (activeId && !openWorkflowTabs.value.includes(activeId)) workflowsStore.activeWorkflowId = null;
+  };
+
   const saveWorkflowById = async (workflowId: string) => {
     const workspace = workflowWorkspaceRefs.value[workflowId];
     if (workspace) {
@@ -557,12 +563,14 @@ export function useWorkspaceTabs({ collectionsPanelRef, scrollTabIntoView }: Wor
           workflowUnsavedChangesMap.value = {};
           activeContentIndex.value = 0;
           syncCollectionsPanelSelection(keepTab.id);
+          clearClosedWorkflowSelection();
         } else if (keepTab.type === 'mock') {
           unsavedChangesMap.value = {};
           appStateStore.updateOpenRequests([]);
           appStateStore.setActiveRequest(-1);
           openWorkflowTabs.value = [];
           workflowUnsavedChangesMap.value = {};
+          clearClosedWorkflowSelection();
           await nextTick();
           selectContentTab(0);
         } else {
@@ -832,6 +840,7 @@ export function useWorkspaceTabs({ collectionsPanelRef, scrollTabIntoView }: Wor
         openWorkflowTabs.value = [];
         openMockTabs.value = [];
         activeContentIndex.value = 0;
+        clearClosedWorkflowSelection();
 
         // 清除 CollectionsPanel 的选中状态
         if (collectionsPanelRef.value && typeof collectionsPanelRef.value.clearSelection === 'function') {
@@ -861,6 +870,7 @@ export function useWorkspaceTabs({ collectionsPanelRef, scrollTabIntoView }: Wor
     // 关闭已保存的 workflow tabs
     savedWorkflows.forEach(workflowId => workflowsStore.clearWorkflowDraft(workflowId));
     openWorkflowTabs.value = workflows.filter(workflowId => hasWorkflowUnsavedChanges(workflowId));
+    clearClosedWorkflowSelection();
 
     // 修正 activeContentIndex：确保仍指向一个有效的 tab
     await nextTick();

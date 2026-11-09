@@ -12,9 +12,11 @@
 
 ### Fixed
 - After clicking Beautify in the request Body, the editor scrolls back to the left edge instead of staying scrolled to the right.
+- After Close All Tabs, Close All Saved Tabs or Close Other Tabs closes a workflow's tab, the workflow is no longer selected in the sidebar.
 
 ### 修复
 - 在请求 Body 中点击 Beautify 后，编辑器自动滚回最左侧，不再停留在右侧需要手动拖动横向滚动条。
+- 通过 Close All Tabs、Close All Saved Tabs 或 Close Other Tabs 关闭 Workflow 页签后，侧边栏不再保持该 Workflow 的选中状态。
 
 ## [0.5.5] - 2026-11-04
 
