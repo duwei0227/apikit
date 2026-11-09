@@ -178,6 +178,20 @@ test.describe('request body editor', () => {
     expect(await editor.value()).toBe(compact);
   });
 
+  test('Beautify scrolls the body back to the left edge', async ({ app }) => {
+    const scrollLeft = () => editor.host.evaluate((el: any) => el.env.editor.renderer.getScrollLeft());
+    const long = 'x'.repeat(400);
+    // 光标停在长行末尾，编辑器横向滚动到了右侧；格式化后同一行仍是这条长行
+    await editor.setDoc(`{\n"a":1,\n"b":2,\n"long":"${long}"}|`);
+    await editor.host.evaluate((el: any) => el.env.editor.renderer.scrollCursorIntoView());
+    await expect.poll(scrollLeft).toBeGreaterThan(0);
+    await app.request.getByRole('button', { name: 'Beautify' }).click();
+    await expect.poll(() => editor.value()).toBe(`{\n  "a": 1,\n  "b": 2,\n  "long": "${long}"\n}`);
+    await expect.poll(scrollLeft).toBe(0);
+    // 光标留在原来的行，移到行首；随后 Ctrl+Z 仍能直接撤回
+    expect(await editor.host.evaluate((el: any) => el.env.editor.getCursorPosition())).toEqual({ row: 3, column: 0 });
+  });
+
   test('Beautify completes missing commas, quotes and values', async ({ app }) => {
     await editor.setDoc("{a: 'x' \"b\": {} \"c\":}|");
     await app.request.getByRole('button', { name: 'Beautify' }).click();

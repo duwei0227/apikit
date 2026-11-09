@@ -58,6 +58,7 @@ const bodyEditorRef = ref<{
   undo: () => void;
   redo: () => void;
   focus: () => void;
+  focusLineStart: () => void;
   revealPosition: (line: number, column: number) => void;
 } | null>(null);
 
@@ -217,9 +218,10 @@ const beautifyRawBody = () => {
   // XML 补全后仍不合法会直接报错；JSON 的格式化不要求合法，补全不了的地方格式化后再提示并定位
   const remaining = body.value.type === 'json' ? validateRawBody('json', formatted, neutralPlaceholder) : null;
   // 点击 Beautify 后焦点在按钮上；把焦点带回编辑器，使随后的 Ctrl+Z 能直接撤回。
+  // 没有错误要定位时，横向滚动回到最左侧，不用手动拖动滚动条。
   nextTick(() => {
     if (remaining) bodyEditorRef.value?.revealPosition(remaining.line, remaining.column);
-    else bodyEditorRef.value?.focus();
+    else bodyEditorRef.value?.focusLineStart();
   });
   if (remaining) {
     window.$toast?.add({

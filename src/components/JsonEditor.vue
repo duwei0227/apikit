@@ -377,6 +377,15 @@ const redo = () => {
   }
 };
 const focus = () => { if (editor) editor.focus(); };
+// 光标留在当前行、移到行首，并把横向滚动条拉回最左侧后聚焦，用于 Beautify 之后从头查看格式化结果
+const focusLineStart = () => {
+  if (!editor) return;
+  const { row } = editor.getCursorPosition();
+  editor.clearSelection();
+  editor.moveCursorTo(row, 0);
+  editor.session.setScrollLeft(0);
+  editor.focus();
+};
 // 把光标移到指定位置（行列号从 1 开始）并滚动到可见，用于定位请求体的语法错误
 const revealPosition = (line: number, column: number) => {
   if (!editor) return;
@@ -385,7 +394,7 @@ const revealPosition = (line: number, column: number) => {
   editor.focus();
 };
 
-defineExpose({ undo, redo, focus, revealPosition });
+defineExpose({ undo, redo, focus, focusLineStart, revealPosition });
 </script>
 
 <template>
