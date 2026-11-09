@@ -8,7 +8,7 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
-## [Unreleased]
+## [0.5.6] - 2026-11-09
 
 ### Fixed
 - After clicking Beautify in the request Body, the editor scrolls back to the left edge instead of staying scrolled to the right.
