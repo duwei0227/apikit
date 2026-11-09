@@ -8,6 +8,14 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
+## [Unreleased]
+
+### Fixed
+- Clicking a request in Collections selects it in the tree again, instead of only opening its tab and sometimes expanding an unrelated folder.
+
+### 修复
+- 在 Collections 中点击请求后，树中会正确选中该请求，不再只打开页签、有时还展开无关的目录。
+
 ## [0.5.6] - 2026-11-09
 
 ### Fixed

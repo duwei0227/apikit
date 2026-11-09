@@ -233,6 +233,26 @@ export function findFolderPath(folders: TreeContainer[], targetId: string, curre
   return null;
 }
 
+/**
+ * 按集合结构（树的数据来源）找到请求节点的 key：collection/<cid>/<fid>.../request/<rid>。
+ * 不依赖请求文件里记录的 collectionId / folderId，二者与结构不一致时仍能定位；找不到返回 null。
+ */
+export function findRequestNodeKey(collections: TreeContainer[], requestId: string): string | null {
+  const search = (container: TreeContainer, key: string): string | null => {
+    if (container.requests?.some(request => request.id === requestId)) return `${key}/request/${requestId}`;
+    for (const folder of container.folders || []) {
+      const found = search(folder, `${key}/${folder.id}`);
+      if (found) return found;
+    }
+    return null;
+  };
+  for (const collection of collections) {
+    const found = search(collection, `collection/${collection.id}`);
+    if (found) return found;
+  }
+  return null;
+}
+
 export function findFolderInCollection(collection: TreeContainer | null | undefined, folderId: string): boolean {
   const search = (folders: TreeContainer[]): boolean => {
     for (const folder of folders) {

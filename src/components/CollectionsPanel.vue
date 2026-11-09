@@ -16,7 +16,7 @@ import {
   copyRequestRefs,
   createCopyIdMaps,
   findFolderByPath,
-  findFolderPath,
+  findRequestNodeKey,
   findNodeByKey,
   type CollectionTreeNode,
   type CollectionTreeNodeData,
@@ -602,7 +602,7 @@ const duplicateRequest = async (collection: Collection, request: RequestNodeData
     await new Promise(resolve => setTimeout(resolve, 100));
     
     // 自动选中新创建的 request
-    selectRequestNode(newRequest.id, collection.id, folder?.id);
+    selectRequestNode(newRequest.id);
     
     // 通知 MainContent 打开新创建的 request
     emit('request-duplicated', newRequest.id);
@@ -729,24 +729,15 @@ const openCreateDialog = (mode: 'collection' | 'folder' = 'collection') => {
   newItemDialog.value?.open(mode);
 };
 
-// 选中指定的 request 节点
-const selectRequestNode = (requestId: string, collectionId: string, folderId?: string | null) => {
-  // 构建节点的 key
-  let key = `collection/${collectionId}`;
-  
-  if (folderId) {
-    // 需要找到 folder 的完整路径
-    const collection = collections.value.find(c => c.id === collectionId);
-    if (collection) {
-      const folderPath = findFolderPath(collection.folders || [], folderId);
-      if (folderPath) {
-        key = `${key}/${folderPath.join('/')}`;
-      }
-    }
-  }
-  
-  key = `${key}/request/${requestId}`;
-  
+// 选中指定的 request 节点。按集合结构查找位置，不依赖请求文件里记录的 folderId：
+// 二者不一致时按 folderId 拼出的 key 在树中不存在，会展开别的文件夹且选不中。不在任何集合中时不改变选中。
+// 启动时打开的页签可能先于集合加载完成，此时先记下，加载完成后再选中
+let pendingSelectRequestId: string | null = null;
+const selectRequestNode = (requestId: string) => {
+  const key = findRequestNodeKey(collections.value, requestId);
+  pendingSelectRequestId = !key && collectionsStore.isLoading ? requestId : null;
+  if (!key) return;
+
   // 展开集合和所有上级文件夹：key 为 collection/<cid>/<fid>.../request/<rid>，
   // 每个上级的 key 是到它为止的前缀
   const expandParents = (nodeKey: string) => {
@@ -765,8 +756,13 @@ const selectRequestNode = (requestId: string, collectionId: string, folderId?: s
   selectedKeys.value = { [key]: true };
 };
 
+watch(() => collectionsStore.isLoading, (loading) => {
+  if (!loading && pendingSelectRequestId) selectRequestNode(pendingSelectRequestId);
+});
+
 // 清除选中状态
 const clearSelection = () => {
+  pendingSelectRequestId = null;
   selectedKeys.value = {};
 };
 

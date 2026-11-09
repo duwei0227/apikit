@@ -25,7 +25,7 @@ export interface WorkflowWorkspaceHandle {
 
 /** CollectionsPanel 中页签用到的接口 */
 export interface CollectionsPanelHandle {
-  selectRequestNode: (requestId: string, collectionId: string, folderId?: string | null) => void;
+  selectRequestNode: (requestId: string) => void;
   clearSelection: () => void;
 }
 
@@ -887,20 +887,9 @@ export function useWorkspaceTabs({ collectionsPanelRef, scrollTabIntoView }: Wor
     }
   };
 
-  // 同步 CollectionsPanel 的选中状态
-  const syncCollectionsPanelSelection = async (requestId: string) => {
-    try {
-      const request = await requestsStore.loadRequest(requestId);
-      if (request && request.collectionId && collectionsPanelRef.value) {
-        collectionsPanelRef.value.selectRequestNode(
-          request.id,
-          request.collectionId,
-          request.folderId
-        );
-      }
-    } catch (error) {
-      console.error('Failed to sync collections panel selection:', error);
-    }
+  // 同步 CollectionsPanel 的选中状态（同步按集合结构查找，不先异步读取请求，避免快速切换时旧结果覆盖新选中）
+  const syncCollectionsPanelSelection = (requestId: string) => {
+    collectionsPanelRef.value?.selectRequestNode(requestId);
   };
 
   // 用于触发名称更新的响应式变量
@@ -955,19 +944,9 @@ export function useWorkspaceTabs({ collectionsPanelRef, scrollTabIntoView }: Wor
   };
 
   // 监听 activeRequestIndex 变化，同步 CollectionsPanel 的选中状态
-  watch(activeRequestIndex, async (newIndex) => {
-    if (newIndex >= 0 && openRequests.value[newIndex]) {
-      const requestId = openRequests.value[newIndex];
-      const request = await requestsStore.loadRequest(requestId);
-
-      if (request && request.collectionId && collectionsPanelRef.value) {
-        collectionsPanelRef.value.selectRequestNode(
-          request.id,
-          request.collectionId,
-          request.folderId
-        );
-      }
-    }
+  watch(activeRequestIndex, (newIndex) => {
+    const requestId = openRequests.value[newIndex];
+    if (newIndex >= 0 && requestId) syncCollectionsPanelSelection(requestId);
   }, { immediate: true });
 
   // 加载打开的请求

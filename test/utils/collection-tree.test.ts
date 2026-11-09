@@ -9,6 +9,7 @@ import {
   findFolderByPath,
   findFolderPath,
   findNodeByKey,
+  findRequestNodeKey,
   findSiblingFolders,
   isRequestNameTaken,
   resolveSaveLocation,
@@ -81,6 +82,16 @@ describe('collection tree', () => {
     expect(tree[0].children.map(node => node.data.id)).toEqual(['f1', 'r1', 'r2']);
     // 不能放到自己或自己的子节点上
     expect(computeDropResult(tree, 'collection/c1/f1', 'collection/c1/f1/f2', 'inside')).toBeNull();
+  });
+
+  it('TREE-009 finds the tree key of a request from the collection structure', () => {
+    const other = { id: 'c2', name: 'Other', requests: [ref('r9')], folders: [] };
+    expect(findRequestNodeKey([collection, other], 'r4')).toBe('collection/c1/f1/f2/request/r4');
+    expect(findRequestNodeKey([collection, other], 'r1')).toBe('collection/c1/request/r1');
+    expect(findRequestNodeKey([collection, other], 'r9')).toBe('collection/c2/request/r9');
+    expect(findRequestNodeKey([collection, other], 'missing')).toBeNull();
+    // 与 buildCollectionTree 生成的 key 一致
+    expect(findNodeByKey(buildCollectionTree([collection]), findRequestNodeKey([collection], 'r3')!)?.label).toBe('Request r3');
   });
 
   it('TREE-006 copies folder structures with new ids and records the id mapping', () => {

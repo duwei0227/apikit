@@ -341,11 +341,7 @@ const handleAddRequest = async (requestData: { name?: string; collection?: Colle
     
     // 自动选中新创建的 request
     if (requestData.collection && collectionsPanelRef.value) {
-      collectionsPanelRef.value.selectRequestNode(
-        newRequest.id,
-        requestData.collection.id,
-        requestData.folder?.id
-      );
+      collectionsPanelRef.value.selectRequestNode(newRequest.id);
     }
   } catch (error) {
     console.error('Failed to add request:', error);

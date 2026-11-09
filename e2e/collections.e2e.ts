@@ -202,6 +202,30 @@ test('reveals the request of the current tab in collapsed folders', async ({ app
   await expect(treeItem(page, 'Deep request')).toHaveAttribute('aria-checked', 'true');
 });
 
+test('selects the clicked request even when its stored folder is out of date', async ({ app, page }) => {
+  await app.run(async (request) => {
+    const cols = window.__store('collections');
+    const c = await cols.createCollection('Stale');
+    const actual = await cols.addFolder(c.id, 'Actual');
+    const other = await cols.addFolder(c.id, 'Other');
+    // 树中请求在 Actual 下，但请求文件里记录的 folderId 仍是 Other
+    const r = { ...request, id: 'stale-1', name: 'Stale request', method: 'GET', url: 'https://example.com/stale', collectionId: c.id, folderId: other.id };
+    await window.__store('requests').saveRequest(r, true);
+    await cols.addRequestReference(c.id, r.id, r.name, r.method, r.url, actual.id);
+    const o = { ...request, id: 'other-1', name: 'Other request', method: 'GET', url: 'https://example.com/other', collectionId: c.id, folderId: other.id };
+    await window.__store('requests').saveRequest(o, true);
+    await cols.addRequestReference(c.id, o.id, o.name, o.method, o.url, other.id);
+  }, { params: [], headers: [], body: { type: 'none', raw: '', formData: [], urlencoded: [] }, auth: { type: 'none' } });
+  await expandAll(page);
+  await treeItem(page, 'Other').locator(':scope > .p-tree-node-content .p-tree-node-toggle-button').click();
+  await expect(treeItem(page, 'Other')).toHaveAttribute('aria-expanded', 'false');
+  await node(page, 'Stale request').click();
+  await expect.poll(() => app.run(() => window.__store('appState').openRequests)).toEqual(['stale-1']);
+  await expect(treeItem(page, 'Stale request')).toHaveAttribute('aria-checked', 'true');
+  // 不展开请求并不在其中的文件夹
+  await expect(treeItem(page, 'Other')).toHaveAttribute('aria-expanded', 'false');
+});
+
 test('deletes the selected collection with the Delete key', async ({ app, page }) => {
   await createShop(app, page);
   await app.run(() => window.__store('collections').createCollection('Other'));
