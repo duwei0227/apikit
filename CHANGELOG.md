@@ -8,7 +8,7 @@
 每个版本先写英文分组（`### Added` / `### Changed` / `### Fixed`），再写中文分组（`### 新增` / `### 变更` / `### 修复`）。
 英文分组会写入自动更新的 `latest.json`，在应用内的更新弹窗中显示。
 
-## [Unreleased]
+## [0.5.7] - 2026-11-09
 
 ### Fixed
 - Clicking a request in Collections selects it in the tree again, instead of only opening its tab and sometimes expanding an unrelated folder.
