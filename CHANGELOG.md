@@ -12,9 +12,11 @@
 
 ### Fixed
 - Clicking a request in Collections selects it in the tree again, instead of only opening its tab and sometimes expanding an unrelated folder.
+- Saving a request whose tab was open while the request was moved to another folder no longer puts its old folder back into the request, which made Collections expand the wrong folder when the request was clicked.
 
 ### 修复
 - 在 Collections 中点击请求后，树中会正确选中该请求，不再只打开页签、有时还展开无关的目录。
+- 请求页签打开期间把请求移到其他目录后，再保存该页签不会把旧目录写回请求，避免之后在 Collections 中点击它时展开错误的目录。
 
 ## [0.5.6] - 2026-11-09
 

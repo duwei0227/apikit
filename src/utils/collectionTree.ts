@@ -253,6 +253,26 @@ export function findRequestNodeKey(collections: TreeContainer[], requestId: stri
   return null;
 }
 
+/**
+ * 按集合结构找到请求当前所在的集合和直接上级文件夹（在集合根下时 folderId 为 null）。
+ * 打开的页签和草稿里记录的位置可能已过时（请求在页签打开期间被移动），保存时以此为准；找不到返回 null。
+ */
+export function findRequestLocation(collections: TreeContainer[], requestId: string): { collectionId: string; folderId: string | null } | null {
+  const search = (container: TreeContainer, folderId: string | null): string | null | undefined => {
+    if (container.requests?.some(request => request.id === requestId)) return folderId;
+    for (const folder of container.folders || []) {
+      const found = search(folder, folder.id);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  };
+  for (const collection of collections) {
+    const folderId = search(collection, null);
+    if (folderId !== undefined) return { collectionId: collection.id, folderId };
+  }
+  return null;
+}
+
 export function findFolderInCollection(collection: TreeContainer | null | undefined, folderId: string): boolean {
   const search = (folders: TreeContainer[]): boolean => {
     for (const folder of folders) {

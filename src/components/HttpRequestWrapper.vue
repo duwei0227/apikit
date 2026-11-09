@@ -2,6 +2,7 @@
 import { ref, watch, onMounted } from 'vue';
 import { useRequestsStore } from '@/stores/requests';
 import { debounce } from '@/utils/debounce';
+import { findRequestLocation } from '@/utils/collectionTree';
 import {
   prepareRequestForEditing,
   prepareRequestForPersistence,
@@ -150,6 +151,12 @@ const saveCurrentRequest = async () => {
     // 如果请求有 collectionId，直接保存
     if (request.value.collectionId) {
       debouncedSaveToCache.cancel();
+      // 位置以集合结构为准，避免把页签打开期间被移动的请求写回旧的 folderId
+      const location = findRequestLocation(props.collections, request.value.id);
+      if (location) {
+        request.value.collectionId = location.collectionId;
+        request.value.folderId = location.folderId;
+      }
       const requestToSave = {
         ...prepareRequestForPersistence(request.value),
         updatedAt: new Date().toISOString()

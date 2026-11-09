@@ -9,6 +9,7 @@ import {
   findFolderByPath,
   findFolderPath,
   findNodeByKey,
+  findRequestLocation,
   findRequestNodeKey,
   findSiblingFolders,
   isRequestNameTaken,
@@ -92,6 +93,15 @@ describe('collection tree', () => {
     expect(findRequestNodeKey([collection, other], 'missing')).toBeNull();
     // 与 buildCollectionTree 生成的 key 一致
     expect(findNodeByKey(buildCollectionTree([collection]), findRequestNodeKey([collection], 'r3')!)?.label).toBe('Request r3');
+  });
+
+  it('TREE-010 finds the collection and direct folder that hold a request', () => {
+    const other = { id: 'c2', name: 'Other', requests: [ref('r9')], folders: [] };
+    expect(findRequestLocation([collection, other], 'r4')).toEqual({ collectionId: 'c1', folderId: 'f2' });
+    expect(findRequestLocation([collection, other], 'r3')).toEqual({ collectionId: 'c1', folderId: 'f1' });
+    expect(findRequestLocation([collection, other], 'r1')).toEqual({ collectionId: 'c1', folderId: null });
+    expect(findRequestLocation([collection, other], 'r9')).toEqual({ collectionId: 'c2', folderId: null });
+    expect(findRequestLocation([collection, other], 'missing')).toBeNull();
   });
 
   it('TREE-006 copies folder structures with new ids and records the id mapping', () => {

@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue';
 import { useAppStateStore } from '@/stores/appState';
-import { findFolderById, isRequestNameTaken, resolveSaveLocation } from '@/utils/collectionTree';
+import { findFolderById, findRequestLocation, isRequestNameTaken, resolveSaveLocation } from '@/utils/collectionTree';
 import { generateId } from '@/utils/id-generator';
 import type { Collection, Folder, Request, TestConfig } from '@/types/models';
 import { matchesShortcut } from '@/utils/shortcuts';
@@ -61,7 +61,13 @@ export function useRequestSave({ props, localRequest, buildTestsConfig, emitSave
   };
 
   const saveRequestDirectly = () => {
-    // 直接保存到已有的 collection/folder
+    // 直接保存到已有的 collection/folder。位置以集合结构为准：页签打开期间请求可能被移动过，
+    // 页签里记录的旧位置会把请求文件的 folderId 写回移动前的值，与集合树不一致
+    const location = findRequestLocation(props.collections, localRequest.value.id);
+    if (location) {
+      localRequest.value.collectionId = location.collectionId;
+      localRequest.value.folderId = location.folderId;
+    }
     const collection = props.collections.find(c => c.id === localRequest.value.collectionId);
 
     if (!collection) {

@@ -165,6 +165,32 @@ test('moves requests with the Move dialog and searches the tree', async ({ app, 
   await expect(node(page, 'List')).toBeVisible();
 });
 
+test('saving an open request after moving it keeps its new folder', async ({ app, page }) => {
+  await createShop(app, page);
+  // 先打开请求页签，再移动它
+  await node(page, 'List').click();
+  await expect.poll(() => app.run(() => window.__store('appState').openRequests)).toEqual(['r1']);
+  await contextMenu(page, 'List', 'Move to...');
+  await dialog(page).locator('.p-tree-node-toggle-button[data-p-leaf=false]').first().click();
+  await dialog(page).locator('.p-tree-node-content', { hasText: 'Orders' }).first().click();
+  await dialog(page).getByRole('button', { name: 'Move' }).click();
+  await expect.poll(() => collections(app)).toEqual([
+    { name: 'Shop', requests: [], folders: [{ name: 'Orders', requests: ['Create', 'Search', 'List'], folders: [] }] },
+  ]);
+
+  // 在页签中修改并保存：请求文件里的位置应与集合树一致，不能写回移动前的位置
+  await app.url.fill('https://example.com/List?page=2');
+  await app.url.press('Control+s');
+  await expect.poll(() => app.run(async () => (await window.__store('requests').loadSavedRequest('r1'))?.url)).toBe('https://example.com/List?page=2');
+  expect(await app.run(async () => {
+    const r = await window.__store('requests').loadSavedRequest('r1');
+    return r?.folderId === window.__store('collections').collections[0].folders[0].id;
+  })).toBe(true);
+  await expect.poll(() => collections(app)).toEqual([
+    { name: 'Shop', requests: [], folders: [{ name: 'Orders', requests: ['Create', 'Search', 'List'], folders: [] }] },
+  ]);
+});
+
 test('moves folders up and down from the right-click menu', async ({ app, page }) => {
   await createShop(app, page);
   // Shop：文件夹 Orders（Create、Search）在请求 List 前面
