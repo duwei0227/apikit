@@ -2,6 +2,7 @@ import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeTextFile, readTextFile, exists } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 import type { AuthConfig, Collection, Environment, Folder, FormDataItem, HttpMethod, KeyValue, Request, RequestBody, RequestReference, WorkflowDefinition } from '@/types/models';
+import { findRequestLocation } from '@/utils/collectionTree';
 import { generateId } from '@/utils/id-generator';
 import { isWorkflowDefinition, remapWorkflow } from '@/utils/workflowTransfer';
 import { readWorkflowFolderPath } from '@/utils/workflowTree';
@@ -666,15 +667,19 @@ export class ImportExportService {
       updatedAt: new Date().toISOString()
     };
 
-    // Remap requests
-    const newRequests: Request[] = requests.map(request => ({
+    // Remap requests：所在文件夹以导入集合的结构为准，导出文件里请求记录的 folderId 可能已过时
+    const newRequests: Request[] = requests.map(request => {
+      const location = findRequestLocation([collection], request.id);
+      const sourceFolderId = location ? location.folderId : request.folderId;
+      return {
       ...request,
       id: requestIdMap.get(request.id) || request.id,
       collectionId: newCollectionId,
-      folderId: request.folderId ? folderIdMap.get(request.folderId) || null : null,
+      folderId: sourceFolderId ? folderIdMap.get(sourceFolderId) || null : null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
-    }));
+      };
+    });
 
     return { collection: newCollection, requests: newRequests, requestIdMap };
   }

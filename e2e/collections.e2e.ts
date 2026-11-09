@@ -252,6 +252,43 @@ test('selects the clicked request even when its stored folder is out of date', a
   await expect(treeItem(page, 'Other')).toHaveAttribute('aria-expanded', 'false');
 });
 
+test('renames and duplicates by the folder a request is shown in, even when its stored folder is out of date', async ({ app, page }) => {
+  await app.run(async (request) => {
+    const cols = window.__store('collections');
+    const reqs = window.__store('requests');
+    const c = await cols.createCollection('BPP');
+    const robot = await cols.addFolder(c.id, 'Robot');
+    const prod = await cols.addFolder(c.id, 'PROD');
+    // Start 在 PROD 下，但请求记录里的 folderId 仍是 Robot；Robot 里已有同名的 Robot only
+    for (const [id, name, folderId, storedFolderId] of [['start', 'Start', prod.id, robot.id], ['robot-1', 'Robot only', robot.id, robot.id]]) {
+      const r = { ...request, id, name, method: 'GET', url: `https://example.com/${id}`, collectionId: c.id, folderId: storedFolderId };
+      await reqs.saveRequest(r, true);
+      await cols.addRequestReference(c.id, id, name, 'GET', r.url, folderId);
+    }
+  }, { params: [], headers: [], body: { type: 'none', raw: '', formData: [], urlencoded: [] }, auth: { type: 'none' } });
+
+  // 重名只看请求实际所在的 PROD：Robot 中的同名请求不影响
+  await contextMenu(page, 'Start', 'Rename');
+  await dialog(page).getByPlaceholder('Enter a new name').fill('Robot only');
+  await dialog(page).getByRole('button', { name: 'Rename' }).click();
+  await expect(dialog(page)).toBeHidden();
+  await expect.poll(() => collections(app)).toEqual([
+    { name: 'BPP', requests: [], folders: [
+      { name: 'Robot', requests: ['Robot only'], folders: [] },
+      { name: 'PROD', requests: ['Robot only'], folders: [] },
+    ] },
+  ]);
+
+  // 复制 PROD：副本请求记录的 folderId 指向复制出的文件夹
+  await contextMenu(page, 'PROD', 'Duplicate');
+  await expect.poll(() => app.run(() => window.__store('collections').collections[0].folders.length)).toBe(3);
+  expect(await app.run(async () => {
+    const copy = window.__store('collections').collections[0].folders.find((f: any) => f.name === 'PROD (Copy)');
+    const saved = await window.__store('requests').loadSavedRequest(copy.requests[0].id);
+    return saved?.folderId === copy.id;
+  })).toBe(true);
+});
+
 test('deletes the selected collection with the Delete key', async ({ app, page }) => {
   await createShop(app, page);
   await app.run(() => window.__store('collections').createCollection('Other'));

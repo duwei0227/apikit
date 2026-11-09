@@ -16,6 +16,7 @@ import {
   copyRequestRefs,
   createCopyIdMaps,
   findFolderByPath,
+  findRequestLocation,
   findRequestNodeKey,
   findNodeByKey,
   type CollectionTreeNode,
@@ -657,7 +658,8 @@ const duplicateFolder = async (collection: Collection, folder: FolderNodeData, f
           await requestsStore.saveRequest(copyRequestData(request, {
             id: newRequestId,
             collectionId: collection.id,
-            folderId: request.folderId ? maps.folderIdMap.get(request.folderId) : createdFolder.id
+            // 所在文件夹以集合结构为准（请求文件里的 folderId 可能已过时）；直接在被复制文件夹下的对应新文件夹
+            folderId: maps.folderIdMap.get(findRequestLocation([folder], request.id)?.folderId ?? folder.id) ?? createdFolder.id
           }));
         }
       }
@@ -697,11 +699,13 @@ const duplicateCollection = async (collection: CollectionNodeData) => {
     for (const request of requests) {
       const newRequestId = maps.requestIdMap.get(request.id);
       if (newRequestId) {
+        // 所在文件夹以集合结构为准（请求文件里的 folderId 可能已过时）
+        const sourceFolderId = findRequestLocation([collection], request.id)?.folderId;
         // 深拷贝出完全独立的请求副本，并清除所有临时属性
         await requestsStore.saveRequest(copyRequestData(request, {
           id: newRequestId,
           collectionId: newCollection.id,
-          folderId: request.folderId ? maps.folderIdMap.get(request.folderId) : null
+          folderId: sourceFolderId ? maps.folderIdMap.get(sourceFolderId) ?? null : null
         }));
       }
     }

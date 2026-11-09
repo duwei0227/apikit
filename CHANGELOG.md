@@ -13,10 +13,12 @@
 ### Fixed
 - Clicking a request in Collections selects it in the tree again, instead of only opening its tab and sometimes expanding an unrelated folder.
 - Saving a request whose tab was open while the request was moved to another folder no longer puts its old folder back into the request, which made Collections expand the wrong folder when the request was clicked.
+- For requests affected by the issue above, Rename no longer reports a duplicate name based on the old folder; duplicating a folder or collection and importing an ApiKit export keep their requests in the folders shown in the tree; MCP tools report the folder a request is actually shown in.
 
 ### 修复
 - 在 Collections 中点击请求后，树中会正确选中该请求，不再只打开页签、有时还展开无关的目录。
 - 请求页签打开期间把请求移到其他目录后，再保存该页签不会把旧目录写回请求，避免之后在 Collections 中点击它时展开错误的目录。
+- 对受上一问题影响的请求：重命名时不再按旧目录误报重名；复制目录或集合、导入 ApiKit 导出文件后，请求记录的目录与树中显示的一致；MCP 工具返回请求实际所在的目录。
 
 ## [0.5.6] - 2026-11-09
 

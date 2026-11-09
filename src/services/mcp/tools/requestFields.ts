@@ -1,7 +1,9 @@
 // 请求字段：AI 传入的字段转换为请求，请求转换为输出
 
 import type { AuthConfig, FormDataItem, HttpMethod, KeyValue, Request, RequestBody, RequestSettings, TestConfig } from '@/types/models';
+import { useCollectionsStore } from '@/stores/collections';
 import { cloneJson } from '@/utils/clone';
+import { findRequestLocation } from '@/utils/collectionTree';
 import { prepareRequestForPersistence } from '@/utils/requestDraft';
 import { createEmptyRequest } from '@/utils/requestFactory';
 import { normalizeTestConfig } from '@/utils/requestTests';
@@ -176,9 +178,17 @@ export function describeRequest(request: Request, reveal: boolean) {
     },
     tests: normalizeTestConfig(clean.testsConfig ?? clean.tests),
     settings: clean.settings,
-    collectionId: clean.collectionId,
-    folderId: clean.folderId,
+    ...currentLocation(clean),
   };
+}
+
+/** 请求所在位置以集合结构为准：请求文件里记录的 collectionId / folderId 可能已过时 */
+function currentLocation(request: Request) {
+  const location = findRequestLocation(useCollectionsStore().collections, request.id);
+  // 在集合根下时与原来一样不返回 folderId
+  return location
+    ? { collectionId: location.collectionId, folderId: location.folderId ?? undefined }
+    : { collectionId: request.collectionId, folderId: request.folderId };
 }
 
 /** 写操作返回的摘要：AI 刚传入的字段不再原样返回 */
@@ -188,8 +198,7 @@ export function summarizeRequest(request: Request) {
     name: request.name,
     method: request.method,
     url: request.url,
-    collectionId: request.collectionId,
-    folderId: request.folderId,
+    ...currentLocation(request),
   };
 }
 
@@ -208,7 +217,6 @@ export function outlineRequest(request: Request) {
     authType: clean.auth?.type || 'none',
     testCount: tests.statusCodeTests.length + tests.jsonFieldTests.length,
     extractedVariables: tests.globalVariables.map(item => item.variableName).filter(Boolean),
-    collectionId: clean.collectionId,
-    folderId: clean.folderId,
+    ...currentLocation(clean),
   };
 }

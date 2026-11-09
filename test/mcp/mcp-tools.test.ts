@@ -1113,6 +1113,20 @@ describe('MCP tools', () => {
     expect((await call('list_collections', { depth: 0 })).error).toBe('depth must be a positive integer');
   });
 
+  it('MCP-034 reports the folder a request is shown in, even when its stored folderId is out of date', async () => {
+    const collection = await call('create_collection', { name: 'BPP' });
+    const robot = await call('create_folder', { collectionId: collection.id, name: 'Robot' });
+    const prod = await call('create_folder', { collectionId: collection.id, name: 'PROD' });
+    const created = await call('create_request', { collectionId: collection.id, folderId: prod.id, name: 'Start', url: '/start' });
+    // 请求记录里的 folderId 过时：仍指向 Robot，集合结构中它在 PROD
+    const stored = await useRequestsStore().loadRequest(created.id);
+    await useRequestsStore().saveRequest({ ...stored!, folderId: robot.id }, true);
+
+    expect((await call('get_request', { requestId: created.id })).folderId).toBe(prod.id);
+    expect((await call('get_request', { requestId: created.id, view: 'summary' })).folderId).toBe(prod.id);
+    expect((await call('update_request', { requestId: created.id, url: '/start2' })).folderId).toBe(prod.id);
+  });
+
   it('MCP-033 finds workflows and requests by partial names and returns compact views', async () => {
     const collection = await call('create_collection', { name: 'BPP' });
     const login = await call('create_request', {

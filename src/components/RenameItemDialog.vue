@@ -3,7 +3,7 @@ import { dialogStyle } from '@/utils/dialogSize';
 import { ref, computed } from 'vue';
 import { useCollectionsStore } from '@/stores/collections';
 import { useRequestsStore } from '@/stores/requests';
-import { findFolderInCollection, findSiblingFolders, isRequestNameTaken } from '@/utils/collectionTree';
+import { findFolderInCollection, findRequestLocation, findSiblingFolders, isRequestNameTaken } from '@/utils/collectionTree';
 
 /** 要重命名的集合、文件夹或请求（树节点的数据） */
 export type RenameTarget =
@@ -80,8 +80,10 @@ const renameItem = async () => {
         return;
       }
       
-      // 检查名称是否重复
-      if (fullRequest.collectionId && isRequestNameTaken(collections.value, fullRequest.collectionId, fullRequest.folderId, newName, fullRequest.id)) {
+      // 检查名称是否重复：位置以集合结构为准，请求文件里的 folderId 可能已过时
+      const location = findRequestLocation(collections.value, fullRequest.id)
+        ?? (fullRequest.collectionId ? { collectionId: fullRequest.collectionId, folderId: fullRequest.folderId ?? null } : null);
+      if (location && isRequestNameTaken(collections.value, location.collectionId, location.folderId, newName, fullRequest.id)) {
         if (window.$toast) {
           window.$toast.add({
             severity: 'warn',
@@ -102,14 +104,14 @@ const renameItem = async () => {
       await requestsStore.saveRequest(updatedRequest);
       
       // 更新 collection 中的引用
-      if (fullRequest.collectionId) {
+      if (location) {
         await collectionsStore.updateRequestReference(
-          fullRequest.collectionId,
+          location.collectionId,
           fullRequest.id,
           newName,
           fullRequest.method,
           fullRequest.url,
-          fullRequest.folderId ?? undefined
+          location.folderId ?? undefined
         );
       }
     }
