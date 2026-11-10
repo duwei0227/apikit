@@ -277,3 +277,18 @@ test('reopens a workflow from the tree after its tab is closed', async ({ app, p
   await expect(tabs.filter({ hasText: 'Login' })).toHaveCount(1);
   await expect(selected).toHaveText(/Login/);
 });
+
+test('leaves space below the last node when the tree is scrolled to the bottom', async ({ app, page }) => {
+  await app.run(async () => {
+    const store = window.__store('workflows');
+    for (let i = 1; i <= 40; i++) await store.createWorkflow(`Flow ${i}`);
+  });
+  await expect(node(page, 'Flow 40')).toBeAttached();
+  const scroller = tree(page).locator('.p-tree-root');
+  await scroller.evaluate(el => { el.scrollTop = el.scrollHeight; });
+  await expect.poll(() => scroller.evaluate(el => {
+    const items = el.querySelectorAll('.p-tree-node-content');
+    const last = items[items.length - 1].getBoundingClientRect();
+    return el.getBoundingClientRect().bottom - last.bottom;
+  })).toBeGreaterThanOrEqual(24);
+});

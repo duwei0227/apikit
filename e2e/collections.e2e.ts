@@ -413,3 +413,18 @@ test('a new folder goes after the other folders and before the requests', async 
   await addFolder('Orders', 'Drafts');
   await expect.poll(shown).toEqual(['Shop', 'Orders', 'Drafts', 'Create', 'Search', 'Archive', 'List']);
 });
+
+test('leaves space below the last node when the tree is scrolled to the bottom', async ({ app, page }) => {
+  await app.run(async () => {
+    const cols = window.__store('collections');
+    for (let i = 1; i <= 40; i++) await cols.createCollection(`Col ${i}`);
+  });
+  await expect(node(page, 'Col 40')).toBeAttached();
+  const scroller = tree(page).locator('.p-tree-root');
+  await scroller.evaluate(el => { el.scrollTop = el.scrollHeight; });
+  await expect.poll(() => scroller.evaluate(el => {
+    const items = el.querySelectorAll('.p-tree-node-content');
+    const last = items[items.length - 1].getBoundingClientRect();
+    return el.getBoundingClientRect().bottom - last.bottom;
+  })).toBeGreaterThanOrEqual(24);
+});

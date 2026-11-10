@@ -421,6 +421,11 @@ const onTreeContextMenu = (event: MouseEvent) => {
   background: transparent;
 }
 
+/* 滚动到底时最后一个节点与面板底部保留约一行的留白 */
+:deep(.p-tree-root-children) {
+  padding-bottom: 2rem;
+}
+
 /* 名称占满整行，行内按钮靠右 */
 :deep(.p-tree-node-label) {
   flex: 1;

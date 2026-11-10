@@ -872,6 +872,11 @@ defineExpose({
   background: transparent;
 }
 
+/* 滚动到底时最后一个节点与面板底部保留约一行的留白 */
+:deep(.p-tree-root-children) {
+  padding-bottom: 2rem;
+}
+
 .method-badge {
   font-weight: 600;
   font-size: 10px;
