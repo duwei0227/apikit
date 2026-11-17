@@ -31,6 +31,8 @@ ApiKit is a cross-platform API testing tool built for developers, with a clean, 
 
 ## Features
 
+Response viewing recognizes JSON sent as `text/plain`; Raw defaults to horizontal scrolling for very long lines, with a **Wrap lines** toggle.
+
 ![ApiKit request editor](docs/public/screenshots/request.png)
 
 | Feature | Description | Docs |

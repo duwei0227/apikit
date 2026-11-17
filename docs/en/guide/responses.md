@@ -14,6 +14,11 @@ After sending, the top of the response area shows the status, time and size, wit
 - Large integers keep their exact value.
 - For responses over 5 MB only the first 1 MB is shown; click **Copy Full Body** to copy all of it, or **Save to File…** to save it.
 
+- JSON objects and arrays sent as `text/plain` are also shown in the JSON editor in **Pretty**, preserving large-integer text.
+- **Raw** disables automatic wrapping when any line exceeds 10,000 characters; scroll horizontally to read it, or click **Wrap lines** to enable wrapping. Each new response resets the default. Wrapping very long lines can increase memory use.
+
+![Raw wrapping option](/screenshots/response-raw.png)
+
 ## Save the response
 
 - **Send And Download** (in the dropdown next to Send): save the response as a file, with the file name and type taken from the response headers.

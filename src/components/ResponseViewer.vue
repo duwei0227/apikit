@@ -4,6 +4,7 @@ import AsyncPanelLoader from './AsyncPanelLoader.vue';
 import { getOperatorLabel } from '@/constants/testOperators';
 import StreamResponseView from './StreamResponseView.vue';
 import SaveToMockDialog from './SaveToMockDialog.vue';
+import { detectResponseLanguage, shouldWrapResponseText } from '@/utils/responseBody';
 import { formatDuration } from '@/utils/streamResponse';
 import { htmlPreviewAllowsScripts } from '@/constants/htmlPreview';
 import { findTextMatches, type TextMatch } from '@/utils/textSearch';
@@ -55,6 +56,11 @@ const previewText = (text: string | undefined) => {
 };
 const displayBody = computed(() => previewText(props.response?.body));
 const displayRawBody = computed(() => previewText(props.response?.rawBody));
+
+const rawWrapLines = ref(true);
+watch(() => props.response, (response) => {
+  rawWrapLines.value = shouldWrapResponseText(response?.rawBody ?? '');
+}, { immediate: true });
 
 const saveFullResponse = async () => {
   const response = props.response;
@@ -309,25 +315,9 @@ const isImageResponse = computed(() => {
   return contentType.includes('image/');
 });
 
-const responseLanguage = computed(() => {
-  if (!props.response) return 'text';
-  const contentType = props.response.contentType.toLowerCase();
-
-  if (contentType.includes('json')) return 'json';
-  if (contentType.includes('xml')) return 'xml';
-  if (contentType.includes('html')) return 'html';
-
-  // 尝试从内容判断
-  const body = props.response.rawBody.trim();
-  if (body.startsWith('<?xml') || body.startsWith('<') && body.includes('</')) {
-    if (body.toLowerCase().includes('<!doctype html') || body.toLowerCase().includes('<html')) {
-      return 'html';
-    }
-    return 'xml';
-  }
-
-  return 'text';
-});
+const responseLanguage = computed(() => detectResponseLanguage(
+  props.response?.rawBody ?? '', props.response?.contentType ?? '',
+));
 
 const shouldUseCodeEditor = computed(() => {
   return ['json', 'xml', 'html'].includes(responseLanguage.value);
@@ -538,6 +528,15 @@ const selectAllPreContent = (event: KeyboardEvent) => {
               </Tabs>
 
               <div class="flex items-center gap-2 mr-2">
+                <Button
+                  v-if="activeBodyViewTab === 1 && !isImageResponse"
+                  label="Wrap lines"
+                  size="small"
+                  text
+                  :aria-pressed="rawWrapLines"
+                  :severity="rawWrapLines ? 'primary' : 'secondary'"
+                  @click="rawWrapLines = !rawWrapLines"
+                />
                 <!-- Search Button -->
                 <Button
                   v-if="!isImageResponse"
@@ -682,11 +681,11 @@ const selectAllPreContent = (event: KeyboardEvent) => {
             </div>
 
             <!-- Raw View -->
-            <div v-else class="flex-1 overflow-y-auto p-4">
+            <div v-else class="flex-1 min-w-0 overflow-auto p-4">
               <!-- Text with search highlighting -->
-              <pre v-if="searchMatches.length > 0" class="response-pre whitespace-pre-wrap" tabindex="0" @keydown="selectAllPreContent" v-html="highlightedResponseBody"></pre>
+              <pre v-if="searchMatches.length > 0" class="response-pre" :style="{ whiteSpace: rawWrapLines ? 'pre-wrap' : 'pre' }" tabindex="0" @keydown="selectAllPreContent" v-html="highlightedResponseBody"></pre>
               <!-- Text without search -->
-              <pre v-else class="response-pre whitespace-pre-wrap" tabindex="0" @keydown="selectAllPreContent">{{ displayRawBody }}</pre>
+              <pre v-else class="response-pre" :style="{ whiteSpace: rawWrapLines ? 'pre-wrap' : 'pre' }" tabindex="0" @keydown="selectAllPreContent">{{ displayRawBody }}</pre>
             </div>
           </div>
         </TabPanel>

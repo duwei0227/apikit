@@ -14,6 +14,11 @@
 - 大整数保持原值显示。
 - 超过 5 MB 的响应只显示前 1 MB，可以点击 **Copy Full Body** 复制全部内容，或 **Save to File…** 保存到文件。
 
+- `text/plain` 等类型中的 JSON 对象和数组也会在 **Pretty** 中使用 JSON 编辑器展示，保留大整数原文。
+- **Raw** 的单行超过 10,000 个字符时默认关闭自动换行，通过横向滚动查看；点击 **Wrap lines** 可手动开启。新响应会重新判断默认值。开启超长行换行可能增加内存使用。
+
+![Raw 换行选项](/screenshots/response-raw.png)
+
 ## 保存响应
 
 - **Send And Download**（Send 按钮旁的下拉菜单）：把响应保存为文件，根据响应头识别文件名和类型。

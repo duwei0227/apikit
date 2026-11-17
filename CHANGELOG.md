@@ -10,6 +10,12 @@
 
 ## [Unreleased]
 
+### Fixed
+- JSON objects and arrays returned as text/plain now use the JSON editor in Pretty. Raw disables automatic wrapping for very long lines to reduce text layout memory, with a Wrap lines toggle to opt in.
+
+### 修复
+- text/plain 返回的 JSON 对象和数组在 Pretty 中使用 JSON 编辑器展示；Raw 超长行默认关闭自动换行以减少文本布局内存，可通过 Wrap lines 手动开启。
+
 ## [0.5.8] - 2026-11-17
 
 ### Changed

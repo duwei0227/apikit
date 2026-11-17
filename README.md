@@ -31,6 +31,8 @@ ApiKit 是一个跨平台的 API 测试工具，专为开发者设计，提供�
 
 ## 功能特性
 
+响应展示会识别 `text/plain` 中的 JSON；Raw 超长行默认横向滚动，可通过 **Wrap lines** 切换换行。
+
 ![ApiKit 请求编辑器](docs/public/screenshots/request.png)
 
 | 功能 | 说明 | 文档 |
