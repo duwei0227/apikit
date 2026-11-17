@@ -10,6 +10,8 @@
 
 ## [Unreleased]
 
+## [0.5.8] - 2026-11-17
+
 ### Changed
 - Reduced temporary memory allocations when validating and sending JSON requests, evaluating response tests, extracting variables and truncating logs, while preserving large-integer precision and existing behavior.
 - Windows: updating ApiKit installed with the `.exe` installer no longer opens the setup wizard. ApiKit closes, uninstalls the old version and installs the new one with only a progress window, keeps the install folder, shortcuts and data, and opens again. ApiKit installed with the `.msi` and the portable version still open the setup wizard.
