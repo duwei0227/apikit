@@ -169,44 +169,28 @@ export function parseJsonPreservingNumbers(text: string): JsonValue {
   };
 
   const parseString = (): string => {
-    index++; // opening quote
-    let result = '';
-
+    const start = index++;
+    let escaped = false;
     while (index < source.length) {
       const ch = source[index];
-
       if (ch === '"') {
-        index++;
-        return result;
+        const end = index++;
+        // 只解码字符串 token，不让原生 JSON.parse 接触数字，保留大整数精度。
+        if (!escaped) return source.slice(start + 1, end);
+        try {
+          return JSON.parse(source.slice(start, index)) as string;
+        } catch {
+          return fail();
+        }
       }
       if (ch === '\\') {
-        const escaped = source[index + 1];
-        switch (escaped) {
-          case '"': result += '"'; break;
-          case '\\': result += '\\'; break;
-          case '/': result += '/'; break;
-          case 'b': result += '\b'; break;
-          case 'f': result += '\f'; break;
-          case 'n': result += '\n'; break;
-          case 'r': result += '\r'; break;
-          case 't': result += '\t'; break;
-          case 'u': {
-            const hex = source.slice(index + 2, index + 6);
-            if (!/^[0-9a-fA-F]{4}$/.test(hex)) fail();
-            result += String.fromCharCode(parseInt(hex, 16));
-            index += 4;
-            break;
-          }
-          default: fail();
-        }
+        escaped = true;
         index += 2;
         continue;
       }
       if (ch.charCodeAt(0) < 0x20) fail();
-      result += ch;
       index++;
     }
-
     return fail();
   };
 

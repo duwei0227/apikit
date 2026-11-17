@@ -11,7 +11,8 @@ interface CommentScan {
 }
 
 const scanComments = (text: string): CommentScan | null => {
-  let output = '';
+  const parts: string[] = [];
+  let plainStart = 0;
   let line = 0;
   const commentedLines = new Set<number>();
   let inString = false;
@@ -20,9 +21,7 @@ const scanComments = (text: string): CommentScan | null => {
   while (index < text.length) {
     const char = text[index];
     if (inString) {
-      output += char;
       if (char === '\\' && index + 1 < text.length) {
-        output += text[index + 1];
         index += 2;
         continue;
       }
@@ -34,53 +33,56 @@ const scanComments = (text: string): CommentScan | null => {
 
     if (char === '"') {
       inString = true;
-      output += char;
       index += 1;
       continue;
     }
 
     const next = text[index + 1];
     if (char === '/' && next === '/') {
+      parts.push(text.slice(plainStart, index));
       commentedLines.add(line);
       const end = text.indexOf('\n', index);
       index = end === -1 ? text.length : end;
+      plainStart = index;
       continue;
     }
 
     if (char === '/' && next === '*') {
+      parts.push(text.slice(plainStart, index));
       commentedLines.add(line);
       const close = text.indexOf('*/', index + 2);
       const end = close === -1 ? text.length : close + 2;
       // 块注释跨行时保留其中的换行，后面的行号不变
       for (let position = index; position < end; position++) {
         if (text[position] !== '\n') continue;
-        output += '\n';
+        parts.push('\n');
         line += 1;
         commentedLines.add(line);
       }
       index = end;
+      plainStart = index;
       continue;
     }
 
-    output += char;
     if (char === '\n') line += 1;
     index += 1;
   }
 
   if (commentedLines.size === 0) return null;
-  return { lines: output.split('\n'), commentedLines };
+  parts.push(text.slice(plainStart));
+  return { lines: parts.join('').split('\n'), commentedLines };
 };
 
 /** 删除 `}` / `]` 前多余的逗号（中间只隔空白），字符串里的内容不动 */
 const removeDanglingCommas = (text: string): string => {
-  let output = '';
+  const parts: string[] = [];
+  let plainStart = 0;
   let inString = false;
 
   for (let index = 0; index < text.length; index++) {
     const char = text[index];
     if (inString) {
-      output += char;
-      if (char === '\\') output += text[++index] ?? '';
+      if (char === '\\') index++;
       else if (char === '"') inString = false;
       continue;
     }
@@ -89,12 +91,14 @@ const removeDanglingCommas = (text: string): string => {
       let next = index + 1;
       while (next < text.length && /\s/.test(text[next])) next += 1;
       const isDangling = text[next] === '}' || text[next] === ']';
-      if (isDangling) continue;
+      if (isDangling) {
+        parts.push(text.slice(plainStart, index));
+        plainStart = index + 1;
+      }
     }
-    output += char;
   }
 
-  return output;
+  return parts.length ? parts.join('') + text.slice(plainStart) : text;
 };
 
 /** 去掉 JSON 文本中的注释，供发送请求和生成 cURL 使用 */

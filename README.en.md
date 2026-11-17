@@ -45,6 +45,8 @@ ApiKit is a cross-platform API testing tool built for developers, with a clean, 
 | 🤖 AI integration (MCP) | AI tools read and change collections, requests, workflows and environments through MCP, find items by partial names, create, change and run requests in batches and import API documents; you confirm before requests are sent and before deletions | [AI Integration](https://duwei0227.github.io/apikit/en/guide/ai) |
 | 📝 Console and history | See every request actually sent and its response, and reopen requests from the history | [Console and History](https://duwei0227.github.io/apikit/en/guide/console-history) |
 
+JSON request and response processing avoids unnecessary temporary allocations while preserving large-integer precision, comment support and assertions.
+
 See the [Reference](https://duwei0227.github.io/apikit/en/guide/reference) for keyboard shortcuts, where data is stored and the FAQ.
 
 ## Download

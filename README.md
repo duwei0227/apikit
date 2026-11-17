@@ -45,6 +45,8 @@ ApiKit 是一个跨平台的 API 测试工具，专为开发者设计，提供�
 | 🤖 AI 集成（MCP） | AI 工具通过 MCP 读取和修改集合、请求、工作流和环境，支持按名称模糊查找、批量新建/修改/运行请求和导入 API 文档，发送请求和删除前由你确认 | [AI 集成](https://duwei0227.github.io/apikit/guide/ai) |
 | 📝 Console 和历史 | 查看每次实际发出的请求和响应，从历史重新打开请求 | [Console 和历史](https://duwei0227.github.io/apikit/guide/console-history) |
 
+JSON 请求和响应处理减少不必要的临时内存分配，保留大整数精度、注释支持和断言功能。
+
 快捷键、数据存储位置和常见问题见[参考](https://duwei0227.github.io/apikit/guide/reference)。
 
 ## 下载安装

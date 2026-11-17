@@ -1,6 +1,6 @@
 // 发送前校验 JSON / XML 请求体：校验的是实际要发出去的内容（JSON 去掉注释、变量替换后），
 // 但错误位置换算回编辑器里的原文，便于定位。
-import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
+import { visit, printParseErrorCode, type ParseError } from 'jsonc-parser';
 import { findXmlSyntaxError } from './beautifyXml';
 
 export interface BodySyntaxError {
@@ -87,12 +87,14 @@ const positionAt = (text: string, offset: number): { line: number; column: numbe
  * 有注释时，注释掉最后一项后留在 `}` / `]` 前的逗号也一并去掉。
  */
 const blankJsonComments = (text: string): string => {
-  const chars = text.split('');
+  const parts: string[] = [];
+  let plainStart = 0;
   let hasComment = false;
   let inString = false;
 
   const blank = (start: number, end: number) => {
-    for (let i = start; i < end; i++) if (chars[i] !== '\n') chars[i] = ' ';
+    parts.push(text.slice(plainStart, start), text.slice(start, end).replace(/[^\n]+/g, part => ' '.repeat(part.length)));
+    plainStart = end;
   };
 
   for (let i = 0; i < text.length; i++) {
@@ -113,7 +115,10 @@ const blankJsonComments = (text: string): string => {
   }
   if (!hasComment) return text;
 
-  const blanked = chars.join('');
+  parts.push(text.slice(plainStart));
+  const blanked = parts.join('');
+  parts.length = 0;
+  plainStart = 0;
   inString = false;
   for (let i = 0; i < blanked.length; i++) {
     const ch = blanked[i];
@@ -126,9 +131,12 @@ const blankJsonComments = (text: string): string => {
     if (ch !== ',') continue;
     const next = blanked.slice(i + 1).search(/\S/);
     const nextChar = next === -1 ? '' : blanked[i + 1 + next];
-    if (nextChar === '}' || nextChar === ']') chars[i] = ' ';
+    if (nextChar === '}' || nextChar === ']') {
+      parts.push(blanked.slice(plainStart, i), ' ');
+      plainStart = i + 1;
+    }
   }
-  return chars.join('');
+  return parts.length ? parts.join('') + blanked.slice(plainStart) : blanked;
 };
 
 // `CommaExpected` → `Comma expected`
@@ -139,7 +147,11 @@ const describeJsonError = (error: ParseError): string => {
 
 const findJsonError = (text: string): { message: string; offset: number } | null => {
   const errors: ParseError[] = [];
-  parse(text, errors, { disallowComments: true, allowTrailingComma: false, allowEmptyContent: true });
+  visit(text, {
+    onError: (error, offset, length) => {
+      if (errors.length === 0) errors.push({ error, offset, length });
+    },
+  }, { disallowComments: true, allowTrailingComma: false, allowEmptyContent: true });
   if (errors.length === 0) return null;
   return { message: describeJsonError(errors[0]), offset: errors[0].offset };
 };

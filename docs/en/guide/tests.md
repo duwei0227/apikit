@@ -1,5 +1,7 @@
 # Tests and Assertions
 
+During test execution, the response JSON is parsed only when an enabled JSON field assertion or JSON variable extraction needs it, and the parsed result is shared within that execution. Status-only checks, response-header extraction and custom variables do not require parsing the response body for tests. Large integers retain their exact values.
+
 Set up assertions and variable extraction in the **Tests** tab of a request. They run after every send, and the results appear under **Test Results** in the response area. In a workflow, a failed assertion stops the workflow.
 
 New requests start with one assertion: status equals `200`.

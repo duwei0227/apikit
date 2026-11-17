@@ -117,14 +117,20 @@ export const executeRequestTests = (
   });
 
   let jsonData: unknown = null;
+  let jsonParsed = false;
   let isValidJson = false;
-  try {
-    // 流式响应对合并后的结果对象取值
-    jsonData = parseJsonPreservingNumbers(responseData.testBody ?? responseData.rawBody);
-    isValidJson = true;
-  } catch {
-    jsonData = null;
-  }
+  // 仅在实际读取 JSON 字段时解析；断言和变量提取共用一次解析结果。
+  const ensureJson = (): boolean => {
+    if (jsonParsed) return isValidJson;
+    jsonParsed = true;
+    try {
+      jsonData = parseJsonPreservingNumbers(responseData.testBody ?? responseData.rawBody);
+      isValidJson = true;
+    } catch {
+      jsonData = null;
+    }
+    return isValidJson;
+  };
 
   jsonFieldTests.forEach((test, index) => {
     if (!test.enabled) return;
@@ -142,7 +148,7 @@ export const executeRequestTests = (
       return;
     }
 
-    if (!isValidJson) {
+    if (!ensureJson()) {
       results.jsonFields.push({
         index,
         passed: false,
@@ -196,7 +202,7 @@ export const executeRequestTests = (
         ? resolve(variable.customValue)
         : variable.valueType === 'header'
           ? findResponseHeader(responseData.headers, variable.headerName)
-          : variable.jsonPath && isValidJson
+          : variable.jsonPath && ensureJson()
             ? extractValueFromJsonPath(jsonData, variable.jsonPath)
             : undefined;
 
@@ -214,6 +220,7 @@ export const executeRequestTests = (
         return;
       }
 
+      const textValue = valueToText(value);
       if (!context.setGlobalVariable) {
         results.globalVars.push({
           index,
@@ -224,22 +231,22 @@ export const executeRequestTests = (
           variableName: variable.variableName,
           valueType: variable.valueType,
           source,
-          value: valueToText(value),
+          value: textValue,
         });
         return;
       }
 
-      context.setGlobalVariable(variable.variableName, valueToText(value), true, variable.description);
+      context.setGlobalVariable(variable.variableName, textValue, true, variable.description);
       results.globalVars.push({
         index,
         success: true,
         status: 'set',
-        message: `Set ${variable.variableName} = ${valueToText(value)}`,
+        message: `Set ${variable.variableName} = ${textValue}`,
         description: variable.description,
         variableName: variable.variableName,
         valueType: variable.valueType,
         source,
-        value: valueToText(value),
+        value: textValue,
       });
     });
   }
