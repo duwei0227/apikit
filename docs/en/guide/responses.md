@@ -65,3 +65,7 @@ For streaming responses, JSON field assertions and variable extraction read the 
 `usage` is the usage object as the API returns it, so the field names depend on the API. For example, assert `text` contains `hello`, or extract `usage.completion_tokens` into a variable.
 
 In a custom format with result events, `text` joins the text of the result events, and `results` holds the last event of each name, for example `results.result.data.suggestAction` or `results.fill.content`.
+
+Very long Raw lines display up to 8,192 characters per part. Use Previous part / Next part to navigate; full-text search jumps to the matching part. Copy Raw Response and saving use the full body; selection and copying inside the editor apply to the current part.
+
+After body validation succeeds, Send and Send And Download clear the current request’s previous response and test results before sending. Failure or cancellation does not restore the old response. Other request tabs, History and Console records remain independent. Memory reclamation is managed by the runtime and may not immediately reduce OS memory usage.

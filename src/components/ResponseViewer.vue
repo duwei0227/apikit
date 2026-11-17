@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { defineAsyncComponent, ref, computed, watch } from 'vue';
+import RawResponsePage from './RawResponsePage.vue';
 import AsyncPanelLoader from './AsyncPanelLoader.vue';
 import { getOperatorLabel } from '@/constants/testOperators';
 import StreamResponseView from './StreamResponseView.vue';
@@ -57,6 +58,7 @@ const previewText = (text: string | undefined) => {
 const displayBody = computed(() => previewText(props.response?.body));
 const displayRawBody = computed(() => previewText(props.response?.rawBody));
 
+const rawNeedsEditor = computed(() => !shouldWrapResponseText(displayRawBody.value));
 const rawWrapLines = ref(true);
 watch(() => props.response, (response) => {
   rawWrapLines.value = shouldWrapResponseText(response?.rawBody ?? '');
@@ -681,9 +683,20 @@ const selectAllPreContent = (event: KeyboardEvent) => {
             </div>
 
             <!-- Raw View -->
-            <div v-else class="flex-1 min-w-0 overflow-auto p-4">
+            <div v-else class="flex-1 min-h-0 min-w-0 overflow-auto p-4 flex flex-col">
+              <RawResponsePage
+                v-if="rawNeedsEditor"
+                class="flex-1"
+                :modelValue="displayRawBody"
+                language="text"
+                :readOnly="true"
+                :wrapLines="rawWrapLines"
+                :searchMatches="searchMatches"
+                :currentMatchIndex="currentMatchIndex"
+                @ctrl-f="openSearchBox"
+              />
               <!-- Text with search highlighting -->
-              <pre v-if="searchMatches.length > 0" class="response-pre" :style="{ whiteSpace: rawWrapLines ? 'pre-wrap' : 'pre' }" tabindex="0" @keydown="selectAllPreContent" v-html="highlightedResponseBody"></pre>
+              <pre v-else-if="searchMatches.length > 0" class="response-pre" :style="{ whiteSpace: rawWrapLines ? 'pre-wrap' : 'pre' }" tabindex="0" @keydown="selectAllPreContent" v-html="highlightedResponseBody"></pre>
               <!-- Text without search -->
               <pre v-else class="response-pre" :style="{ whiteSpace: rawWrapLines ? 'pre-wrap' : 'pre' }" tabindex="0" @keydown="selectAllPreContent">{{ displayRawBody }}</pre>
             </div>

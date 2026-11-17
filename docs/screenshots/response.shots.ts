@@ -8,6 +8,6 @@ test('response Raw wrapping option', async ({ app, page }) => {
   await app.request.getByRole('button', { name: 'Send', exact: true }).click();
   await app.request.getByRole('tab', { name: 'Raw', exact: true }).click();
   await expect(app.request.getByRole('button', { name: 'Wrap lines' })).toHaveAttribute('aria-pressed', 'false');
-  await expect(app.request.locator('pre.response-pre')).toHaveCSS('white-space', 'pre');
+  await expect(app.request.locator('.response-tabs .ace_editor')).toBeVisible();
   await page.screenshot({ path: 'docs/public/screenshots/response-raw.png', animations: 'disabled' });
 });

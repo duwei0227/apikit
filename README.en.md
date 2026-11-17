@@ -147,3 +147,7 @@ ApiKit is built on these excellent open source projects:
 Made with ❤️ by [@duwei0227](https://github.com/duwei0227)
 
 </div>
+
+Very long Raw lines display up to 8,192 characters per part. Use Previous part / Next part to navigate; full-text search jumps to the matching part. Copy Raw Response and saving use the full body; selection and copying inside the editor apply to the current part.
+
+Starting a new request clears its previous response and test results to reduce overlapping memory use.

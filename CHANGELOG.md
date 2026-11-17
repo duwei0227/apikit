@@ -10,6 +10,18 @@
 
 ## [Unreleased]
 
+### Changed
+- Release the current request’s previous response and test results before sending again, including Send And Download.
+
+### Fixed
+- Render very long Raw lines in bounded parts in the plain-text editor to reduce blocking during response tab switches.
+
+### 变更
+- 再次发送（含 Send And Download）前释放当前请求的旧响应和测试结果引用。
+
+### 修复
+- 超长行 Raw 改用纯文本编辑器分段展示，全文搜索自动定位对应段，减少切换响应页签时的布局阻塞。
+
 ## [0.5.9] - 2026-11-17
 
 ### Fixed

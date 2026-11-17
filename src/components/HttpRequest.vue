@@ -58,7 +58,7 @@ const emit = defineEmits<{
 const requestsStore = useRequestsStore();
 
 // 从 store 的 responseCache 恢复状态
-const cachedState = requestsStore.getResponseCache(props.request.id);
+let cachedState = requestsStore.getResponseCache(props.request.id);
 
 // Tests 相关数据（编辑 UI 在 RequestTestsEditor 子组件；这里持有数据供执行/保存/恢复）
 const statusCodeTests = ref<StatusCodeTest[]>([
@@ -126,6 +126,8 @@ const isUrlInputFocused = ref(false); // URL 输入框是否获得焦点
 const isParamsBulkEdit = ref(false);
 const paramsBulkText = ref('');
 const testResults = ref<RequestTestResults | null>(cachedState?.testResults || null);
+// 初始化完成后释放缓存快照，避免它继续持有上次的大响应。
+cachedState = null;
 let currentRequestId: string | null = null; // 当前请求 ID，用于取消
 
 // Settings - 从请求中加载或使用默认值
@@ -385,12 +387,20 @@ const validateBodyBeforeSend = async (): Promise<boolean> => {
   return false;
 };
 
+// 清空当前响应并等待缓存同步、旧编辑器卸载后再开始下一次请求。
+const discardPreviousResponse = async () => {
+  response.value = null;
+  testResults.value = null;
+  await nextTick();
+};
+
 // 发送请求：拼请求、发送、解析响应、执行断言都由 HttpExecutionService 完成，与 Workflow、MCP 一致
 const sendRequest = async () => {
   if (!(await validateBodyBeforeSend())) return;
   let requestId: string | null = null;
   isLoading.value = true;
   isResponseCollapsed.value = false; // 发送请求时展开响应区域
+  await discardPreviousResponse();
   const startTime = Date.now();
 
   try {
@@ -423,6 +433,7 @@ const sendAndDownload = async () => {
   let requestId: string | null = null;
   isLoading.value = true;
   isResponseCollapsed.value = false;
+  await discardPreviousResponse();
   const startTime = Date.now();
 
   try {

@@ -65,3 +65,7 @@ ApiKit 能识别以下接口的事件，并合并出回答文本、思考内容�
 `usage` 是接口返回的原始用量对象，字段名随接口不同。例如断言 `text` contains `你好`，或把 `usage.completion_tokens` 提取为变量。
 
 自定义格式有结果事件时，`text` 是各结果事件文本的拼接，`results` 按事件名保存最后一个事件，例如 `results.result.data.suggestAction`、`results.fill.content`。
+
+超长行 Raw 每次显示最多 8,192 字符，通过 Previous part / Next part 翻页；全文搜索自动跳转到匹配段。Copy Raw Response 和保存使用完整原文，编辑器内选择与复制针对当前段。
+
+请求体校验通过后，Send 和 Send And Download 会先清空当前请求的旧响应与测试结果，再开始发送。失败或取消不会恢复旧响应。其他请求页签、History 和 Console 记录保持独立；内存由运行时回收，不保证立即归还操作系统。

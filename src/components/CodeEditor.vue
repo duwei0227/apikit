@@ -7,6 +7,7 @@ const props = withDefaults(defineProps<{
   language?: 'json' | 'xml' | 'html' | 'urlencoded' | 'text';
   readOnly?: boolean;
   autoHeight?: boolean;
+  wrapLines?: boolean;
   searchMatches?: SearchMatch[];
   currentMatchIndex?: number;
 }>(), {
@@ -14,6 +15,7 @@ const props = withDefaults(defineProps<{
   language: 'json',
   readOnly: false,
   autoHeight: false,
+  wrapLines: false,
   searchMatches: () => [],
   currentMatchIndex: -1
 });
@@ -86,6 +88,7 @@ onMounted(() => {
   });
   editor = instance;
   applyBaseOptions(instance);
+  instance.session.setUseWrapMode(props.wrapLines);
   setReadOnly(instance, props.readOnly);
   setLanguage();
   instance.clearSelection();
@@ -128,6 +131,8 @@ watch(() => props.language, () => {
   setLanguage();
   updateSearchHighlights();
 });
+
+watch(() => props.wrapLines, value => editor?.session.setUseWrapMode(value));
 
 watch(() => props.readOnly, (val) => { if (editor) setReadOnly(editor, val); });
 

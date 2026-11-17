@@ -147,3 +147,7 @@ ApiKit 的开发离不开以下优秀的开源项目：
 Made with ❤️ by [@duwei0227](https://github.com/duwei0227)
 
 </div>
+
+超长行 Raw 每次显示最多 8,192 字符，通过 Previous part / Next part 翻页；全文搜索自动跳转到匹配段。Copy Raw Response 和保存使用完整原文，编辑器内选择与复制针对当前段。
+
+发送新请求前清空当前请求的上一份响应与测试结果，减少新旧响应同时占用内存。
