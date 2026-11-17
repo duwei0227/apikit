@@ -10,6 +10,8 @@
 
 ## [Unreleased]
 
+## [0.5.10] - 2026-11-17
+
 ### Changed
 - Release the current request’s previous response and test results before sending again, including Send And Download.
 
