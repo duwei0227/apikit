@@ -10,7 +10,7 @@
 
 ## [Unreleased]
 
-## [0.5.11] - 2026-11-18
+## [0.5.12] - 2026-11-18
 
 ### Changed
 - MCP Recent calls uses a table with the local date and time, operation, target name, and status.
@@ -25,6 +25,12 @@
 ### 修复
 - MCP 会要求助手在调用前提醒用户可能需要在 ApiKit 确认，并向请求进度通知的客户端报告正在等待 ApiKit 确认。
 - 支持 MCP elicitation 的客户端可使用 **Confirm deletion** 确认删除。选择 **Allow All This Session** 后，ApiKit 重启前也会跳过删除确认。
+
+## [0.5.11] - 2026-11-18
+
+The desktop build failed. Version 0.5.12 includes the changes planned for this release.
+
+桌面版构建失败。此版本计划发布的改动收录于 0.5.12。
 
 ## [0.5.10] - 2026-11-17
 
