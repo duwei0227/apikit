@@ -10,6 +10,8 @@
 
 ## [Unreleased]
 
+## [0.5.11] - 2026-11-18
+
 ### Changed
 - MCP Recent calls uses a table with the local date and time, operation, target name, and status.
 
