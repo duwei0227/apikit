@@ -205,8 +205,12 @@ pub async fn mcp_respond(
 }
 
 #[tauri::command]
-pub async fn mcp_waiting_for_approval(state: tauri::State<'_, McpState>, call_id: String) {
+pub async fn mcp_waiting_for_approval(
+    state: tauri::State<'_, McpState>,
+    call_id: String,
+) -> Result<(), String> {
     send_waiting_for_approval(&state.streams, &call_id).await;
+    Ok(())
 }
 
 async fn send_waiting_for_approval(streams: &EventStreams, call_id: &str) {
