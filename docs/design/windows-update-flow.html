@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ApiKit Windows 升级体验</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --font-size-base: 16px;
+      --foreground: light-dark(#1c2530, #edf2f9);
+      --muted-foreground: light-dark(#566272, #b3becc);
+      --control: light-dark(#edf2f8, #303640);
+      --active: light-dark(#1556a8, #a8ccff);
+      --active-text: light-dark(#ffffff, #172335);
+      font: 1rem/1.6 system-ui, sans-serif;
+    }
+    body { margin: 0; padding: 24px 16px; background: light-dark(#ffffff, #202124); }
+    main { max-width: 736px; margin: auto; }
+    h2, h3, p { margin: 0; }
+    h2 { font-size: 1.5rem; }
+    h3 { font-size: 1rem; }
+    .text-muted { color: var(--muted-foreground); }
+    .text-small, .viz-badge { font-size: .875rem; }
+    .viz-badge { border-radius: 6px; padding: 2px 8px; background: var(--control); }
+    .btn {
+      border: 0; border-radius: 6px; padding: 8px 12px; min-height: 44px;
+      cursor: pointer; font: inherit; color: var(--foreground); background: var(--control);
+    }
+    .btn[aria-pressed="true"] { color: var(--active-text); background: var(--active); }
+  </style>
+</head>
+<body>
+<main>
+<section id="apikit-update-flow" aria-labelledby="apikit-flow-title">
+  <style>
+    #apikit-update-flow { display:grid; gap:calc(var(--font-size-base) * 1.1); color:var(--foreground); container-type:inline-size; }
+    #apikit-update-flow .flow-heading { display:grid; gap:calc(var(--font-size-base) * .25);  }
+    #apikit-update-flow .flow-lane { display:grid; gap:calc(var(--font-size-base) * .5); }
+    #apikit-update-flow .lane-header { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    #apikit-update-flow .route { display:flex; align-items:stretch; margin:0; padding:0; list-style:none; }
+    #apikit-update-flow .route li { display:flex; flex:1; min-width:0; align-items:center; }
+    #apikit-update-flow .route .btn { flex:1; min-width:0; white-space:normal; }
+    #apikit-update-flow .route li + li::before { content:""; width:16px; height:8px; flex:none; margin:0 5px; background:var(--muted-foreground);
+      clip-path:polygon(0 44%,72% 44%,58% 0,68% 0,100% 50%,68% 100%,58% 100%,72% 56%,0 56%); }
+    #apikit-update-flow .screen-row { display:grid; grid-template-columns:minmax(220px, .9fr) minmax(0, 1fr); gap:16px; align-items:center; }
+    #apikit-update-flow .screen {
+      --window-bg:light-dark(#ffffff,#202124);
+      --window-title:light-dark(#edf2f8,#303640);
+      --window-text:light-dark(#1c2530,#edf2f9);
+      --window-edge:light-dark(#bac7d5,#586273);
+      --window-track:light-dark(#e6edf6,#414b5a);
+      --window-fill:light-dark(#1664ca,#70adff);
+      border:1px solid var(--window-edge); border-radius:8px; overflow:hidden;
+      background:var(--window-bg); color:var(--window-text); }
+    #apikit-update-flow .screen-title { background:var(--window-title); padding:7px 12px; border-bottom:1px solid var(--window-edge); }
+    #apikit-update-flow .screen-body { display:grid; gap:8px; padding:12px; min-height:64px; align-content:center; }
+    #apikit-update-flow .screen-progress { height:5px; overflow:hidden; border-radius:6px; background:var(--window-track); }
+    #apikit-update-flow .screen-progress span { display:block; height:100%; background:var(--window-fill); }
+    #apikit-update-flow .step-copy { display:grid; gap:5px; }
+    @container (max-width: 520px) {
+      #apikit-update-flow .route { flex-wrap:wrap; row-gap:8px; }
+      #apikit-update-flow .route li { flex:0 0 auto; max-width:100%; }
+      #apikit-update-flow .screen-row { grid-template-columns:minmax(0,1fr); gap:10px; }
+    }
+  </style>
+  <div class="flow-heading">
+    <h2 id="apikit-flow-title">ApiKit Windows 升级体验</h2>
+    <p class="text-small text-muted">NSIS 安装版 · 应用内更新 · 点击步骤预览</p>
+  </div>
+
+  <section class="flow-lane" aria-labelledby="apikit-flow-current">
+    <div class="lane-header">
+      <h3 id="apikit-flow-current">现有流程</h3>
+      <span class="viz-badge">2 个系统进度窗口</span>
+    </div>
+    <ol class="route">
+      <li><button class="btn" type="button" data-stage="old-download" aria-pressed="false">确认并下载</button></li>
+      <li><button class="btn" type="button" data-stage="old-remove" aria-pressed="true">卸载旧版</button></li>
+      <li><button class="btn" type="button" data-stage="old-install" aria-pressed="false">安装新版</button></li>
+      <li><button class="btn" type="button" data-stage="old-restart" aria-pressed="false">重开应用</button></li>
+    </ol>
+  </section>
+
+  <section class="flow-lane" aria-labelledby="apikit-flow-proposed">
+    <div class="lane-header">
+      <h3 id="apikit-flow-proposed">优化方案</h3>
+      <span class="viz-badge">1 个系统进度窗口</span>
+    </div>
+    <ol class="route">
+      <li><button class="btn" type="button" data-stage="new-download" aria-pressed="false">确认并下载</button></li>
+      <li><button class="btn" type="button" data-stage="new-install" aria-pressed="false">原地更新</button></li>
+      <li><button class="btn" type="button" data-stage="new-restart" aria-pressed="false">重开应用</button></li>
+    </ol>
+  </section>
+
+  <div class="screen-row" aria-live="polite" aria-atomic="true">
+    <div class="screen" aria-label="窗口示意">
+      <div class="screen-title" data-window>ApiKit 卸载程序</div>
+      <div class="screen-body">
+        <div data-message>正在卸载旧版本…</div>
+        <div class="screen-progress" data-progress aria-hidden="true"><span style="width:70%"></span></div>
+      </div>
+    </div>
+    <div class="step-copy">
+      <h3 data-label>现有流程 · 第 1 个系统窗口</h3>
+      <p class="text-muted" data-detail>应用退出后，旧卸载器显示进度，处理完成后交回安装器。</p>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const root = document.getElementById('apikit-update-flow');
+  const stages = {
+    'old-download': ['ApiKit · 版本更新', '正在下载更新…', 64, '现有流程 · 应用内', '确认更新后，在 ApiKit 内显示下载进度。'],
+    'old-remove': ['ApiKit 卸载程序', '正在卸载旧版本…', 70, '现有流程 · 第 1 个系统窗口', '应用退出后，旧卸载器显示进度，处理完成后交回安装器。'],
+    'old-install': ['ApiKit 安装程序', '正在安装新版本…', 56, '现有流程 · 第 2 个系统窗口', '安装器在原目录写入新版，安装完成后自动关闭。'],
+    'old-restart': ['ApiKit', '新版已启动', null, '现有流程 · 回到应用', '安装成功后，ApiKit 自动重开。'],
+    'new-download': ['ApiKit · 版本更新', '正在下载更新…', 64, '优化方案 · 应用内', '确认一次更新，下载并校验完成后退出应用。'],
+    'new-install': ['ApiKit 更新程序', '正在更新 ApiKit…', 72, '优化方案 · 唯一的系统进度窗口', '在原目录覆盖程序文件，保留快捷方式、设置和用户数据。'],
+    'new-restart': ['ApiKit', '新版已启动', null, '优化方案 · 回到应用', '更新成功后进度窗口关闭，ApiKit 自动重开。'],
+  };
+  const steps = [...root.querySelectorAll('[data-stage]')];
+  const windowTitle = root.querySelector('[data-window]');
+  const message = root.querySelector('[data-message]');
+  const progress = root.querySelector('[data-progress]');
+  const label = root.querySelector('[data-label]');
+  const detail = root.querySelector('[data-detail]');
+
+  function show(stage) {
+    if (!Object.hasOwn(stages, stage)) return;
+    const [title, text, percent, stepLabel, stepDetail] = stages[stage];
+    windowTitle.textContent = title;
+    message.textContent = text;
+    progress.hidden = percent === null;
+    if (percent !== null) progress.firstElementChild.style.width = percent + '%';
+    label.textContent = stepLabel;
+    detail.textContent = stepDetail;
+    for (const step of steps) {
+      step.setAttribute('aria-pressed', String(step.dataset.stage === stage));
+    }
+  }
+
+  for (const step of steps) {
+    step.addEventListener('click', () => {
+      const stage = step.dataset.stage;
+      show(stage);
+    });
+  }
+
+  show('old-remove');
+})();
+</script>
+</main>
+</body>
+</html>
