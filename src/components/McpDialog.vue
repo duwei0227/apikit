@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { dialogStyle } from '@/utils/dialogSize';
 import { computed, ref, watch } from 'vue';
-import { useMcpStore } from '@/stores/mcp';
+import { useMcpStore, type McpCallRecord } from '@/stores/mcp';
 import { MCP_TOOLS } from '@/services/mcp/tools';
 import DocsLink from './DocsLink.vue';
 
@@ -43,7 +43,7 @@ const toolGroups = computed(() => [
   { label: 'Read', tools: MCP_TOOLS.filter(tool => tool.kind === 'read') },
   { label: 'Create and edit', tools: MCP_TOOLS.filter(tool => tool.kind === 'write' && !tool.destructive) },
   { label: 'Run (asks you first)', tools: MCP_TOOLS.filter(tool => tool.kind === 'execute') },
-  { label: 'Delete (asks you every time)', tools: MCP_TOOLS.filter(tool => tool.destructive) },
+  { label: 'Delete', tools: MCP_TOOLS.filter(tool => tool.destructive) },
 ]);
 
 const closeDialog = () => {
@@ -90,7 +90,20 @@ const regenerateToken = () => {
   });
 };
 
+const formatDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, {
+  year: 'numeric', month: '2-digit', day: '2-digit',
+});
 const formatTime = (iso: string) => new Date(iso).toLocaleTimeString();
+
+function callStatus(call: McpCallRecord) {
+  if (call.ok === true) return { label: 'Succeeded', kind: 'success' };
+  if (call.ok === false) return { label: 'Failed', kind: 'failure' };
+  if (call.waitingIn === 'apikit') return { label: 'Waiting in ApiKit', kind: 'waiting' };
+  if (call.waitingIn === 'client') return { label: 'Waiting in AI tool', kind: 'waiting' };
+  return { label: 'Running', kind: 'running' };
+}
+
+const callRows = computed(() => mcpStore.recentCalls.map(call => ({ ...call, status: callStatus(call) })));
 </script>
 
 <template>
@@ -230,7 +243,7 @@ const formatTime = (iso: string) => new Date(iso).toLocaleTimeString();
 
       <!-- Confirmation -->
       <div class="flex flex-col gap-1.5">
-        <span>Confirm requests, workflow runs and environment switches</span>
+        <span>MCP tool confirmation</span>
         <label class="flex items-center gap-2 cursor-pointer select-none">
           <RadioButton
             :modelValue="mcpStore.settings.confirmIn"
@@ -304,7 +317,7 @@ const formatTime = (iso: string) => new Date(iso).toLocaleTimeString();
       <!-- Recent calls -->
       <div class="flex flex-col gap-2">
         <div class="flex items-center justify-between">
-          <span class="font-medium">Recent calls</span>
+          <span id="mcp-recent-calls-label" class="font-medium">Recent calls</span>
           <Button
             v-if="mcpStore.recentCalls.length > 0"
             label="Clear"
@@ -318,17 +331,35 @@ const formatTime = (iso: string) => new Date(iso).toLocaleTimeString();
           No calls yet.
         </div>
         <div v-else class="mcp-calls">
-          <div v-for="call in mcpStore.recentCalls" :key="call.id" class="mcp-call" :title="call.message || ''">
-            <span class="text-surface-500 dark:text-surface-400 tabular-nums">{{ formatTime(call.time) }}</span>
-            <code class="font-mono text-xs">{{ call.tool }}</code>
-            <span class="flex-1 min-w-0 truncate">{{ call.summary }}</span>
-            <span v-if="call.waitingInClient" class="text-xs text-surface-500 dark:text-surface-400 whitespace-nowrap">
-              Waiting for approval in your AI tool
-            </span>
-            <i v-if="call.ok === null" class="pi pi-spin pi-spinner text-surface-400"></i>
-            <i v-else-if="call.ok" class="pi pi-check text-green-600"></i>
-            <i v-else class="pi pi-times text-red-500"></i>
-          </div>
+          <table aria-labelledby="mcp-recent-calls-label">
+            <thead>
+              <tr>
+                <th scope="col">Time</th>
+                <th scope="col">Operation</th>
+                <th scope="col">Target</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="call in callRows" :key="call.id">
+                <td>
+                  <time :datetime="call.time" class="whitespace-nowrap tabular-nums">
+                    {{ formatDate(call.time) }}
+                    <span class="mcp-call-detail">{{ formatTime(call.time) }}</span>
+                  </time>
+                </td>
+                <td class="font-medium" :title="call.tool">{{ call.operation }}</td>
+                <td>
+                  <span class="font-semibold">{{ call.target.name }}</span>
+                  <span v-if="call.target.context" class="mcp-call-detail">{{ call.target.context }}</span>
+                </td>
+                <td>
+                  <span class="mcp-call-status" :class="call.status.kind">{{ call.status.label }}</span>
+                  <span v-if="call.message" class="mcp-call-detail mcp-call-error" :title="call.message">{{ call.message }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -384,21 +415,68 @@ const formatTime = (iso: string) => new Date(iso).toLocaleTimeString();
 
 .mcp-calls {
   border: 1px solid var(--p-content-border-color);
-  border-radius: 0.25rem;
-  max-height: 12rem;
+  border-radius: 0.5rem;
+  max-height: 22rem;
   overflow: auto;
 }
 
-.mcp-call {
-  align-items: center;
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.375rem 0.75rem;
+.mcp-calls table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 34rem;
+  table-layout: fixed;
+  width: 100%;
 }
 
-.mcp-call + .mcp-call {
-  border-top: 1px solid var(--p-content-border-color);
+.mcp-calls th,
+.mcp-calls td {
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  overflow-wrap: anywhere;
 }
+
+.mcp-calls th {
+  background: var(--p-content-hover-background);
+  position: sticky;
+  top: 0;
+}
+
+.mcp-calls th:nth-child(1) { width: 17%; }
+.mcp-calls th:nth-child(2) { width: 23%; }
+.mcp-calls th:nth-child(3) { width: 37%; }
+.mcp-calls th:nth-child(4) { width: 23%; }
+
+.mcp-calls td {
+  border-top: 1px solid var(--p-content-border-color);
+  vertical-align: middle;
+}
+
+.mcp-call-detail {
+  color: var(--p-text-muted-color);
+  display: block;
+  font-size: 0.8125rem;
+  margin-top: 0.125rem;
+}
+
+.mcp-call-error {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.mcp-call-status {
+  background: var(--p-content-hover-background);
+  border-radius: 0.375rem;
+  display: inline-block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+}
+
+.mcp-call-status.success { background: #eaf5ee; color: #236244; }
+.mcp-call-status.failure { background: #fceeed; color: #963328; }
+.mcp-call-status.waiting { background: #fff4de; color: #7a4f09; }
 
 .mcp-note {
   align-items: flex-start;

@@ -33,22 +33,28 @@ MCP 服务默认关闭，只接受本机连接，并且必须带 token。点击 
 
 ![AI 集成对话框](/screenshots/mcp.png)
 
+**Recent calls** 按表格显示本地日期和时间、操作类型、目标名称及状态。请求目标可显示集合和文件夹路径，搜索显示关键词和范围，等待确认时会标明确认位置。
+
+![MCP 调用记录表格](/screenshots/mcp-recent-calls.png)
+
 ## 设置
 
 | 设置 | 说明 |
 |------|------|
 | **Show variable values and credentials to AI** | 默认关闭：环境变量的值、鉴权 token、密码和敏感请求头在发给 AI 时显示为 `<hidden>`。发送请求时仍使用真实值 |
-| **Confirm requests, workflow runs and environment switches** | **In ApiKit**：在 ApiKit 中弹窗确认；**In the AI tool, when it supports it**：AI 工具支持 MCP elicitation 时在 AI 工具中确认，不支持时仍在 ApiKit 中确认 |
+| **MCP tool confirmation** | **In ApiKit**：在 ApiKit 中弹窗确认；**In the AI tool, when it supports it**：AI 工具支持 MCP elicitation 时在 AI 工具中确认，不支持时仍在 ApiKit 中确认 |
 | **Changes the AI makes to requests and workflows** | **Keep as unsaved edits**：AI 对已有请求和工作流的修改显示为未保存的修改，由你 Save 或 Discard；**Save directly**：直接保存。AI 新建的请求和工作流总是直接保存 |
 
 对话框底部的 **Available tools** 列出全部工具，**Recent calls** 显示最近的调用。
 
 ## 需要你确认的操作
 
+MCP 会要求 AI 助手在调用可能需要审批的工具前，在对话中提醒你留意 ApiKit 的确认框。实际进入 ApiKit 确认时，接受流式响应并请求 MCP 进度通知的客户端还会收到提示，请你打开 ApiKit 完成确认。原调用会继续等待你的选择。
+
 | 操作 | 确认方式 |
 |------|---------|
 | 发送请求（包括 `run_requests` 一次发送的多个请求，整批确认一次）、运行工作流、切换当前环境（包括创建环境并设为当前）、`import_spec` 从网址下载文档 | 每次确认；可选择 **Allow All This Session**，ApiKit 重启前不再询问 |
-| 删除请求、文件夹、集合、工作流 | **每次都确认**，即使选择过 Allow All This Session；确认框显示要删除的内容、其中的请求数量和用到这些请求的工作流 |
+| 删除请求、文件夹、集合、工作流 | 默认逐次确认，确认位置沿用上方设置。AI 工具中需勾选 **Confirm deletion** 并提交。选择 **Allow All This Session** 后，排队中及后续的删除操作也会放行，直到 ApiKit 重启 |
 
 ## 工具
 
@@ -59,7 +65,7 @@ MCP 服务默认关闭，只接受本机连接，并且必须带 token。点击 
 | 创建和修改 | `create_collection`、`update_collection`、`create_folder`、`update_folder`、`create_request`、`import_curl`（从 cURL 命令创建）、`update_request`、`move_request`、`create_workflow`、`update_workflow`、`create_environment`、`update_environment`、`set_global_variables` |
 | 批量 | `create_requests`（一次新建多个请求，自动创建目录）、`update_requests`（一次修改多个请求）、`run_requests`（并行发送多个请求，需确认）、`import_spec`（导入 OpenAPI / Swagger、Postman 或 ApiKit 导出文件） |
 | 运行（需确认） | `send_request`、`run_workflow`、`set_active_environment` |
-| 删除（每次确认） | `delete_request`、`delete_folder`、`delete_collection`、`delete_workflow` |
+| 删除 | `delete_request`、`delete_folder`、`delete_collection`、`delete_workflow` |
 
 ### 减少调用次数和返回内容
 

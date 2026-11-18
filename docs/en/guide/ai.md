@@ -33,22 +33,28 @@ The MCP server is off by default, accepts only connections from this computer an
 
 ![AI integration dialog](/screenshots/mcp.png)
 
+**Recent calls** shows the local date and time, operation, target name, and status in a table. Request targets can show their collection and folder path, searches show their terms and scope, and pending rows show where to confirm.
+
+![Recent MCP calls table](/screenshots/mcp-recent-calls.png)
+
 ## Settings
 
 | Setting | Description |
 |---------|-------------|
 | **Show variable values and credentials to AI** | Off by default: environment variable values, auth tokens, passwords and secret headers are sent to the AI as `<hidden>`. Requests still use the real values when they run |
-| **Confirm requests, workflow runs and environment switches** | **In ApiKit**: confirm in an ApiKit dialog; **In the AI tool, when it supports it**: confirm in the AI tool when it supports MCP elicitation, otherwise in ApiKit |
+| **MCP tool confirmation** | **In ApiKit**: confirm in an ApiKit dialog; **In the AI tool, when it supports it**: confirm in the AI tool when it supports MCP elicitation, otherwise in ApiKit |
 | **Changes the AI makes to requests and workflows** | **Keep as unsaved edits**: the AI's changes to existing requests and workflows show up as unsaved edits that you Save or Discard; **Save directly**: saved right away. New requests and workflows the AI creates are always saved directly |
 
 **Available tools** at the bottom of the dialog lists all tools, and **Recent calls** shows the latest calls.
 
 ## Actions you confirm
 
+MCP instructs your assistant to tell you in the conversation that you may need to respond in ApiKit before it calls a tool that requires approval. When ApiKit opens its confirmation dialog, clients that accept streaming responses and request MCP progress updates also receive a message asking you to open ApiKit and respond. The original call waits for your decision.
+
 | Action | Confirmation |
 |--------|--------------|
 | Sending requests (several requests sent by `run_requests` are confirmed once), running workflows, switching the active environment (including creating an environment and making it active), downloading a document with `import_spec` | Every time; you can choose **Allow All This Session** to stop asking until ApiKit restarts |
-| Deleting requests, folders, collections and workflows | **Every time**, even after Allow All This Session; the confirmation shows what will be deleted, how many requests it contains and which workflows use them |
+| Deleting requests, folders, collections and workflows | Confirmations are required by default. The setting above controls where you confirm. In the AI tool, select **Confirm deletion** and submit. **Allow All This Session** also approves queued and future deletions until ApiKit restarts |
 
 ## Tools
 
@@ -59,7 +65,7 @@ The MCP server is off by default, accepts only connections from this computer an
 | Create and edit | `create_collection`, `update_collection`, `create_folder`, `update_folder`, `create_request`, `import_curl` (create from a cURL command), `update_request`, `move_request`, `create_workflow`, `update_workflow`, `create_environment`, `update_environment`, `set_global_variables` |
 | Batch | `create_requests` (create several requests, creating folders as needed), `update_requests` (change several requests), `run_requests` (send several requests in parallel, asks you first), `import_spec` (import an OpenAPI / Swagger document, a Postman collection or an ApiKit export) |
 | Run (asks you first) | `send_request`, `run_workflow`, `set_active_environment` |
-| Delete (asks you every time) | `delete_request`, `delete_folder`, `delete_collection`, `delete_workflow` |
+| Delete | `delete_request`, `delete_folder`, `delete_collection`, `delete_workflow` |
 
 ### Fewer calls and smaller results
 

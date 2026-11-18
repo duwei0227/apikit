@@ -10,6 +10,20 @@
 
 ## [Unreleased]
 
+### Changed
+- MCP Recent calls uses a table with the local date and time, operation, target name, and status.
+
+### Fixed
+- MCP instructs assistants to mention possible ApiKit approval before calling a tool and reports when a call is waiting for approval in ApiKit to clients that request progress updates.
+- MCP delete tools offer **Confirm deletion** in clients that support elicitation. **Allow All This Session** also covers deletions until ApiKit restarts.
+
+### 变更
+- MCP 的 Recent calls 改为表格，显示本地日期和时间、操作类型、目标名称及状态。
+
+### 修复
+- MCP 会要求助手在调用前提醒用户可能需要在 ApiKit 确认，并向请求进度通知的客户端报告正在等待 ApiKit 确认。
+- 支持 MCP elicitation 的客户端可使用 **Confirm deletion** 确认删除。选择 **Allow All This Session** 后，ApiKit 重启前也会跳过删除确认。
+
 ## [0.5.10] - 2026-11-17
 
 ### Changed

@@ -15,6 +15,7 @@ import { type McpToolContext, type McpToolResult, McpToolError, type McpToolHand
 
 export * from './types';
 export { MCP_TOOLS } from './definitions';
+export { describeMcpCallTarget, describeMcpCallResult } from './recentCalls';
 export { buildWorkflowSteps } from './workflowSteps';
 
 const HANDLERS: Record<string, McpToolHandler> = {
@@ -52,13 +53,20 @@ export const mcpConfirmToolNames = () => MCP_TOOLS
   .filter(tool => tool.kind === 'execute' || tool.mayConfirm || tool.destructive)
   .map(tool => tool.name);
 
-export async function callMcpTool(name: string, rawArgs: unknown, context: McpToolContext): Promise<McpToolResult> {
+export async function callMcpTool(
+  name: string,
+  rawArgs: unknown,
+  context: McpToolContext,
+  onResult?: (result: unknown) => void,
+): Promise<McpToolResult> {
   try {
     const handler = HANDLERS[name];
     if (!handler) throw new McpToolError(`Unknown tool: ${name}`);
     const args = isRecord(rawArgs) ? rawArgs : {};
     const result = await handler(args, context);
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    const text = JSON.stringify(result, null, 2);
+    onResult?.(result);
+    return { content: [{ type: 'text', text }] };
   } catch (error) {
     return { content: [{ type: 'text', text: (error as Error | null)?.message || String(error) }], isError: true };
   }

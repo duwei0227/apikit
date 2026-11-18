@@ -38,11 +38,14 @@ const answer = (value: 'deny' | 'allow' | 'allowAll') => {
         {{ confirmation.note || 'This makes real network requests with your active environment.' }}
         <template v-if="queuedCount > 0">{{ queuedCount }} more waiting.</template>
       </p>
+      <p class="m-0 text-xs text-surface-500 dark:text-surface-400">
+        Allow All This Session also approves queued and future MCP deletions until ApiKit restarts.
+      </p>
     </div>
     <template #footer>
       <div class="flex w-full flex-wrap justify-end gap-2">
         <Button label="Deny" severity="secondary" @click="answer('deny')" />
-        <Button v-if="!confirmation?.destructive" label="Allow All This Session" severity="secondary" @click="answer('allowAll')" />
+        <Button label="Allow All This Session" severity="secondary" @click="answer('allowAll')" />
         <Button
           :label="confirmation?.destructive ? 'Delete' : 'Allow'"
           :severity="confirmation?.destructive ? 'danger' : undefined"

@@ -46,11 +46,17 @@ For several requests use create_requests (also creates missing folders), update_
 Requests use {{name}} placeholders that resolve from the active environment \
 and global variables; create_environment, update_environment and set_global_variables manage them. \
 list_builtin_variables lists built-in dynamic variables such as {{$timestamp}} and {{$guid}}. get_request_log and get_workflow_logs return bodies in pages; follow hasMore and nextOffset to retrieve the full body. send_request and run_requests return logId for retrieving the full response with get_request_log. send_request, run_requests and \
-run_workflow make real network calls and, like set_active_environment and the delete_* tools, wait for the user to approve them. Request and workflow updates follow ApiKit's configured edit mode: they may stage changes on top of an existing draft, or save directly (which fails when a draft exists). Follow each tool's result and description.";
+run_workflow make real network calls. Before calling tools that may require approval, including send_request, run_requests, run_workflow, set_active_environment, create_environment with activate: true, import_spec from a URL, and the delete_* tools, tell the user in the conversation that they may need to respond to a confirmation dialog in ApiKit. If a progress message says approval is pending in ApiKit, relay that instruction to the user and wait for the original call to finish. A session-wide approval can skip the prompt. \
+Request and workflow updates follow ApiKit's configured edit mode: they may stage changes on top of an existing draft, or save directly (which fails when a draft exists). Follow each tool's result and description.";
 
 type PendingCalls = Arc<Mutex<HashMap<String, oneshot::Sender<Value>>>>;
 /// 调用 id -> 这次调用的事件流
-type EventStreams = Arc<Mutex<HashMap<String, mpsc::UnboundedSender<String>>>>;
+type EventStreams = Arc<Mutex<HashMap<String, ToolEventStream>>>;
+
+struct ToolEventStream {
+    sender: mpsc::UnboundedSender<String>,
+    progress_token: Option<Value>,
+}
 /// elicitation 请求 id -> (调用 id, 等待客户端答复的一方)
 type PendingElicitations = Arc<Mutex<HashMap<String, (String, oneshot::Sender<Value>)>>>;
 
@@ -198,6 +204,30 @@ pub async fn mcp_respond(
     Ok(())
 }
 
+#[tauri::command]
+pub async fn mcp_waiting_for_approval(state: tauri::State<'_, McpState>, call_id: String) {
+    send_waiting_for_approval(&state.streams, &call_id).await;
+}
+
+async fn send_waiting_for_approval(streams: &EventStreams, call_id: &str) {
+    let mut streams = streams.lock().await;
+    let Some(stream) = streams.get_mut(call_id) else {
+        return;
+    };
+    let Some(token) = stream.progress_token.take() else {
+        return;
+    };
+    let _ = stream.sender.send(sse_message(&json!({
+        "jsonrpc": "2.0",
+        "method": "notifications/progress",
+        "params": {
+            "progressToken": token,
+            "progress": 1,
+            "message": "Waiting for approval in ApiKit. Open ApiKit and respond to the MCP confirmation dialog."
+        }
+    })));
+}
+
 /// 让客户端向用户弹出确认，返回客户端答复的 JSON-RPC 消息（含 result 或 error）。
 /// 只对事件流应答中的调用有效；客户端已断开时按取消处理。
 #[tauri::command]
@@ -207,7 +237,7 @@ pub async fn mcp_elicit(
     message: String,
     requested_schema: Value,
 ) -> Result<Value, String> {
-    let Some(stream) = state.streams.lock().await.get(&call_id).cloned() else {
+    let Some(stream) = state.streams.lock().await.get(&call_id).map(|stream| stream.sender.clone()) else {
         return Err("This call cannot ask in the AI tool".to_string());
     };
 
@@ -348,9 +378,13 @@ async fn handle_post(State(shared): State<Arc<ServerShared>>, headers: HeaderMap
                 Ok(call) => call,
                 Err((code, message)) => return json_response(StatusCode::OK, rpc_error(id, code, &message)),
             };
-            // 只有会话声明了 elicitation、且工具可能要确认时才用事件流应答
-            if session.is_some() && accepts_event_stream(&headers) && shared.confirm_tools.contains(&name) {
-                return call_tool_stream(shared.clone(), id, name, arguments).await;
+            let can_elicit = session.is_some();
+            let progress_token = tool_progress_token(&params);
+            if (can_elicit || progress_token.is_some())
+                && accepts_event_stream(&headers)
+                && shared.confirm_tools.contains(&name)
+            {
+                return call_tool_stream(shared.clone(), id, name, arguments, can_elicit, progress_token).await;
             }
             let call_id = new_call_id(&shared);
             rpc_result(id, run_tool(&shared, &call_id, &name, arguments, false).await)
@@ -406,6 +440,14 @@ fn accepts_event_stream(headers: &HeaderMap) -> bool {
         .is_some_and(|accept| accept.to_ascii_lowercase().contains("text/event-stream"))
 }
 
+fn tool_progress_token(params: &Value) -> Option<Value> {
+    params
+        .get("_meta")?
+        .get("progressToken")
+        .filter(|token| token.is_string() || token.is_i64() || token.is_u64())
+        .cloned()
+}
+
 fn new_session_id() -> String {
     use std::hash::{BuildHasher, Hasher};
     // RandomState 的密钥来自操作系统的随机数
@@ -440,15 +482,25 @@ impl Stream for EventStream {
     }
 }
 
-/// 以事件流应答 tools/call：结果之前可以先发 elicitation/create 请求
-async fn call_tool_stream(shared: Arc<ServerShared>, id: Value, name: String, arguments: Value) -> Response {
+/// 以事件流应答 tools/call，在结果前发送客户端确认请求或进度通知
+async fn call_tool_stream(
+    shared: Arc<ServerShared>,
+    id: Value,
+    name: String,
+    arguments: Value,
+    can_elicit: bool,
+    progress_token: Option<Value>,
+) -> Response {
     let call_id = new_call_id(&shared);
     let (events, receiver) = mpsc::unbounded_channel::<String>();
-    shared.streams.lock().await.insert(call_id.clone(), events.clone());
+    shared.streams.lock().await.insert(call_id.clone(), ToolEventStream {
+        sender: events.clone(),
+        progress_token,
+    });
 
     tauri::async_runtime::spawn(async move {
         let result = {
-            let run = run_tool(&shared, &call_id, &name, arguments, true);
+            let run = run_tool(&shared, &call_id, &name, arguments, can_elicit);
             tokio::pin!(run);
             let mut keep_alive = tokio::time::interval(SSE_KEEP_ALIVE);
             keep_alive.tick().await;
@@ -654,6 +706,41 @@ mod tests {
         assert!(accepts_event_stream(&headers(&[(header::ACCEPT, "application/json, text/event-stream")])));
         assert!(!accepts_event_stream(&headers(&[(header::ACCEPT, "application/json")])));
         assert!(!accepts_event_stream(&HeaderMap::new()));
+    }
+
+    #[test]
+    fn accepts_only_string_and_integer_progress_tokens() {
+        for token in [json!("approval"), json!(42), json!(0)] {
+            assert_eq!(tool_progress_token(&json!({ "_meta": { "progressToken": token.clone() } })), Some(token));
+        }
+        for token in [Value::Null, json!(true), json!(1.5), json!({})] {
+            assert_eq!(tool_progress_token(&json!({ "_meta": { "progressToken": token } })), None);
+        }
+        assert_eq!(tool_progress_token(&json!({})), None);
+    }
+
+    #[tokio::test]
+    async fn reports_local_approval_only_to_the_requesting_stream() {
+        let streams: EventStreams = Default::default();
+        let (sender, mut receiver) = mpsc::unbounded_channel();
+        let (other_sender, mut other_receiver) = mpsc::unbounded_channel();
+        streams.lock().await.insert("call-1".into(), ToolEventStream { sender, progress_token: Some(json!("approval")) });
+        streams.lock().await.insert("call-2".into(), ToolEventStream { sender: other_sender, progress_token: None });
+
+        send_waiting_for_approval(&streams, "call-1").await;
+        send_waiting_for_approval(&streams, "call-1").await;
+        send_waiting_for_approval(&streams, "call-2").await;
+        assert_eq!(receiver.try_recv().unwrap(), sse_message(&json!({
+            "jsonrpc": "2.0",
+            "method": "notifications/progress",
+            "params": {
+                "progressToken": "approval",
+                "progress": 1,
+                "message": "Waiting for approval in ApiKit. Open ApiKit and respond to the MCP confirmation dialog."
+            }
+        })));
+        assert!(receiver.try_recv().is_err());
+        assert!(other_receiver.try_recv().is_err());
     }
 
     #[test]

@@ -44,7 +44,7 @@ ApiKit 是一个跨平台的 API 测试工具，专为开发者设计，提供�
 | 📁 集合 | 多层文件夹，拖拽或右键菜单排序；导入 Postman、OpenAPI / Swagger 和 cURL，导出 ApiKit JSON 或 Postman | [集合](https://duwei0227.github.io/apikit/guide/collections)、[导入导出](https://duwei0227.github.io/apikit/guide/import-export) |
 | 🔗 工作流 | 文件夹分类，拖动或右键菜单排序、移动；串联请求，条件分支和循环（多个条件、先后满足）、循环间隔、`$loopIndex`、Set Variables，运行日志逐步查看 | [工作流](https://duwei0227.github.io/apikit/guide/workflow) |
 | 🧩 Mock 服务 | 在本机端口模拟接口，按规则返回不同响应，响应模板可读取请求、批量生成列表 | [Mock 服务](https://duwei0227.github.io/apikit/guide/mock) |
-| 🤖 AI 集成（MCP） | AI 工具通过 MCP 读取和修改集合、请求、工作流和环境，支持按名称模糊查找、批量新建/修改/运行请求和导入 API 文档，发送请求和删除前由你确认 | [AI 集成](https://duwei0227.github.io/apikit/guide/ai) |
+| 🤖 AI 集成（MCP） | AI 工具通过 MCP 读取和修改集合、请求、工作流和环境，支持按名称模糊查找、批量新建/修改/运行请求和导入 API 文档。发送请求和删除前由你确认，可在支持 MCP elicitation 的 AI 工具中完成。选择本次会话全部允许后，ApiKit 重启前会跳过这些确认。需在 ApiKit 确认时，可通过 MCP 进度通知告知 AI 工具。调用记录显示日期时间、操作、目标名称和状态 | [AI 集成](https://duwei0227.github.io/apikit/guide/ai) |
 | 📝 Console 和历史 | 查看每次实际发出的请求和响应，从历史重新打开请求 | [Console 和历史](https://duwei0227.github.io/apikit/guide/console-history) |
 
 JSON 请求和响应处理减少不必要的临时内存分配，保留大整数精度、注释支持和断言功能。

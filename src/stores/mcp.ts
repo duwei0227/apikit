@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type { McpChoiceAnswer, McpChoiceRequest, McpConfirmRequest } from '@/services/mcp/tools';
+import type { McpCallTarget } from '@/services/mcp/tools/recentCalls';
 import { buildChoiceElicitation, buildElicitation, interpretChoice, interpretElicitation, type McpConfirmLocation } from '@/services/mcp/confirm';
 import type { ConsoleLog } from '@/types/models';
 
@@ -26,7 +27,7 @@ export interface McpSettings {
   port: number;
   token: string;
   revealSecrets: boolean;
-  /** 在哪里确认发送请求、运行 Workflow 和切换环境；client 表示客户端支持时在 AI 工具里确认 */
+  /** MCP 工具的确认位置；client 表示客户端支持时在 AI 工具里确认 */
   confirmIn: McpConfirmLocation;
   /** AI 修改已有的请求和 Workflow 时存为未保存的修改，由用户在 ApiKit 中保存或丢弃 */
   stageEdits: boolean;
@@ -36,10 +37,10 @@ export interface McpCallRecord {
   id: string;
   time: string;
   tool: string;
-  summary: string;
+  operation: string;
+  target: McpCallTarget;
   ok: boolean | null;
-  /** 正在等用户在 AI 工具里确认 */
-  waitingInClient?: boolean;
+  waitingIn?: McpConfirmLocation;
   message?: string;
   durationMs?: number;
 }
@@ -76,23 +77,14 @@ const loadSettings = (): McpSettings => {
   }
 };
 
-/** 调用记录里显示的简短说明 */
-const summarizeArgs = (args: unknown): string => {
-  if (!args || typeof args !== 'object') return '';
-  const record = args as Record<string, unknown>;
-  const request = record.request as Record<string, unknown> | undefined;
-  const label = record.name ?? request?.name ?? record.requestId ?? record.workflowId ?? record.collectionId;
-  return typeof label === 'string' ? label : '';
-};
-
 export const useMcpStore = defineStore('mcp', () => {
   const settings = ref<McpSettings>(loadSettings());
   const running = ref(false);
   const startError = ref('');
   const recentCalls = ref<McpCallRecord[]>([]);
   const pendingConfirmations = ref<McpPendingConfirmation[]>([]);
-  // 本次运行期间允许所有执行类调用，重启 ApiKit 后恢复为逐次确认
-  const allowAllExecute = ref(false);
+  // 重启 ApiKit 后恢复为逐次确认
+  const allowAllConfirmations = ref(false);
   const dialogVisible = ref(false);
 
   let bridge: McpBridgeOptions | null = null;
@@ -119,47 +111,51 @@ export const useMcpStore = defineStore('mcp', () => {
     }
   }
 
-  function confirm(request: McpConfirmRequest): Promise<boolean> {
-    if (allowAllExecute.value && !request.destructive) return Promise.resolve(true);
-    return new Promise(resolve => {
+  function confirmInApiKit(callId: string, request: McpConfirmRequest): Promise<boolean> {
+    if (allowAllConfirmations.value) return Promise.resolve(true);
+    setWaitingIn(callId, 'apikit');
+    return new Promise<boolean>(resolve => {
       pendingConfirmations.value = [
         ...pendingConfirmations.value,
         { ...request, id: `confirm-${++confirmationSequence}`, resolve },
       ];
-    });
+      void invoke('mcp_waiting_for_approval', { callId }).catch(error => {
+        console.error('Failed to report the ApiKit approval prompt:', error);
+      });
+    }).finally(() => setWaitingIn(callId));
   }
 
   function allowAllThisSession() {
-    allowAllExecute.value = true;
-    // 已在排队的请求一并放行；删除等不可撤销的操作仍逐个确认
-    pendingConfirmations.value.filter(item => !item.destructive).forEach(item => item.resolve(true));
-    pendingConfirmations.value = pendingConfirmations.value.filter(item => item.destructive);
+    allowAllConfirmations.value = true;
+    pendingConfirmations.value.forEach(item => item.resolve(true));
+    pendingConfirmations.value = [];
   }
 
   /** 客户端支持并且设置允许时在 AI 工具里确认，否则（或客户端没法询问时）用 ApiKit 的确认框 */
   async function confirmCall(callId: string, canElicit: boolean, request: McpConfirmRequest): Promise<boolean> {
-    if (allowAllExecute.value && !request.destructive) return true;
+    if (allowAllConfirmations.value) return true;
     if (canElicit && settings.value.confirmIn === 'client') {
-      setWaitingInClient(callId, true);
+      setWaitingIn(callId, 'client');
       let answer = null;
       try {
         const { message, requestedSchema } = buildElicitation(request);
-        answer = interpretElicitation(await invoke('mcp_elicit', { callId, message, requestedSchema }));
+        const reply = await invoke('mcp_elicit', { callId, message, requestedSchema });
+        answer = interpretElicitation(reply, request.destructive);
       } catch (error) {
         console.error('Failed to ask in the AI tool:', error);
       } finally {
-        setWaitingInClient(callId, false);
+        setWaitingIn(callId);
       }
-      if (answer === 'allowAll' && !request.destructive) allowAllThisSession();
+      if (answer === 'allowAll') allowAllThisSession();
       if (answer) return answer !== 'deny';
     }
-    return confirm(request);
+    return confirmInApiKit(callId, request);
   }
 
   /** 名称匹配到多项时在 AI 工具里请用户选择；客户端不支持时返回 null，工具改为返回候选列表 */
   async function chooseInClient(callId: string, canElicit: boolean, request: McpChoiceRequest): Promise<McpChoiceAnswer> {
     if (!canElicit) return null;
-    setWaitingInClient(callId, true);
+    setWaitingIn(callId, 'client');
     try {
       const { message, requestedSchema } = buildChoiceElicitation(request);
       return interpretChoice(await invoke('mcp_elicit', { callId, message, requestedSchema }), request.options);
@@ -167,18 +163,18 @@ export const useMcpStore = defineStore('mcp', () => {
       console.error('Failed to ask in the AI tool:', error);
       return null;
     } finally {
-      setWaitingInClient(callId, false);
+      setWaitingIn(callId);
     }
   }
 
-  function setWaitingInClient(callId: string, waitingInClient: boolean) {
-    recentCalls.value = recentCalls.value.map(item => (item.id === callId ? { ...item, waitingInClient } : item));
+  function setWaitingIn(callId: string, waitingIn?: McpConfirmLocation) {
+    recentCalls.value = recentCalls.value.map(item => (item.id === callId ? { ...item, waitingIn } : item));
   }
 
   function answerConfirmation(id: string, answer: 'deny' | 'allow' | 'allowAll') {
     const pending = pendingConfirmations.value.find(item => item.id === id);
     if (!pending) return;
-    if (answer === 'allowAll' && !pending.destructive) {
+    if (answer === 'allowAll') {
       allowAllThisSession();
       return;
     }
@@ -192,30 +188,34 @@ export const useMcpStore = defineStore('mcp', () => {
   }
 
   async function handleCall(event: McpCallEvent) {
-    const { callMcpTool, getMcpTool } = await loadTools();
-    if (!getMcpTool(event.name)) return;
+    const { callMcpTool, getMcpTool, describeMcpCallTarget, describeMcpCallResult } = await loadTools();
+    const tool = getMcpTool(event.name);
+    if (!tool) return;
 
     const record: McpCallRecord = {
       id: event.id,
       time: new Date().toISOString(),
       tool: event.name,
-      summary: summarizeArgs(event.arguments),
+      operation: tool.title,
+      target: describeMcpCallTarget(event.name, event.arguments),
       ok: null,
     };
     recentCalls.value = [record, ...recentCalls.value].slice(0, MAX_RECENT_CALLS);
 
     const started = Date.now();
+    let payload: unknown;
     const result = await callMcpTool(event.name, event.arguments, {
       onConsoleLog: log => bridge?.onConsoleLog(log),
       confirm: request => confirmCall(event.id, event.canElicit === true, request),
       choose: request => chooseInClient(event.id, event.canElicit === true, request),
       revealSecrets: () => settings.value.revealSecrets,
       stageEdits: () => settings.value.stageEdits,
-    });
+    }, value => { payload = value; });
 
     recentCalls.value = recentCalls.value.map(item => (item.id === record.id
       ? {
         ...item,
+        target: describeMcpCallResult(event.name, payload, record.target),
         ok: !result.isError,
         message: result.isError ? result.content[0]?.text : undefined,
         durationMs: Date.now() - started,
@@ -325,7 +325,7 @@ export const useMcpStore = defineStore('mcp', () => {
     recentCalls,
     pendingConfirmations,
     currentConfirmation,
-    allowAllExecute,
+    allowAllConfirmations,
     dialogVisible,
     status,
     statusText,

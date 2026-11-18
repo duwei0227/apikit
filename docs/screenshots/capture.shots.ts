@@ -219,9 +219,24 @@ test('mock service', async ({ page }) => {
 });
 
 test('AI integration dialog', async ({ app, page }) => {
+  await seedCollection(app);
   await app.run(() => window.__store('mcp').setEnabled(true));
+  await app.run(() => {
+    const [collection] = window.__store('collections').collections;
+    window.__emitTauriEvent('mcp://call', { id: 'mcp-docs-list', name: 'list_collections', arguments: {} });
+    window.__emitTauriEvent('mcp://call', {
+      id: 'mcp-docs-search', name: 'search_requests', arguments: { collectionId: collection.id, query: 'orders' },
+    });
+    window.__emitTauriEvent('mcp://call', {
+      id: 'mcp-docs-request', name: 'get_request', arguments: { requestId: 'req-get-order', view: 'summary' },
+    });
+  });
   await app.run(() => window.__store('mcp').openDialog());
   const dialog = page.locator('.p-dialog:visible');
   await expect(dialog).toContainText('Enable MCP server');
+  const calls = dialog.getByRole('table', { name: 'Recent calls' });
+  await expect(calls).toContainText('Search term · Shop API');
+  await expect(calls.getByText('Succeeded', { exact: true })).toHaveCount(3);
   await shot(dialog, 'mcp');
+  await shot(calls.locator('xpath=../..'), 'mcp-recent-calls');
 });

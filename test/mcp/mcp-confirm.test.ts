@@ -37,10 +37,24 @@ describe('MCP confirmation in the AI tool', () => {
     ]);
   });
 
-  it('MCP-CONFIRM-004 does not offer allow all for destructive actions', () => {
+  it('MCP-CONFIRM-004 requires explicit deletion approval before granting session approval', () => {
     const elicitation = buildElicitation({ tool: 'delete_request', title: 't', detail: 'GET Login', note: 'Deleted.', destructive: true });
     expect(elicitation.message).toBe('Allow ApiKit to run delete_request?\nGET Login\nDeleted.');
-    expect(elicitation.requestedSchema).toEqual({ type: 'object', properties: {} });
+    expect(elicitation.requestedSchema).toEqual({
+      type: 'object',
+      properties: {
+        confirmDelete: { type: 'boolean', title: 'Confirm deletion', default: false },
+        allowAll: expect.objectContaining({ type: 'boolean', default: false, description: expect.stringContaining('deletions') }),
+      },
+      required: ['confirmDelete'],
+    });
+    expect(interpretElicitation({ result: { action: 'accept', content: { confirmDelete: true } } }, true)).toBe('allow');
+    expect(interpretElicitation({ result: { action: 'accept', content: { confirmDelete: true, allowAll: true } } }, true)).toBe('allowAll');
+    expect(interpretElicitation({ result: { action: 'accept', content: { confirmDelete: false } } }, true)).toBe('deny');
+    expect(interpretElicitation({ result: { action: 'accept', content: { allowAll: true } } }, true)).toBe('deny');
+    expect(interpretElicitation({ result: { action: 'decline' } }, true)).toBe('deny');
+    expect(interpretElicitation({ result: { action: 'cancel' } }, true)).toBe('deny');
+    expect(interpretElicitation({ error: { code: -32601 } }, true)).toBeNull();
   });
 
   it('MCP-CONFIRM-005 asks the user to choose one of several matches', () => {

@@ -419,7 +419,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: 'Delete request',
     kind: 'write',
     destructive: true,
-    description: 'Permanently delete a saved request, including unsaved edits. The user must approve every deletion. The result lists workflows that used the request; their steps then refer to a missing request.',
+    description: 'Permanently delete a saved request, including unsaved edits. Requires user approval unless session authorization is active. The result lists workflows that used the request; their steps then refer to a missing request.',
     inputSchema: objectSchema({ requestId: { type: 'string' } }, ['requestId']),
   },
   {
@@ -427,7 +427,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: 'Delete folder',
     kind: 'write',
     destructive: true,
-    description: 'Permanently delete a folder with its subfolders and all requests in them. The user must approve every deletion. The result lists workflows that used those requests.',
+    description: 'Permanently delete a folder with its subfolders and all requests in them. Requires user approval unless session authorization is active. The result lists workflows that used those requests.',
     inputSchema: objectSchema({ collectionId: { type: 'string' }, folderId: { type: 'string' } }, ['collectionId', 'folderId']),
   },
   {
@@ -435,7 +435,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: 'Delete collection',
     kind: 'write',
     destructive: true,
-    description: 'Permanently delete a collection with all its folders and requests. The user must approve every deletion. The result lists workflows that used those requests.',
+    description: 'Permanently delete a collection with all its folders and requests. Requires user approval unless session authorization is active. The result lists workflows that used those requests.',
     inputSchema: objectSchema({ collectionId: { type: 'string' } }, ['collectionId']),
   },
   {
@@ -443,7 +443,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: 'Delete workflow',
     kind: 'write',
     destructive: true,
-    description: 'Permanently delete a workflow, including unsaved edits. The saved requests it uses are kept. The user must approve every deletion.',
+    description: 'Permanently delete a workflow, including unsaved edits. The saved requests it uses are kept. Requires user approval unless session authorization is active.',
     inputSchema: objectSchema({ workflowId: { type: 'string' } }, ['workflowId']),
   },
   {

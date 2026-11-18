@@ -294,10 +294,10 @@ test('collapses Thinking again for the next streamed response', async ({ app }) 
   await expect(app.request.getByText('先想一想')).toBeHidden();
 });
 
-test('asks before every MCP deletion and closes the deleted request tab', async ({ app, page }) => {
+test('honors session approval for MCP deletions and closes the deleted request tab', async ({ app, page }) => {
   await app.run(() => window.__store('mcp').setEnabled(true));
-  const mcpCall = (id: string, name: string, args: Record<string, unknown>) =>
-    app.run(([id, name, args]) => window.__emitTauriEvent('mcp://call', { id, name, arguments: args }), [id, name, args] as const);
+  const mcpCall = (id: string, name: string, args: Record<string, unknown>, canElicit = false) =>
+    app.run(([id, name, args, canElicit]) => window.__emitTauriEvent('mcp://call', { id, name, arguments: args, canElicit }), [id, name, args, canElicit] as const);
   const mcpResult = async (id: string) => {
     await expect.poll(() => app.run((id) => window.__invokes.some(([cmd, args]) => cmd === 'mcp_respond' && args.id === id), id)).toBe(true);
     return JSON.parse(await app.run((id) => window.__invokes.find(([cmd, args]) => cmd === 'mcp_respond' && args.id === id)![1].result.content[0].text, id));
@@ -306,30 +306,51 @@ test('asks before every MCP deletion and closes the deleted request tab', async 
   const collection = await mcpResult('d1');
   await mcpCall('d2', 'create_request', { collectionId: collection.id, name: 'Scratch', url: 'https://example.com/scratch' });
   const request = await mcpResult('d2');
+  await mcpCall('read-scratch', 'get_request', { requestId: request.id, view: 'summary' });
+  await mcpResult('read-scratch');
+  await mcpCall('find-scratch', 'search_requests', { collectionId: collection.id, query: 'scratch' });
+  await mcpResult('find-scratch');
 
   const tree = page.locator('.p-tree').first();
   await tree.locator('.p-tree-node-toggle-button[data-p-leaf=false]').first().click();
   await tree.getByText('Scratch', { exact: true }).click();
   await expect(app.url).toHaveValue('https://example.com/scratch');
 
-  // 即使已选择"全部允许"，删除仍然逐个确认
-  await app.run(() => { window.__store('mcp').allowAllExecute = true; });
-  await mcpCall('d3', 'delete_request', { requestId: request.id });
+  await app.run(() => {
+    window.__invokeResults.mcp_elicit = { error: { code: -32601, message: 'Method not found' } };
+  });
+  await mcpCall('d3', 'delete_request', { requestId: request.id }, true);
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('AI wants to delete a request');
   await expect(dialog).toContainText('GET Scratch · Temp');
-  await expect(dialog.getByRole('button', { name: 'Allow All This Session' })).toHaveCount(0);
-  await dialog.getByRole('button', { name: 'Delete' }).click();
+  const approvalNotices = () => app.run(() => window.__invokes
+    .filter(([cmd]) => cmd === 'mcp_waiting_for_approval').map(([, args]) => args.callId));
+  await expect.poll(approvalNotices).toEqual(['d3']);
+  await dialog.getByRole('button', { name: 'Allow All This Session' }).click();
 
   expect(await mcpResult('d3')).toMatchObject({ deleted: { requestId: request.id } });
   await expect(tree.getByText('Scratch', { exact: true })).toHaveCount(0);
   await expect(page.locator('.content-tabs [data-content-tab-index]', { hasText: 'Scratch' })).toHaveCount(0);
+  await mcpCall('d4', 'delete_collection', { collectionId: collection.id });
+  expect(await mcpResult('d4')).toMatchObject({ deleted: { collectionId: collection.id } });
+  await expect(dialog).toHaveCount(0);
+  expect(await approvalNotices()).toEqual(['d3']);
 
   // 工具列表中删除工具单独分组
   await app.run(() => window.__store('mcp').openDialog());
+  const recentCalls = page.getByRole('table', { name: 'Recent calls' });
+  await expect(recentCalls.getByRole('row').filter({ hasText: 'Get request' })).toContainText('Scratch');
+  await expect(recentCalls.getByRole('row').filter({ hasText: 'Search requests' })).toContainText('Search term · Temp');
+  const deletedRequest = recentCalls.getByRole('row').filter({ hasText: 'Delete request' });
+  await expect(deletedRequest).toContainText('Scratch');
+  await expect(deletedRequest).toContainText('Temp');
+  await expect(deletedRequest).toContainText('Succeeded');
+  await expect(deletedRequest.locator('time')).toContainText(/\d{4}/);
+  await expect(deletedRequest.locator('time')).toContainText(/\d{1,2}:\d{2}:\d{2}/);
+  await expect(deletedRequest).not.toContainText(request.id);
   await page.getByText(/^Available tools/).click();
   const group = (label: string) => page.locator('.mcp-details').getByText(label, { exact: true }).locator('xpath=..');
-  const deleteGroup = group('Delete (asks you every time)');
+  const deleteGroup = group('Delete');
   await expect(deleteGroup.locator('code')).toHaveText(['delete_request', 'delete_folder', 'delete_collection', 'delete_workflow']);
   await expect(group('Create and edit').locator('code', { hasText: 'delete_' })).toHaveCount(0);
 });
